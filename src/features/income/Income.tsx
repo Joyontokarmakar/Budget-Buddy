@@ -17,6 +17,7 @@ export const Income: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [type, setType] = useState<IncomeType>('werkstudent');
+  const [sourceName, setSourceName] = useState('');
   const [destinationAccount, setDestinationAccount] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -67,6 +68,11 @@ export const Income: React.FC = () => {
       return;
     }
 
+    if (type === 'other' && !sourceName.trim()) {
+      setError('Please specify the source name for "Other"');
+      return;
+    }
+
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setError('Amount must be greater than €0.00');
@@ -81,10 +87,12 @@ export const Income: React.FC = () => {
         type,
         destination_account_id: destinationAccount,
         notes: notes.trim() || null,
+        source_name: sourceName.trim() || null,
       });
 
       // Reset & Reload
       setAmount('');
+      setSourceName('');
       setNotes('');
       setDate(new Date().toISOString().split('T')[0]);
       setSuccessMsg('Income logged successfully!');
@@ -186,6 +194,20 @@ export const Income: React.FC = () => {
                   ]}
                 />
 
+                <Input
+                  label={t('income.sourceName') + (type === 'other' ? ' *' : '')}
+                  placeholder={
+                    type === 'werkstudent' ? 'e.g., Apple GmbH' :
+                    type === 'scholarship' ? 'e.g., DAAD' :
+                    type === 'family' ? 'e.g., parents' :
+                    type === 'freelance' ? 'e.g., web design' :
+                    'e.g., Birthday Gift'
+                  }
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                  required={type === 'other'}
+                />
+
                 <Select
                   label={t('income.destination')}
                   value={destinationAccount}
@@ -231,9 +253,17 @@ export const Income: React.FC = () => {
                     <ArrowDownLeft className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-foreground">{getIncomeTypeLabel(inc.type)}</h4>
+                    <h4 className="text-sm font-bold text-foreground">
+                      {inc.source_name ? inc.source_name : getIncomeTypeLabel(inc.type)}
+                    </h4>
                     <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-2">
                       <span>{new Date(inc.date).toLocaleDateString('de-DE')}</span>
+                      {inc.source_name && (
+                        <>
+                          <span>•</span>
+                          <span>{getIncomeTypeLabel(inc.type)}</span>
+                        </>
+                      )}
                       <span>•</span>
                       <span>To: {inc.account?.name || 'Unknown Account'}</span>
                     </p>

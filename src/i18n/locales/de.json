@@ -59,6 +59,7 @@
     "date": "Datum",
     "type": "Einnahmequelle",
     "destination": "Zielkonto",
+    "sourceName": "Name der Quelle (z. B. Arbeitgeber, Person)",
     "notes": "Notizen (Optional)",
     "save": "Einnahme buchen",
     "werkstudent": "Werkstudentengehalt",

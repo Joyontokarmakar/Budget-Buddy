@@ -59,6 +59,7 @@
     "date": "Date",
     "type": "Income Source",
     "destination": "Destination Account",
+    "sourceName": "Source Name (e.g., Company, Person)",
     "notes": "Notes (Optional)",
     "save": "Log Income",
     "werkstudent": "Werkstudent Salary",

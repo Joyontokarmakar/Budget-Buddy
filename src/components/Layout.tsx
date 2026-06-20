@@ -46,11 +46,24 @@ export const Layout: React.FC = () => {
         
         {/* Top Header Bar */}
         <header className="sticky top-0 z-30 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md px-6 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-xs text-muted-foreground font-semibold">Willkommen / Welcome</span>
-            <span className="text-sm font-bold truncate max-w-[180px] sm:max-w-[300px]">
-              {profile?.name || 'Student'}
-            </span>
+          <div className="flex items-center gap-2.5">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Avatar"
+                className="h-8.5 w-8.5 rounded-full object-cover border border-border/80 shadow-xs"
+              />
+            ) : (
+              <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-tr from-primary/20 to-violet-500/20 border border-border/60 flex items-center justify-center text-primary font-black text-xs uppercase">
+                {(profile?.name || 'S').charAt(0)}
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-none mb-0.5">Welcome</span>
+              <span className="text-xs font-extrabold truncate max-w-[120px] sm:max-w-[200px] leading-tight">
+                {profile?.name || 'Student'}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

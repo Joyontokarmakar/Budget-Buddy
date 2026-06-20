@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
+import { db } from '../../services/db';
 import type { Language, ThemeMode } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
-import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check, Camera, Upload } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
-  const { profile, updateProfile, signOut } = useAuthStore();
+  const { profile, updateProfile, updatePassword, signOut } = useAuthStore();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Profile Form State
   const [name, setName] = useState(profile?.name || '');
   const [email] = useState(profile?.email || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Security Form State
   const [password, setPassword] = useState('');
@@ -40,6 +44,22 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    setAvatarError(null);
+    setAvatarUploading(true);
+    try {
+      const avatarUrl = await db.uploadAvatar(profile.id, file);
+      const { error } = await updateProfile({ avatar_url: avatarUrl });
+      if (error) throw new Error(error);
+    } catch (err: any) {
+      setAvatarError(err.message || 'Failed to upload photo');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleUpdateSecurity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
@@ -47,7 +67,7 @@ export const Settings: React.FC = () => {
     setSecurityError(null);
     setSecurityLoading(true);
 
-    const { error } = await updateProfile({}); // In mock mode this does nothing, in real mode updates password if supabase configured
+    const { error } = await updatePassword(password.trim());
     setSecurityLoading(false);
     
     if (error) {
@@ -95,15 +115,63 @@ export const Settings: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* PROFILE CARD */}
-        <Card>
+        <Card className="bg-card/75 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <User className="h-4.5 w-4.5 text-muted-foreground" />
               {t('settings.profile')}
             </CardTitle>
-            <CardDescription>Update your personal details</CardDescription>
+            <CardDescription>Update your personal details and photo</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-5">
+            {/* Profile Avatar Uploader */}
+            <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/50">
+              <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Profile Avatar"
+                    className="h-24 w-24 rounded-full object-cover border-2 border-primary shadow-md group-hover:opacity-75 transition-opacity"
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-primary/10 to-violet-500/10 border-2 border-dashed border-primary/50 flex flex-col items-center justify-center text-primary group-hover:bg-primary/5 transition-colors">
+                    <User className="h-8 w-8 text-primary/60 mb-0.5" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary/70">Upload</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200">
+                  <Camera className="h-6 w-6" />
+                </div>
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-background/70 rounded-full flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-primary animate-pulse">Saving...</span>
+                  </div>
+                )}
+              </div>
+              <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="h-8 text-xs gap-1.5"
+                  disabled={avatarUploading}
+                >
+                  <Upload className="h-3.5 w-3.5" /> Change Photo
+                </Button>
+                {avatarError && (
+                  <p className="text-[10px] text-destructive mt-1 font-semibold">{avatarError}</p>
+                )}
+              </div>
+            </div>
+
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <Input
                 label={t('settings.name')}

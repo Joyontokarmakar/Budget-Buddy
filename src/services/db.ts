@@ -842,6 +842,46 @@ export const db = {
     }
   },
 
+  // AVATARS
+  uploadAvatar: async (userId: string, file: File): Promise<string> => {
+    if (!isSupabaseConfigured) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (e) {
+      console.error('Supabase avatar upload error, falling back to local simulation:', e);
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  },
+
   // PERMANENT ASSETS
   getPermanentAssets: async (userId: string): Promise<PermanentAsset[]> => {
     if (!isSupabaseConfigured) {

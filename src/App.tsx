@@ -5,7 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 
 // Features
-import { SignInPage, SignUpPage, ForgotPasswordPage } from './features/auth/AuthPages';
+import { SignInPage, SignUpPage, ForgotPasswordPage, ResetPasswordPage } from './features/auth/AuthPages';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { Expenses } from './features/expenses/Expenses';
 import { Income } from './features/income/Income';
@@ -34,6 +34,7 @@ function App() {
             <Route path="/login" element={<SignInPage />} />
             <Route path="/register" element={<SignUpPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Protected Routes */}
             <Route

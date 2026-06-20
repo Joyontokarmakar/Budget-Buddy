@@ -10,6 +10,7 @@ export interface Profile {
   preferred_language: Language;
   theme_preference: ThemeMode;
   monthly_budget: number;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +75,7 @@ export interface Income {
   amount: number;
   type: IncomeType;
   notes: string | null;
+  source_name: string | null;
   destination_account_id: string;
   created_at: string;
   updated_at: string;

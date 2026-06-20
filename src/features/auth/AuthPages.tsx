@@ -348,3 +348,100 @@ export const ForgotPasswordPage: React.FC = () => {
     </div>
   );
 };
+
+// =========================================================================
+// RESET PASSWORD PAGE
+// =========================================================================
+export const ResetPasswordPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { updatePassword, loading } = useAuthStore();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (!password || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    const { error: err } = await updatePassword(password);
+    if (err) {
+      setError(err);
+    } else {
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8 relative overflow-hidden">
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-violet-500/10 blur-[120px] pointer-events-none" />
+
+      <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
+        <CardHeader className="space-y-2 text-center pb-4">
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-primary/20 mb-2">
+            BB
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">Set New Password</CardTitle>
+          <CardDescription>Enter your new password below</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs flex gap-2.5 items-start">
+              <CheckCircle className="h-5 w-5 shrink-0" />
+              <div>
+                <span className="font-bold">Password Reset Successful!</span> Redirecting you to sign in...
+              </div>
+            </div>
+          )}
+
+          {!success && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                type="password"
+                label="New Password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                icon={<Lock className="h-4 w-4" />}
+                required
+              />
+              <Input
+                type="password"
+                label="Confirm New Password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                icon={<Lock className="h-4 w-4" />}
+                required
+              />
+              <Button type="submit" className="w-full" loading={loading}>
+                Update Password
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
