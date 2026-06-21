@@ -54,46 +54,5 @@ BudgetBuddy features a modern, interactive dashboard, receipt OCR scanning, deta
 
 ---
 
-## 🚀 Getting Started
-
-### 📋 Prerequisites
-Ensure you have the following installed on your system:
-- **Node.js** (v18.x or higher)
-- **npm** (v9.x or higher)
-
-### 💻 Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Joyontokarmakar/Budget-Buddy.git
-   cd Budget-Buddy
-   ```
-
-2. **Install project dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory and add your Supabase credentials (if no credentials are provided, BudgetBuddy will fallback to secure Local Memory Mode automatically):
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. **Launch the development server:**
-   ```bash
-   npm run dev
-   ```
-   Open **`http://localhost:5173`** in your browser to view the application.
-
-5. **Build for Production:**
-   To bundle the application into optimized static assets under the `dist/` folder:
-   ```bash
-   npm run build
-   ```
-
----
-
 ## 🤝 Contribution Guidelines
 If you'd like to contribute, please fork the repository and use a feature branch. Pull requests are warmly welcome!
