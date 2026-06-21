@@ -104,7 +104,7 @@ export const Layout: React.FC = () => {
         </header>
 
         {/* Main Content Router Slot */}
-        <main className="flex-1 px-4 py-6 md:p-8 pb-20 md:pb-8 max-w-5xl w-full mx-auto safe-pb">
+        <main className="flex-1 px-4 py-6 md:p-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-8 max-w-5xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
