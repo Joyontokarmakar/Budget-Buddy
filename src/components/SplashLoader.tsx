@@ -8,7 +8,7 @@ interface SplashLoaderProps {
 
 export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComplete }) => {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('Initializing secure session...');
+  const [statusText, setStatusText] = useState('Checking credentials...');
   const [isExiting, setIsExiting] = useState(false);
 
   // 1. Progress simulation up to 90%
@@ -23,18 +23,18 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
 
         if (prev >= 90) {
           clearInterval(timer);
-          return 90; // Hold at 90% until backend is initialized
+          return 90; // Hold at 90% until backend auth resolves
         }
 
         // Dynamic status updates based on simulated progress
-        if (prev < 20) {
+        if (prev < 25) {
           setStatusText('Connecting to database...');
-        } else if (prev < 45) {
+        } else if (prev < 50) {
           setStatusText('Authenticating session...');
-        } else if (prev < 70) {
+        } else if (prev < 75) {
           setStatusText('Syncing accounts & assets...');
         } else {
-          setStatusText('Applying settings...');
+          setStatusText('Applying preferences...');
         }
 
         // Random organic increment between 2% and 8%
@@ -49,7 +49,7 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
   // 2. Accelerate progress to 100% when backend auth initialization completes
   useEffect(() => {
     if (isFinished) {
-      setStatusText('Sync complete! Loading dashboard...');
+      setStatusText('Sync complete! Launching...');
       
       const fastTimer = setInterval(() => {
         setProgress((prev) => {
@@ -60,7 +60,7 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
               setIsExiting(true);
               // Wait for transition duration to call onComplete
               setTimeout(onComplete, 350);
-            }, 250);
+            }, 200);
             return 100;
           }
           return prev + 10;
@@ -78,43 +78,104 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
         isExiting ? 'opacity-0 scale-98 pointer-events-none' : 'opacity-100 scale-100'
       )}
     >
-      <div className="flex flex-col items-center max-w-xs px-6 text-center space-y-8">
+      {/* Styles for line-drawing and pulsing glow animations */}
+      <style>{`
+        @keyframes drawPath {
+          0% {
+            stroke-dashoffset: 400;
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.8;
+          }
+          75% {
+            stroke-dashoffset: 0;
+            filter: drop-shadow(0 0 3px #00f0ff);
+          }
+          100% {
+            stroke-dashoffset: 0;
+            filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 16px rgba(0, 240, 255, 0.6));
+          }
+        }
+        @keyframes pulseGlow {
+          0%, 100% {
+            filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.4));
+            transform: scale(1);
+          }
+          50% {
+            filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 24px rgba(0, 240, 255, 0.7));
+            transform: scale(1.02);
+          }
+        }
+        .animate-logo-draw {
+          stroke-dasharray: 400;
+          stroke-dashoffset: 400;
+          animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .animate-logo-glow {
+          transform-origin: center;
+          animation: pulseGlow 2.5s ease-in-out infinite;
+          animation-delay: 1.8s;
+        }
+      `}</style>
+
+      <div className="flex flex-col items-center max-w-xs px-6 text-center space-y-6">
         
-        {/* Glow backdrop behind logo */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/30 rounded-full blur-2xl animate-pulse h-20 w-20 mx-auto" />
+        {/* Glow backdrop behind SVG logo */}
+        <div className="relative flex items-center justify-center h-28 w-28">
+          <div className="absolute inset-0 bg-cyan-500/10 rounded-full blur-2xl animate-pulse" />
           
-          {/* Logo container with rotation outline effect */}
-          <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-tr from-primary to-violet-600 flex items-center justify-center text-white font-extrabold text-3xl shadow-2xl shadow-primary/20 animate-pulse border border-white/10">
-            BB
-            {/* Ambient loading orbit border ring */}
-            <div className="absolute -inset-1 rounded-2xl border border-primary/40 animate-ping opacity-25" />
-          </div>
+          {/* Logo SVG rendering the actual glowing lines */}
+          <svg
+            viewBox="0 0 100 100"
+            className="w-24 h-24 text-cyan-400 z-10 animate-logo-glow"
+          >
+            {/* Left B path with teardrop bottom-left curve */}
+            <path
+              d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="animate-logo-draw"
+            />
+            {/* Right B path overlapping stem */}
+            <path
+              d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="animate-logo-draw"
+            />
+          </svg>
         </div>
 
         {/* Branding text */}
         <div className="space-y-1">
-          <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-white via-white to-white/70 bg-clip-text text-transparent">
+          <h1 className="text-xl font-black tracking-tight text-white/90">
             BudgetBuddy
           </h1>
-          <p className="text-[10px] font-bold text-primary/80 uppercase tracking-widest leading-none">
+          <p className="text-[9px] font-bold text-cyan-400/80 uppercase tracking-widest leading-none">
             Student Financial Hub
           </p>
         </div>
 
-        {/* Linear progress bar */}
-        <div className="w-48 space-y-2">
-          <div className="h-1 w-full bg-slate-900/80 rounded-full overflow-hidden border border-white/5">
+        {/* Linear progress bar - Clean & Minimalist */}
+        <div className="w-44 space-y-1.5 pt-2">
+          <div className="h-0.5 w-full bg-slate-900/60 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary via-violet-500 to-indigo-500 rounded-full transition-all duration-200 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+              className="h-full bg-cyan-400 transition-all duration-200 shadow-[0_0_6px_#22d3ee]"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-[10px] text-muted-foreground font-semibold px-0.5">
-            <span className="truncate max-w-[130px] transition-all duration-300">
+          <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold px-0.5">
+            <span className="truncate max-w-[110px]">
               {statusText}
             </span>
-            <span className="tabular-nums">{progress}%</span>
+            <span className="tabular-nums text-cyan-400/70">{progress}%</span>
           </div>
         </div>
 
