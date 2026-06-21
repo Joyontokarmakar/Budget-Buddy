@@ -835,7 +835,7 @@ export const Expenses: React.FC = () => {
                             </div>
 
                             {/* Nested Items details */}
-                            <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/20">
+                            <div className="rounded-xl border border-border/40 overflow-x-auto bg-muted/20">
                               <table className="w-full text-left text-xs border-collapse">
                                 <thead>
                                   <tr className="bg-muted/40 text-muted-foreground font-semibold border-b border-border/40">
@@ -986,7 +986,7 @@ export const Expenses: React.FC = () => {
                                             year: '2-digit',
                                           });
                                           return (
-                                            <div key={exp.id} className="border border-border/40 rounded-xl bg-card overflow-hidden shadow-xs">
+                                            <div key={exp.id} className="border border-border/40 rounded-xl bg-card overflow-x-auto shadow-xs">
                                               {/* Day Subtotal Header */}
                                               <div className="bg-muted/40 px-4 py-2.5 flex justify-between items-center border-b border-border/30">
                                                 <div className="flex flex-wrap items-center gap-3">

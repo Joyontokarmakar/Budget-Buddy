@@ -383,7 +383,7 @@ export const Reports: React.FC = () => {
               type="button"
               onClick={() => setSelectedBillCategory(selectedBillCategory === 'Total Expense' ? null : 'Total Expense')}
               className={cn(
-                "p-3 rounded-xl border text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
+                "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                 selectedBillCategory === 'Total Expense'
                   ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
                   : "bg-card hover:bg-muted border-border/80 text-foreground"
@@ -391,7 +391,7 @@ export const Reports: React.FC = () => {
             >
               <span className="opacity-90">Total Expense</span>
               <span className={cn(
-                "text-[10px] font-black font-mono block mt-1",
+                "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
                 selectedBillCategory === 'Total Expense' ? "text-primary-foreground/90" : "text-muted-foreground"
               )}>
                 Current: €{totalExpenses.toFixed(2)}
@@ -406,7 +406,7 @@ export const Reports: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedBillCategory(isActive ? null : catName)}
                   className={cn(
-                    "p-3 rounded-xl border text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
+                    "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                     isActive
                       ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
                       : "bg-card hover:bg-muted border-border/80 text-foreground"
@@ -415,7 +415,7 @@ export const Reports: React.FC = () => {
                   <span className="opacity-90">{catName}</span>
                   {/* Show current month value under the button */}
                   <span className={cn(
-                    "text-[10px] font-black font-mono block mt-1",
+                    "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
                     isActive ? "text-primary-foreground/90" : "text-muted-foreground"
                   )}>
                     Current: €{
@@ -447,7 +447,7 @@ export const Reports: React.FC = () => {
                   No records found for this category.
                 </div>
               ) : (
-                <div className="border border-border/50 rounded-xl overflow-hidden bg-card/40">
+                <div className="border border-border/50 rounded-xl overflow-x-auto bg-card/40">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-muted/40 text-muted-foreground font-bold border-b border-border text-[9px] uppercase">

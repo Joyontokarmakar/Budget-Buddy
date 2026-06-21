@@ -1,11 +1,13 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const Navigation: React.FC = () => {
   const { t } = useTranslation();
+  const location = useLocation();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -18,12 +20,29 @@ export const Navigation: React.FC = () => {
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
+  // Mobile Bottom Tab Bar items (max 4 primary links + 1 "More" button)
+  const primaryItems = [
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/expenses', label: t('nav.expenses'), icon: TrendingDown },
+    { to: '/income', label: t('nav.income'), icon: TrendingUp },
+    { to: '/reports', label: t('nav.reports'), icon: FileText },
+  ];
+
+  const secondaryItems = [
+    { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
+    { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
+    { to: '/assets', label: t('nav.assets'), icon: Gem },
+    { to: '/settings', label: t('nav.settings'), icon: Settings },
+  ];
+
+  const isSecondaryActive = secondaryItems.some(item => location.pathname === item.to);
+
   return (
     <>
       {/* Mobile Sticky Bottom Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-lg border-t border-border px-2 pt-2 pb-safe md:hidden shadow-lg shadow-black/5">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border px-1 pt-2 pb-safe md:hidden shadow-lg shadow-black/5">
         <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
-          {navItems.map((item) => {
+          {primaryItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -48,8 +67,76 @@ export const Navigation: React.FC = () => {
               </NavLink>
             );
           })}
+
+          {/* More trigger button on mobile */}
+          <button
+            type="button"
+            onClick={() => setIsMoreOpen(!isMoreOpen)}
+            className={cn(
+              'flex flex-col items-center justify-center flex-1 h-full text-muted-foreground transition-colors relative',
+              isSecondaryActive || isMoreOpen ? 'text-primary' : 'hover:text-foreground'
+            )}
+          >
+            <Menu className="h-5 w-5 transition-transform duration-200 active:scale-95" />
+            <span className="text-[10px] font-semibold mt-1 tracking-tight truncate">More</span>
+            {isSecondaryActive && (
+              <span className="absolute top-0 w-1.5 h-1.5 rounded-full bg-primary -translate-y-1" />
+            )}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Bottom Sheet Drawer Menu */}
+      {isMoreOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsMoreOpen(false)}
+        />
+      )}
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-[24px] px-6 pt-4 pb-8 md:hidden transition-transform duration-300 ease-out shadow-2xl safe-pb",
+          isMoreOpen ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        {/* Drawer Drag Bar */}
+        <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5 cursor-pointer" onClick={() => setIsMoreOpen(false)} />
+
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">More Features</h3>
+          <button
+            type="button"
+            onClick={() => setIsMoreOpen(false)}
+            className="p-1 rounded-full hover:bg-muted text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* 2-column grid of options */}
+        <div className="grid grid-cols-2 gap-3.5">
+          {secondaryItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setIsMoreOpen(false)}
+                className={cn(
+                  "flex items-center gap-3.5 px-4 h-12 rounded-xl text-sm font-semibold transition-all border border-transparent active:scale-[0.98]",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
+                    : "bg-secondary/50 text-foreground hover:bg-secondary"
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Desktop Responsive Sidebar */}
       <aside className="fixed top-0 bottom-0 left-0 z-40 hidden w-64 border-r border-border bg-card/50 backdrop-blur-md p-6 md:flex flex-col">

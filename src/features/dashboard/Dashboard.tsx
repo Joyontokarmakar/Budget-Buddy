@@ -166,7 +166,7 @@ export const Dashboard: React.FC = () => {
         
         {/* Total Assets (Span 2) */}
         <Card className="col-span-2 bg-gradient-to-tr from-primary to-violet-600 border-none text-white shadow-xl shadow-primary/10">
-          <CardContent className="p-6 flex flex-col justify-between h-36">
+          <CardContent className="p-4 sm:p-6 flex flex-col justify-between min-h-[144px]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">
                 {t('dashboard.currentMoney')}
@@ -174,7 +174,7 @@ export const Dashboard: React.FC = () => {
               <Wallet className="h-5 w-5 text-white/80" />
             </div>
             <div className="mt-2">
-              <h2 className="text-3xl font-extrabold tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                 €{totalAssets.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
               <span className="text-[10px] text-white/60 font-semibold mt-1">Across all synced assets</span>
@@ -184,7 +184,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Monthly Spending */}
         <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-5 flex flex-col justify-between h-36">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[144px]">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-[9px] font-bold uppercase tracking-wider">
                 {t('dashboard.monthlySpending')}
@@ -192,7 +192,7 @@ export const Dashboard: React.FC = () => {
               <TrendingDown className="h-4.5 w-4.5 text-rose-500" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">
+              <h3 className="text-lg sm:text-xl font-bold">
                 €{monthlySpending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
               <p className="text-[9px] text-muted-foreground mt-0.5">This Month</p>
@@ -202,7 +202,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Remaining Budget */}
         <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-5 flex flex-col justify-between h-36">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[144px]">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-[9px] font-bold uppercase tracking-wider">
                 {t('dashboard.remainingBudget')}
@@ -210,7 +210,7 @@ export const Dashboard: React.FC = () => {
               <Coins className="h-4.5 w-4.5 text-emerald-500" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">
+              <h3 className="text-lg sm:text-xl font-bold">
                 €{remainingBudget.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h3>
               <p className="text-[9px] text-muted-foreground mt-0.5">Of €{monthlyBudget.toFixed(0)} limit</p>
@@ -225,12 +225,12 @@ export const Dashboard: React.FC = () => {
         {/* Income & Savings */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="bg-emerald-500/5 dark:bg-emerald-500/[0.02] border-emerald-500/10">
-            <CardContent className="p-5 flex flex-col justify-between h-28">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[112px]">
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 {t('dashboard.thisMonthIncome')}
               </span>
               <div>
-                <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+                <span className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
                   +€{thisMonthIncome.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <p className="text-[9px] text-muted-foreground mt-0.5">Werkstudent + Support</p>
@@ -239,12 +239,12 @@ export const Dashboard: React.FC = () => {
           </Card>
 
           <Card className={thisMonthSavings >= 0 ? "bg-blue-500/5 dark:bg-blue-500/[0.02] border-blue-500/10" : "bg-rose-500/5 dark:bg-rose-500/[0.02] border-rose-500/10"}>
-            <CardContent className="p-5 flex flex-col justify-between h-28">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[112px]">
               <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 {t('dashboard.thisMonthSavings')}
               </span>
               <div>
-                <span className={`text-lg font-extrabold ${thisMonthSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-500'}`}>
+                <span className={`text-base sm:text-lg font-extrabold ${thisMonthSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-500'}`}>
                   {thisMonthSavings >= 0 ? '+' : ''}€{thisMonthSavings.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <p className="text-[9px] text-muted-foreground mt-0.5">Net Cash Flow</p>
@@ -278,15 +278,15 @@ export const Dashboard: React.FC = () => {
           <CardTitle className="text-sm font-bold">{t('dashboard.quickActions')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-3 gap-3">
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-xs font-semibold" onClick={() => navigate('/expenses')}>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/expenses')}>
             <TrendingDown className="h-5 w-5 text-rose-500" />
             + Expense
           </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-xs font-semibold" onClick={() => navigate('/income')}>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/income')}>
             <TrendingUp className="h-5 w-5 text-emerald-500" />
             + Income
           </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-xs font-semibold" onClick={() => navigate('/accounts')}>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts')}>
             <Plus className="h-5 w-5 text-primary" />
             + Account
           </Button>
