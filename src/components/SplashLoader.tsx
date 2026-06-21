@@ -125,8 +125,38 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
         <div className="relative flex items-center justify-center h-28 w-28">
           <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
           
-          {/* Logo SVG rendering the actual glowing lines on gradient card */}
-          <img src="/budget-buddy.svg" className="h-24 w-24 rounded-3xl shadow-xl z-10 animate-logo-glow" alt="BudgetBuddy Logo" />
+          {/* Logo SVG rendering the actual glowing lines on gradient card, progressive fill */}
+          <div className="relative flex items-center justify-center h-24 w-24 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-3xl p-4 shadow-xl shadow-cyan-500/20 z-10 animate-logo-glow">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-full h-full text-white"
+            >
+              {/* Left B path */}
+              <path
+                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="400"
+                strokeDashoffset={400 - (400 * progress) / 100}
+                style={{ transition: 'stroke-dashoffset 0.2s ease-out' }}
+              />
+              {/* Right B path */}
+              <path
+                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="400"
+                strokeDashoffset={400 - (400 * progress) / 100}
+                style={{ transition: 'stroke-dashoffset 0.2s ease-out' }}
+              />
+            </svg>
+          </div>
         </div>
 
         {/* Branding text */}
