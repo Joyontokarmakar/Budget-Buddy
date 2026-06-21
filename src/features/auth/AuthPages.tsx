@@ -56,7 +56,7 @@ export const SignInPage: React.FC = () => {
               className="w-8 h-8 text-white"
             >
               <path
-                d="M 32 26 L 32 78 M 32 26 C 46 26 46 54 32 54 C 18 54 18 78 32 78"
+                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -64,7 +64,7 @@ export const SignInPage: React.FC = () => {
                 strokeLinejoin="round"
               />
               <path
-                d="M 52 26 L 52 78 M 52 26 C 66 26 66 54 52 54 C 66 54 66 78 52 78"
+                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -217,7 +217,7 @@ export const SignUpPage: React.FC = () => {
               className="w-8 h-8 text-white"
             >
               <path
-                d="M 32 26 L 32 78 M 32 26 C 46 26 46 54 32 54 C 18 54 18 78 32 78"
+                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -225,7 +225,7 @@ export const SignUpPage: React.FC = () => {
                 strokeLinejoin="round"
               />
               <path
-                d="M 52 26 L 52 78 M 52 26 C 66 26 66 54 52 54 C 66 54 66 78 52 78"
+                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -342,7 +342,7 @@ export const ForgotPasswordPage: React.FC = () => {
               className="w-8 h-8 text-white"
             >
               <path
-                d="M 32 26 L 32 78 M 32 26 C 46 26 46 54 32 54 C 18 54 18 78 32 78"
+                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -350,7 +350,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 strokeLinejoin="round"
               />
               <path
-                d="M 52 26 L 52 78 M 52 26 C 66 26 66 54 52 54 C 66 54 66 78 52 78"
+                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -459,7 +459,7 @@ export const ResetPasswordPage: React.FC = () => {
               className="w-8 h-8 text-white"
             >
               <path
-                d="M 32 26 L 32 78 M 32 26 C 46 26 46 54 32 54 C 18 54 18 78 32 78"
+                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -467,7 +467,7 @@ export const ResetPasswordPage: React.FC = () => {
                 strokeLinejoin="round"
               />
               <path
-                d="M 52 26 L 52 78 M 52 26 C 66 26 66 54 52 54 C 66 54 66 78 52 78"
+                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
