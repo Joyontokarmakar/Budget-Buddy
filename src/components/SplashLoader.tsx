@@ -78,44 +78,21 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
         isExiting ? 'opacity-0 scale-98 pointer-events-none' : 'opacity-100 scale-100'
       )}
     >
-      {/* Styles for line-drawing and pulsing glow animations */}
+      {/* Styles for pulsing glow animation */}
       <style>{`
-        @keyframes drawPath {
-          0% {
-            stroke-dashoffset: 400;
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.8;
-          }
-          75% {
-            stroke-dashoffset: 0;
-            filter: drop-shadow(0 0 3px #00f0ff);
-          }
-          100% {
-            stroke-dashoffset: 0;
-            filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 16px rgba(0, 240, 255, 0.6));
-          }
-        }
         @keyframes pulseGlow {
           0%, 100% {
-            filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.7)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.4));
+            filter: drop-shadow(0 4px 6px rgba(34, 211, 238, 0.25)) drop-shadow(0 10px 15px rgba(139, 92, 246, 0.2));
             transform: scale(1);
           }
           50% {
-            filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 24px rgba(0, 240, 255, 0.7));
-            transform: scale(1.02);
+            filter: drop-shadow(0 8px 12px rgba(34, 211, 238, 0.4)) drop-shadow(0 16px 24px rgba(139, 92, 246, 0.35));
+            transform: scale(1.03);
           }
-        }
-        .animate-logo-draw {
-          stroke-dasharray: 400;
-          stroke-dashoffset: 400;
-          animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
         .animate-logo-glow {
           transform-origin: center;
           animation: pulseGlow 2.5s ease-in-out infinite;
-          animation-delay: 1.8s;
         }
       `}</style>
 
@@ -125,36 +102,44 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
         <div className="relative flex items-center justify-center h-28 w-28">
           <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" />
           
-          {/* Logo SVG rendering the actual glowing lines on gradient card, progressive fill */}
-          <div className="relative flex items-center justify-center h-24 w-24 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-3xl p-4 shadow-xl shadow-cyan-500/20 z-10 animate-logo-glow">
+          {/* Logo SVG rendering the actual logo card with progressive vertical fill */}
+          <div className="relative flex items-center justify-center h-28 w-28 z-10 animate-logo-glow">
             <svg
-              viewBox="0 0 100 100"
-              className="w-full h-full text-white"
+              viewBox="262 195 503 503"
+              className="w-full h-full"
+              fill="none"
             >
-              {/* Left B path */}
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray="400"
-                strokeDashoffset={400 - (400 * progress) / 100}
-                style={{ transition: 'stroke-dashoffset 0.2s ease-out' }}
-              />
-              {/* Right B path */}
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray="400"
-                strokeDashoffset={400 - (400 * progress) / 100}
-                style={{ transition: 'stroke-dashoffset 0.2s ease-out' }}
-              />
+              <defs>
+                <linearGradient id="loader-buddy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#22d3ee" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+                <clipPath id="loader-clip">
+                  <rect
+                    x="262"
+                    y={195 + 503 * (1 - progress / 100)}
+                    width="503"
+                    height={503 * (progress / 100)}
+                    style={{ transition: 'y 0.2s ease-out, height 0.2s ease-out' }}
+                  />
+                </clipPath>
+              </defs>
+
+              {/* Silhouette background (low opacity) */}
+              <g opacity="0.15">
+                <g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)" fill="url(#loader-buddy-grad)" stroke="none">
+                  <path d="M3585 8290 c-201 -22 -378 -93 -542 -217 -185 -139 -322 -346 -390 -589 l-28 -99 0 -1595 0 -1595 26 -95 c86 -308 290 -560 564 -697 103 -52 221 -89 326 -103 59 -8 551 -10 1629 -8 l1545 3 99 27 c406 112 703 436 788 858 19 95 19 3112 0 3215 -81 439 -394 770 -831 878 -86 21 -90 21 -1601 23 -833 1 -1546 -2 -1585 -6z m1245 -1263 c30 -9 91 -34 135 -56 387 -192 486 -740 191 -1058 l-61 -65 80 -82 c92 -92 142 -178 176 -301 30 -112 24 -296 -14 -403 -67 -191 -212 -342 -397 -418 -127 -52 -163 -54 -807 -54 l-596 0 6 133 c12 242 71 509 155 705 99 229 242 396 413 482 127 65 167 73 399 80 187 6 223 10 272 29 80 31 157 104 194 183 26 57 29 73 29 168 0 95 -3 110 -28 160 -34 66 -86 122 -146 157 -81 49 -124 53 -562 53 l-406 0 -6 -107 c-4 -58 -7 -241 -7 -406 l0 -300 -63 -66 c-82 -85 -144 -174 -201 -286 l-45 -90 -1 783 0 783 618 -4 c540 -3 624 -5 672 -20z m1335 -1 c121 -36 205 -86 296 -176 70 -69 94 -101 128 -170 61 -127 74 -190 69 -340 -4 -96 -10 -141 -28 -194 -28 -81 -98 -192 -161 -256 l-44 -44 76 -76 c41 -41 89 -100 106 -130 180 -318 87 -727 -209 -923 -100 -65 -192 -103 -284 -117 -38 -5 -264 -10 -502 -10 l-433 0 61 50 c66 56 123 123 172 205 l32 54 320 3 c371 4 391 8 489 98 209 191 162 523 -91 643 l-67 32 -325 4 -325 3 -50 75 c-27 41 -54 80 -59 87 -5 7 8 36 35 79 l43 67 280 0 c316 0 385 8 469 52 94 51 153 135 178 256 16 75 3 166 -32 239 -33 68 -116 146 -186 174 -56 23 -70 24 -385 27 l-326 3 -39 67 c-21 37 -75 105 -120 152 -46 46 -83 86 -83 88 0 2 210 1 468 -1 411 -3 474 -5 527 -21z"/>
+                  <path d="M4346 5669 c-213 -50 -392 -315 -459 -681 l-14 -77 41 -6 c22 -4 221 -5 441 -3 394 4 401 4 460 27 84 34 183 133 215 216 30 77 33 197 7 271 -40 115 -129 205 -242 244 -50 17 -82 20 -234 19 -97 -1 -193 -5 -215 -10z"/>
+                </g>
+              </g>
+
+              {/* Clipped foreground fill (full opacity) */}
+              <g clipPath="url(#loader-clip)">
+                <g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)" fill="url(#loader-buddy-grad)" stroke="none">
+                  <path d="M3585 8290 c-201 -22 -378 -93 -542 -217 -185 -139 -322 -346 -390 -589 l-28 -99 0 -1595 0 -1595 26 -95 c86 -308 290 -560 564 -697 103 -52 221 -89 326 -103 59 -8 551 -10 1629 -8 l1545 3 99 27 c406 112 703 436 788 858 19 95 19 3112 0 3215 -81 439 -394 770 -831 878 -86 21 -90 21 -1601 23 -833 1 -1546 -2 -1585 -6z m1245 -1263 c30 -9 91 -34 135 -56 387 -192 486 -740 191 -1058 l-61 -65 80 -82 c92 -92 142 -178 176 -301 30 -112 24 -296 -14 -403 -67 -191 -212 -342 -397 -418 -127 -52 -163 -54 -807 -54 l-596 0 6 133 c12 242 71 509 155 705 99 229 242 396 413 482 127 65 167 73 399 80 187 6 223 10 272 29 80 31 157 104 194 183 26 57 29 73 29 168 0 95 -3 110 -28 160 -34 66 -86 122 -146 157 -81 49 -124 53 -562 53 l-406 0 -6 -107 c-4 -58 -7 -241 -7 -406 l0 -300 -63 -66 c-82 -85 -144 -174 -201 -286 l-45 -90 -1 783 0 783 618 -4 c540 -3 624 -5 672 -20z m1335 -1 c121 -36 205 -86 296 -176 70 -69 94 -101 128 -170 61 -127 74 -190 69 -340 -4 -96 -10 -141 -28 -194 -28 -81 -98 -192 -161 -256 l-44 -44 76 -76 c41 -41 89 -100 106 -130 180 -318 87 -727 -209 -923 -100 -65 -192 -103 -284 -117 -38 -5 -264 -10 -502 -10 l-433 0 61 50 c66 56 123 123 172 205 l32 54 320 3 c371 4 391 8 489 98 209 191 162 523 -91 643 l-67 32 -325 4 -325 3 -50 75 c-27 41 -54 80 -59 87 -5 7 8 36 35 79 l43 67 280 0 c316 0 385 8 469 52 94 51 153 135 178 256 16 75 3 166 -32 239 -33 68 -116 146 -186 174 -56 23 -70 24 -385 27 l-326 3 -39 67 c-21 37 -75 105 -120 152 -46 46 -83 86 -83 88 0 2 210 1 468 -1 411 -3 474 -5 527 -21z"/>
+                  <path d="M4346 5669 c-213 -50 -392 -315 -459 -681 l-14 -77 41 -6 c22 -4 221 -5 441 -3 394 4 401 4 460 27 84 34 183 133 215 216 30 77 33 197 7 271 -40 115 -129 205 -242 244 -50 17 -82 20 -234 19 -97 -1 -193 -5 -215 -10z"/>
+                </g>
+              </g>
             </svg>
           </div>
         </div>
