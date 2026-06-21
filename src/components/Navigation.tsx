@@ -138,9 +138,9 @@ export const Navigation: React.FC = () => {
         </div>
 
         {/* Mobile Drawer Footer Credit */}
-        <div className="mt-6 pt-4 border-t border-border/50 text-[10px] text-muted-foreground/60 font-medium text-center">
+        <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center">
           <div>BudgetBuddy Student v1.0.0</div>
-          <div>© {new Date().getFullYear()} <NavLink to="/developer" onClick={() => setIsMoreOpen(false)} className="hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
+          <div>© {new Date().getFullYear()} <NavLink to="/developer" onClick={() => setIsMoreOpen(false)} className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
         </div>
       </div>
 
@@ -180,17 +180,9 @@ export const Navigation: React.FC = () => {
         </div>
 
         {/* Footer Credit */}
-        <div className="pt-4 border-t border-border/50 text-[10px] text-muted-foreground/60 font-medium text-center space-y-1">
+        <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center space-y-1">
           <div>BudgetBuddy Student v1.0.0</div>
-          <div>© {new Date().getFullYear()} <NavLink to="/developer" className="hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
-          <a
-            href="https://joyontokarmakar.netlify.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-primary transition-colors underline"
-          >
-            joyontokarmakar.netlify.app
-          </a>
+          <div>© {new Date().getFullYear()} <NavLink to="/developer" className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
         </div>
       </aside>
     </>
