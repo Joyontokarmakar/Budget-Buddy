@@ -172,8 +172,8 @@ export const Developer: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="relative pl-5 border-l-2 border-primary/20 space-y-1">
                 <span className="absolute left-[-5px] top-[5px] w-2 h-2 rounded-full bg-primary" />
-                <h3 className="font-bold text-foreground text-sm">Master of Science (MSc) in Automotive Software Engineering</h3>
-                <p className="text-xs text-primary font-semibold">Chemnitz University of Technology (Technische Universität Chemnitz)</p>
+                <h3 className="font-bold text-foreground text-sm">MSc in Automotive Software Engineering</h3>
+                <p className="text-xs text-primary font-semibold">Technische Universität Chemnitz</p>
                 <p className="text-xs text-muted-foreground mt-1">Specializing in AI/LLM integrations, automotive system design, and intelligent software development.</p>
               </div>
             </CardContent>
