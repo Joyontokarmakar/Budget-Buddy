@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Code2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const Navigation: React.FC = () => {
@@ -17,6 +17,7 @@ export const Navigation: React.FC = () => {
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
     { to: '/reports', label: t('nav.reports'), icon: FileText },
     { to: '/assets', label: t('nav.assets'), icon: Gem },
+    { to: '/developer', label: t('nav.developer'), icon: Code2 },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
@@ -32,6 +33,7 @@ export const Navigation: React.FC = () => {
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
     { to: '/assets', label: t('nav.assets'), icon: Gem },
+    { to: '/developer', label: t('nav.developer'), icon: Code2 },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 

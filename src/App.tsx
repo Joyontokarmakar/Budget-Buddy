@@ -14,6 +14,7 @@ import { Analytics } from './features/analytics/Analytics';
 import { Reports } from './features/reports/Reports';
 import { Assets } from './features/assets/Assets';
 import { Settings } from './features/settings/Settings';
+import { Developer } from './features/developer/Developer';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,7 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="assets" element={<Assets />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="developer" element={<Developer />} />
             </Route>
 
             {/* Fallback Catch-all Redirect */}

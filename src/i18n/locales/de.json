@@ -7,7 +7,8 @@
     "analytics": "Analysen",
     "settings": "Einstellungen",
     "reports": "Berichte",
-    "assets": "Anlagevermögen"
+    "assets": "Anlagevermögen",
+    "developer": "Entwicklerinfo"
   },
   "auth": {
     "signIn": "Anmelden",
