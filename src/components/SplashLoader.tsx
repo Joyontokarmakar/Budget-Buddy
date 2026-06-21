@@ -159,15 +159,6 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
           </div>
         </div>
 
-        {/* Branding text */}
-        <div className="space-y-1">
-          <h1 className="text-xl font-black tracking-tight text-white/90">
-            BudgetBuddy
-          </h1>
-          <p className="text-[9px] font-bold text-cyan-400/80 uppercase tracking-widest leading-none">
-            Student Financial Hub
-          </p>
-        </div>
 
         {/* Linear progress bar - Clean & Minimalist */}
         <div className="w-44 space-y-1.5 pt-2">
