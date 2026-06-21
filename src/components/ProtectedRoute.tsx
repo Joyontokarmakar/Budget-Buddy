@@ -1,20 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Spinner } from './ui';
+import { SplashLoader } from './SplashLoader';
 
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, initialized, initialize } = useAuthStore();
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  if (!initialized) {
+  if (showSplash) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner />
-      </div>
+      <SplashLoader
+        isFinished={initialized}
+        onComplete={() => setShowSplash(false)}
+      />
     );
   }
 
