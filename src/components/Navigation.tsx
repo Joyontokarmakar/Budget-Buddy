@@ -142,29 +142,7 @@ export const Navigation: React.FC = () => {
       <aside className="fixed top-0 bottom-0 left-0 z-40 hidden w-64 border-r border-border bg-card/50 backdrop-blur-md p-6 md:flex flex-col">
         {/* App Branding */}
         <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-md shadow-primary/20 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-6.5 h-6.5 text-white"
-            >
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <img src="/budget-buddy.svg" className="h-9 w-9 rounded-xl shadow-md shrink-0" alt="BudgetBuddy Logo" />
           <div className="flex flex-col">
             <span className="font-bold text-sm tracking-tight">BudgetBuddy</span>
             <span className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest leading-none">Student</span>

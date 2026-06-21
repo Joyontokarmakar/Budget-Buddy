@@ -50,29 +50,7 @@ export const SignInPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-8 h-8 text-white"
-            >
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="BudgetBuddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">BudgetBuddy Student</CardTitle>
           <CardDescription>{t('auth.signIn')}</CardDescription>
         </CardHeader>
@@ -211,29 +189,7 @@ export const SignUpPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-8 h-8 text-white"
-            >
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="BudgetBuddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">BudgetBuddy Student</CardTitle>
           <CardDescription>{t('auth.signUp')}</CardDescription>
         </CardHeader>
@@ -336,29 +292,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-8 h-8 text-white"
-            >
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="BudgetBuddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
           <CardDescription>We'll send you an email instructions link</CardDescription>
         </CardHeader>
@@ -453,29 +387,7 @@ export const ResetPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-8 h-8 text-white"
-            >
-              <path
-                d="M 35 26 L 35 78 M 35 26 C 49 26 57 34 57 42 C 57 50 49 52 35 52 M 35 52 C 21 52 21 78 35 78"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M 57 26 L 57 52 M 57 26 C 71 26 79 34 79 42 C 79 50 71 52 57 52 M 57 52 C 57 70 49 78 35 78 L 57 78 C 71 78 79 76 79 65 C 79 54 71 52 57 52"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="BudgetBuddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">Set New Password</CardTitle>
           <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
