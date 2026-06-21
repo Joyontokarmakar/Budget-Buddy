@@ -34,85 +34,93 @@ export const Developer: React.FC = () => {
       </div>
 
       {/* Main Developer Info Card */}
-      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border border-border/60 p-6 flex flex-col items-center shadow-xl">
+      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border border-border/60 p-6 flex flex-col items-center shadow-xl relative overflow-hidden">
         
-        {/* Avatar Image with pulse backdrop */}
-        <div className="relative mb-5 group">
-          <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
-          <img
-            src="/developer.jpg"
-            alt="Joyonto Karmakar"
-            className="relative h-28 w-28 rounded-full object-cover border-4 border-card shadow-lg transition-transform duration-300 group-hover:scale-[1.03]"
-          />
-        </div>
+        {/* Watermark Logo Background */}
+        <img
+          src="/budget-buddy.svg"
+          alt=""
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 opacity-[0.06] pointer-events-none z-0 select-none transform -rotate-12"
+        />
 
-        {/* Name and Designation */}
-        <h2 className="text-lg font-bold tracking-tight">Joyonto Karmakar</h2>
-        <p className="text-xs font-semibold text-primary mt-1 uppercase tracking-wider">Full-Stack Web Developer</p>
-        
-        {/* Meta Stats */}
-        <div className="flex gap-4 mt-3 text-[10px] text-muted-foreground font-semibold">
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> Chemnitz, Germany
-          </span>
-          <span className="flex items-center gap-1">
-            <Compass className="h-3.5 w-3.5 text-primary shrink-0" /> Bangladesh
-          </span>
-        </div>
+        <div className="relative z-10 flex flex-col items-center w-full">
+          {/* Avatar Image with pulse backdrop */}
+          <div className="relative mb-5 group">
+            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
+            <img
+              src="/developer.jpg"
+              alt="Joyonto Karmakar"
+              className="relative h-28 w-28 rounded-full object-cover border-4 border-card shadow-lg transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+          </div>
 
-        <hr className="w-full border-border/40 my-4.5" />
+          {/* Name and Designation */}
+          <h2 className="text-lg font-bold tracking-tight">Joyonto Karmakar</h2>
+          <p className="text-xs font-semibold text-primary mt-1 uppercase tracking-wider">Full-Stack Web Developer</p>
+          
+          {/* Meta Stats */}
+          <div className="flex gap-4 mt-3 text-[10px] text-muted-foreground font-semibold">
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> Chemnitz, Germany
+            </span>
+            <span className="flex items-center gap-1">
+              <Compass className="h-3.5 w-3.5 text-primary shrink-0" /> Bangladesh
+            </span>
+          </div>
 
-        {/* Short Bio */}
-        <div className="text-center text-xs leading-relaxed text-muted-foreground/90 space-y-2.5 px-2">
-          <p>
-            Full-Stack Web Developer with 5+ years of experience building high-performance web applications. Specializing in JavaScript, TypeScript, Vue.js, and React.js.
-          </p>
-          <p>
-            Currently pursuing an MSc in Automotive Software Engineering at Technische Universität Chemnitz, Germany.
-          </p>
-        </div>
+          <hr className="w-full border-border/40 my-4.5" />
 
-        {/* Call to action (Portfolio website) */}
-        <a
-          href="https://joyontokarmakar.netlify.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full mt-6 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all active:scale-[0.98] group"
-        >
-          <Globe className="h-4 w-4" />
-          Visit Portfolio & CV
-          <ExternalLink className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </a>
+          {/* Short Bio */}
+          <div className="text-center text-xs leading-relaxed text-muted-foreground/90 space-y-2.5 px-2">
+            <p>
+              Full-Stack Web Developer with 5+ years of experience building high-performance web applications. Specializing in JavaScript, TypeScript, Vue.js, and React.js.
+            </p>
+            <p>
+              Currently pursuing an MSc in Automotive Software Engineering at Technische Universität Chemnitz, Germany.
+            </p>
+          </div>
 
-        {/* Secondary Compact Quick Contact Links */}
-        <div className="flex items-center justify-center gap-2 mt-4.5 w-full">
+          {/* Call to action (Portfolio website) */}
           <a
-            href="mailto:joyonto.karmakar.cse@gmail.com"
-            title="Email Joyonto"
-            className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
-          >
-            <Mail className="h-4 w-4" />
-          </a>
-
-          <a
-            href="https://github.com/Joyontokarmakar"
+            href="https://joyontokarmakar.netlify.app"
             target="_blank"
             rel="noopener noreferrer"
-            title="GitHub Profile"
-            className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
+            className="w-full mt-6 py-2.5 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/95 transition-all active:scale-[0.98] group"
           >
-            <GithubIcon className="h-4 w-4" />
+            <Globe className="h-4 w-4" />
+            Visit Portfolio & CV
+            <ExternalLink className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
 
-          <a
-            href="tel:+491631739855"
-            title="Call Phone"
-            className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
-          >
-            <Phone className="h-4 w-4" />
-          </a>
+          {/* Secondary Compact Quick Contact Links */}
+          <div className="flex items-center justify-center gap-2 mt-4.5 w-full">
+            <a
+              href="mailto:joyonto.karmakar.cse@gmail.com"
+              title="Email Joyonto"
+              className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Mail className="h-4 w-4" />
+            </a>
+
+            <a
+              href="https://github.com/Joyontokarmakar"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="GitHub Profile"
+              className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <GithubIcon className="h-4 w-4" />
+            </a>
+
+            <a
+              href="tel:+491631739855"
+              title="Call Phone"
+              className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Phone className="h-4 w-4" />
+            </a>
+          </div>
         </div>
-
       </Card>
     </div>
   );
