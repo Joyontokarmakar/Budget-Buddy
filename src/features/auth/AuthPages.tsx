@@ -50,8 +50,28 @@ export const SignInPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-primary/20 mb-2">
-            BB
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 text-white"
+            >
+              <path
+                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">BudgetBuddy Student</CardTitle>
           <CardDescription>{t('auth.signIn')}</CardDescription>
@@ -191,8 +211,28 @@ export const SignUpPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-primary/20 mb-2">
-            BB
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 text-white"
+            >
+              <path
+                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">BudgetBuddy Student</CardTitle>
           <CardDescription>{t('auth.signUp')}</CardDescription>
@@ -296,8 +336,28 @@ export const ForgotPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-primary/20 mb-2">
-            BB
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 text-white"
+            >
+              <path
+                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
           <CardDescription>We'll send you an email instructions link</CardDescription>
@@ -393,8 +453,28 @@ export const ResetPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-primary/20 mb-2">
-            BB
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-lg shadow-primary/20 mb-2 shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 text-white"
+            >
+              <path
+                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Set New Password</CardTitle>
           <CardDescription>Enter your new password below</CardDescription>

@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Account, ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner } from '../../components/ui';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, Receipt, AlertTriangle, CheckCircle, Flame, Coins } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
 
 export const Dashboard: React.FC = () => {
@@ -135,7 +135,29 @@ export const Dashboard: React.FC = () => {
         <Card className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-none shadow-lg">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Receipt className="h-5 w-5 animate-bounce" />
+              <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0 animate-bounce">
+                <svg
+                  viewBox="0 0 100 100"
+                  className="w-5 h-5 text-white"
+                >
+                  <path
+                    d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="6.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="6.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
               <div>
                 <h4 className="text-xs font-bold text-white">Install BudgetBuddy</h4>
                 <p className="text-[10px] text-white/80">Add to your home screen for quick offline access!</p>

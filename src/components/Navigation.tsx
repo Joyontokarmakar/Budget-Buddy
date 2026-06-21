@@ -142,8 +142,28 @@ export const Navigation: React.FC = () => {
       <aside className="fixed top-0 bottom-0 left-0 z-40 hidden w-64 border-r border-border bg-card/50 backdrop-blur-md p-6 md:flex flex-col">
         {/* App Branding */}
         <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white font-extrabold shadow-md shadow-primary/20">
-            BB
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center text-white shadow-md shadow-primary/20 shrink-0">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-6.5 h-6.5 text-white"
+            >
+              <path
+                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-sm tracking-tight">BudgetBuddy</span>
