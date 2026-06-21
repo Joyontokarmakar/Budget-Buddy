@@ -148,7 +148,7 @@ export const Navigation: React.FC = () => {
               className="w-6.5 h-6.5 text-white"
             >
               <path
-                d="M 32 26 L 32 54 C 18 54 18 78 32 78 C 46 78 46 54 32 54 M 32 26 C 46 26 46 54 32 54"
+                d="M 32 26 L 32 78 M 32 26 C 46 26 46 54 32 54 C 18 54 18 78 32 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
@@ -156,7 +156,7 @@ export const Navigation: React.FC = () => {
                 strokeLinejoin="round"
               />
               <path
-                d="M 52 26 L 52 78 C 66 78 66 54 52 54 M 52 54 C 66 54 66 26 52 26"
+                d="M 52 26 L 52 78 M 52 26 C 66 26 66 54 52 54 C 66 54 66 78 52 78"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
