@@ -78,7 +78,7 @@ export const Navigation: React.FC = () => {
             )}
           >
             <Menu className="h-5 w-5 transition-transform duration-200 active:scale-95" />
-            <span className="text-[10px] font-semibold mt-1 tracking-tight truncate">More</span>
+            <span className="text-[10px] font-semibold mt-1 tracking-tight truncate">{t('common.more')}</span>
             {isSecondaryActive && (
               <span className="absolute top-0 w-1.5 h-1.5 rounded-full bg-primary -translate-y-1" />
             )}
@@ -103,7 +103,7 @@ export const Navigation: React.FC = () => {
         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5 cursor-pointer" onClick={() => setIsMoreOpen(false)} />
 
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">More Features</h3>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">{t('common.moreFeatures')}</h3>
           <button
             type="button"
             onClick={() => setIsMoreOpen(false)}

@@ -6,7 +6,7 @@
     "accounts": "Konten",
     "analytics": "Analysen",
     "settings": "Einstellungen",
-    "reports": "Detaillierte Berichte",
+    "reports": "Berichte",
     "assets": "Anlagevermögen"
   },
   "auth": {
@@ -141,6 +141,8 @@
     "delete": "Löschen",
     "success": "Erfolgreich",
     "error": "Fehler",
-    "loading": "Lädt..."
+    "loading": "Lädt...",
+    "more": "Mehr",
+    "moreFeatures": "Weitere Funktionen"
   }
 }

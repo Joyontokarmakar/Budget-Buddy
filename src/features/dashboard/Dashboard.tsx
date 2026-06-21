@@ -130,7 +130,7 @@ export const Dashboard: React.FC = () => {
   const status = getBudgetStatus();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {isInstallable && (
         <Card className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-none shadow-lg">
           <CardContent className="p-4 flex items-center justify-between">
@@ -162,11 +162,11 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Main KPI Grid - Revolut Style */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Assets (Span 2) */}
         <Card className="col-span-2 bg-gradient-to-tr from-primary to-violet-600 border-none text-white shadow-xl shadow-primary/10">
-          <CardContent className="p-4 sm:p-6 flex flex-col justify-between min-h-[144px]">
+          <CardContent className="p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">
                 {t('dashboard.currentMoney')}
@@ -184,7 +184,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Monthly Spending */}
         <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[144px]">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-[9px] font-bold uppercase tracking-wider">
                 {t('dashboard.monthlySpending')}
@@ -202,7 +202,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Remaining Budget */}
         <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[144px]">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-[9px] font-bold uppercase tracking-wider">
                 {t('dashboard.remainingBudget')}
@@ -220,12 +220,12 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Secondary Financial Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         
         {/* Income & Savings */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <Card className="bg-emerald-500/5 dark:bg-emerald-500/[0.02] border-emerald-500/10">
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[112px]">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                 {t('dashboard.thisMonthIncome')}
               </span>
@@ -239,7 +239,7 @@ export const Dashboard: React.FC = () => {
           </Card>
 
           <Card className={thisMonthSavings >= 0 ? "bg-blue-500/5 dark:bg-blue-500/[0.02] border-blue-500/10" : "bg-rose-500/5 dark:bg-rose-500/[0.02] border-rose-500/10"}>
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[112px]">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
               <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                 {t('dashboard.thisMonthSavings')}
               </span>

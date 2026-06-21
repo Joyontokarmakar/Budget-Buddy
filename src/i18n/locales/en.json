@@ -6,7 +6,7 @@
     "accounts": "Accounts",
     "analytics": "Analytics",
     "settings": "Settings",
-    "reports": "Detailed Reports",
+    "reports": "Reports",
     "assets": "Permanent Assets"
   },
   "auth": {
@@ -141,6 +141,8 @@
     "delete": "Delete",
     "success": "Success",
     "error": "Error",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "more": "More",
+    "moreFeatures": "More Features"
   }
 }
