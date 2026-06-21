@@ -29,6 +29,7 @@ export const Expenses: React.FC = () => {
   const [itemName, setItemName] = useState('');
   const [itemAmount, setItemAmount] = useState('');
   const [itemCategoryId, setItemCategoryId] = useState('');
+  const [otherPurpose, setOtherPurpose] = useState('');
   
   // Store autocomplete state
   const [storeQuery, setStoreQuery] = useState('');
@@ -199,12 +200,16 @@ export const Expenses: React.FC = () => {
   };
 
   const handleAddItem = () => {
-    if (!itemName.trim() || !itemAmount.trim() || !itemCategoryId) return;
+    const selectedCat = categories.find(c => c.id === itemCategoryId);
+    const isOther = selectedCat?.name.toLowerCase() === 'other';
+    const nameToUse = isOther ? otherPurpose : itemName;
+
+    if (!nameToUse.trim() || !itemAmount.trim() || !itemCategoryId) return;
     const val = parseFloat(itemAmount);
     if (isNaN(val) || val <= 0) return;
 
     const newItem = {
-      name: itemName.trim(),
+      name: nameToUse.trim(),
       amount: val,
       category_id: itemCategoryId,
     };
@@ -217,6 +222,7 @@ export const Expenses: React.FC = () => {
 
     setItemName('');
     setItemAmount('');
+    setOtherPurpose('');
   };
 
   const handleRemoveItem = (index: number) => {
@@ -262,11 +268,15 @@ export const Expenses: React.FC = () => {
     let activeAmount = amount;
 
     // Auto-add current un-added item in inputs if present
-    if (itemName.trim() && itemAmount.trim()) {
+    const selectedCat = categories.find(c => c.id === itemCategoryId);
+    const isOther = selectedCat?.name.toLowerCase() === 'other';
+    const currentItemNameToUse = isOther ? otherPurpose : itemName;
+
+    if (currentItemNameToUse.trim() && itemAmount.trim()) {
       const val = parseFloat(itemAmount);
       if (!isNaN(val) && val > 0) {
         const newItem = {
-          name: itemName.trim(),
+          name: currentItemNameToUse.trim(),
           amount: val,
           category_id: itemCategoryId,
         };
@@ -277,6 +287,7 @@ export const Expenses: React.FC = () => {
         // Reset item input states
         setItemName('');
         setItemAmount('');
+        setOtherPurpose('');
       }
     }
 
@@ -479,13 +490,23 @@ export const Expenses: React.FC = () => {
                   {/* Add New Item Inputs */}
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Item Name (e.g. Bread)"
-                        value={itemName}
-                        onChange={(e) => setItemName(e.target.value)}
-                        className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                      />
+                      {categories.find(c => c.id === itemCategoryId)?.name.toLowerCase() === 'other' ? (
+                        <input
+                          type="text"
+                          placeholder="Specify Purpose (e.g. Taxi fare)"
+                          value={otherPurpose}
+                          onChange={(e) => setOtherPurpose(e.target.value)}
+                          className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Item Name (e.g. Bread)"
+                          value={itemName}
+                          onChange={(e) => setItemName(e.target.value)}
+                          className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
+                      )}
                       <input
                         type="number"
                         step="0.01"
@@ -518,7 +539,13 @@ export const Expenses: React.FC = () => {
                         variant="secondary"
                         size="sm"
                         className="h-9 text-[10px] font-extrabold px-3.5 py-1 gap-1 shrink-0"
-                        disabled={!itemName.trim() || !itemAmount.trim() || !itemCategoryId}
+                        disabled={
+                          itemAmount.trim() === '' ||
+                          itemCategoryId === '' ||
+                          (categories.find(c => c.id === itemCategoryId)?.name.toLowerCase() === 'other'
+                            ? otherPurpose.trim() === ''
+                            : itemName.trim() === '')
+                        }
                       >
                         <Plus className="h-3.5 w-3.5" /> Add
                       </Button>
