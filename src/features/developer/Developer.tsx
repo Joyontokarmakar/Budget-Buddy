@@ -19,6 +19,23 @@ const GithubIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+const LinkedinIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
 export const Developer: React.FC = () => {
   const { t } = useTranslation();
 
@@ -110,6 +127,16 @@ export const Developer: React.FC = () => {
               className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
             >
               <GithubIcon className="h-4 w-4" />
+            </a>
+
+            <a
+              href="https://www.linkedin.com/in/joyontokarmakar"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="LinkedIn Profile"
+              className="p-2.5 rounded-xl bg-secondary/50 border border-border/40 hover:bg-secondary hover:border-border/80 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <LinkedinIcon className="h-4 w-4" />
             </a>
 
             <a
