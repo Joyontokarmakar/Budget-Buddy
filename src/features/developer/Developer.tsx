@@ -109,6 +109,20 @@ export const Developer: React.FC = () => {
             <ExternalLink className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
 
+          {/* Buy Me A Coffee Button */}
+          <a
+            href="https://www.buymeacoffee.com/joyontokarmakar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block transition-transform duration-200 active:scale-[0.98] hover:scale-[1.02] focus:outline-none"
+          >
+            <img
+              src="/bmc-button.png"
+              alt="Buy Me A Coffee"
+              className="h-10 w-auto object-contain shadow-md rounded-xl"
+            />
+          </a>
+
           {/* Secondary Compact Quick Contact Links */}
           <div className="flex items-center justify-center gap-2 mt-4.5 w-full">
             <a
