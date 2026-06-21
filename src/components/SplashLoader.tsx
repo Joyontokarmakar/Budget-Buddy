@@ -8,7 +8,6 @@ interface SplashLoaderProps {
 
 export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComplete }) => {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('Checking credentials...');
   const [isExiting, setIsExiting] = useState(false);
 
   // 1. Progress simulation up to 90%
@@ -26,17 +25,6 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
           return 90; // Hold at 90% until backend auth resolves
         }
 
-        // Dynamic status updates based on simulated progress
-        if (prev < 25) {
-          setStatusText('Connecting to database...');
-        } else if (prev < 50) {
-          setStatusText('Authenticating session...');
-        } else if (prev < 75) {
-          setStatusText('Syncing accounts & assets...');
-        } else {
-          setStatusText('Applying preferences...');
-        }
-
         // Random organic increment between 2% and 8%
         const increment = Math.floor(Math.random() * 7) + 2;
         return Math.min(prev + increment, 90);
@@ -49,8 +37,6 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
   // 2. Accelerate progress to 100% when backend auth initialization completes
   useEffect(() => {
     if (isFinished) {
-      setStatusText('Sync complete! Launching...');
-      
       const fastTimer = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 100) {
@@ -141,23 +127,6 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({ isFinished, onComple
                 </g>
               </g>
             </svg>
-          </div>
-        </div>
-
-
-        {/* Linear progress bar - Clean & Minimalist */}
-        <div className="w-44 space-y-1.5 pt-2">
-          <div className="h-0.5 w-full bg-slate-900/60 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-cyan-400 transition-all duration-200 shadow-[0_0_6px_#22d3ee]"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold px-0.5">
-            <span className="truncate max-w-[110px]">
-              {statusText}
-            </span>
-            <span className="tabular-nums text-cyan-400/70">{progress}%</span>
           </div>
         </div>
 
