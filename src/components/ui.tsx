@@ -1,6 +1,6 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import { cn } from '../utils/cn';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 // =========================================================================
 // BUTTON COMPONENT
@@ -55,22 +55,35 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', label, error, icon, ...props }, ref) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const isPasswordType = type === 'password';
+
     return (
       <div className="w-full flex flex-col gap-1.5">
         {label && <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>}
         <div className="relative flex items-center">
           {icon && <div className="absolute left-3.5 text-muted-foreground pointer-events-none">{icon}</div>}
           <input
-            type={type}
+            type={isPasswordType && showPassword ? 'text' : type}
             ref={ref}
             className={cn(
               'flex h-11 w-full rounded-xl border border-border bg-card px-4 py-2 text-sm transition-all duration-200 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50',
               icon ? 'pl-10' : '',
+              isPasswordType ? 'pr-11' : '',
               error ? 'border-destructive focus:ring-destructive/20 focus:border-destructive' : '',
               className
             )}
             {...props}
           />
+          {isPasswordType && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-muted/50 transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          )}
         </div>
         {error && <span className="text-[11px] font-medium text-destructive ml-1">{error}</span>}
       </div>
