@@ -47,7 +47,7 @@ export const Developer: React.FC = () => {
           <Code2 className="h-5.5 w-5.5 text-primary" />
           {t('nav.developer')}
         </h1>
-        <p className="text-[11px] text-muted-foreground mt-1">Creator of BudgetBuddy Student</p>
+        <p className="text-[11px] text-muted-foreground mt-1">Creator of Your <span className="font-bold text-primary">BudgetBuddy</span></p>
       </div>
 
       {/* Main Developer Info Card */}
