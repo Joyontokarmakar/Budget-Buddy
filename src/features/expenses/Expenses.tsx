@@ -323,8 +323,22 @@ export const Expenses: React.FC = () => {
       if (selectedStore) {
         storeId = selectedStore.id;
       } else if (storeQuery.trim()) {
-        const store = await db.createStore(profile.id, storeQuery.trim());
-        storeId = store.id;
+        const queryText = storeQuery.trim().toLowerCase();
+        // 1. Exact case-insensitive match
+        const exactMatch = stores.find(s => s.name.toLowerCase() === queryText);
+        if (exactMatch) {
+          storeId = exactMatch.id;
+        } else {
+          // 2. Prefix match (e.g. "net" matches "Netto")
+          const prefixMatch = stores.find(s => s.name.toLowerCase().startsWith(queryText));
+          if (prefixMatch) {
+            storeId = prefixMatch.id;
+          } else {
+            // 3. Fallback to creating a new custom store
+            const store = await db.createStore(profile.id, storeQuery.trim());
+            storeId = store.id;
+          }
+        }
       }
 
       // Determine dominant category from items
@@ -584,9 +598,14 @@ export const Expenses: React.FC = () => {
                         if (e.key === 'Escape') {
                           setShowStoreDropdown(false);
                         } else if (e.key === 'Enter') {
-                          const exactMatch = stores.find(s => s.name.toLowerCase() === storeQuery.toLowerCase());
-                          if (exactMatch) {
-                            handleStoreSelect(exactMatch);
+                          if (showStoreDropdown && filteredStores.length > 0) {
+                            e.preventDefault();
+                            handleStoreSelect(filteredStores[0]);
+                          } else {
+                            const exactMatch = stores.find(s => s.name.toLowerCase() === storeQuery.toLowerCase());
+                            if (exactMatch) {
+                              handleStoreSelect(exactMatch);
+                            }
                           }
                           setShowStoreDropdown(false);
                         }
