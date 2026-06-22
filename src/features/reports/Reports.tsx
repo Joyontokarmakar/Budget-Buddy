@@ -160,6 +160,10 @@ export const Reports: React.FC = () => {
           else if (catName === 'Education') code = 'E';
           else if (catName === 'Shopping') code = 'S';
           else if (catName === 'Restaurant') code = 'R';
+          else if (catName === 'Cosmetics') code = 'C';
+          else if (catName === 'Medicine') code = 'Med';
+          else if (catName === 'Book') code = 'B';
+          else if (catName === 'Electronic') code = 'EL';
 
           itemsList.push({
             date: dateStr,

@@ -35,6 +35,7 @@ export const Expenses: React.FC = () => {
   const [storeQuery, setStoreQuery] = useState('');
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+  const storeDropdownRef = useRef<HTMLDivElement>(null);
 
   // Custom Category State
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -109,6 +110,18 @@ export const Expenses: React.FC = () => {
       setPaymentAccountId(accounts[0].id);
     }
   }, [accounts]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
+        setShowStoreDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleStoreSelect = (store: Store) => {
     setSelectedStore(store);
@@ -370,9 +383,9 @@ export const Expenses: React.FC = () => {
   };
 
   // Filter stores for autocomplete
-  const filteredStores = storeQuery.trim() === ''
-    ? []
-    : stores.filter(s => s.name.toLowerCase().includes(storeQuery.toLowerCase())).slice(0, 5);
+  const filteredStores = stores
+    .filter(s => s.name.toLowerCase().includes(storeQuery.trim().toLowerCase()))
+    .slice(0, 25);
 
   const filteredSummaryExpenses: ExpenseWithDetails[] = expenses.filter(e => {
     if (!e.date) return false;
@@ -554,7 +567,7 @@ export const Expenses: React.FC = () => {
                 </div>
 
                 {/* 2. Store Autocomplete Search */}
-                <div className="relative flex flex-col gap-1.5 w-full">
+                <div ref={storeDropdownRef} className="relative flex flex-col gap-1.5 w-full">
                   <label className="text-xs font-semibold text-muted-foreground ml-1">{t('expenses.store')}</label>
                   <div className="relative flex items-center">
                     <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -567,23 +580,40 @@ export const Expenses: React.FC = () => {
                         setShowStoreDropdown(true);
                       }}
                       onFocus={() => setShowStoreDropdown(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setShowStoreDropdown(false);
+                        } else if (e.key === 'Enter') {
+                          const exactMatch = stores.find(s => s.name.toLowerCase() === storeQuery.toLowerCase());
+                          if (exactMatch) {
+                            handleStoreSelect(exactMatch);
+                          }
+                          setShowStoreDropdown(false);
+                        }
+                      }}
                       placeholder="Search store (e.g., Lidl, REWE)..."
                       className="flex h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
 
-                  {showStoreDropdown && storeQuery.trim() !== '' && (
+                  {showStoreDropdown && (
                     <div className="absolute top-[68px] left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg max-h-52 overflow-y-auto">
-                      {filteredStores.map(store => (
-                        <div
-                          key={store.id}
-                          onClick={() => handleStoreSelect(store)}
-                          className="px-4 py-2.5 hover:bg-muted text-sm cursor-pointer font-medium transition-colors"
-                        >
-                          {store.name}
+                      {filteredStores.length > 0 ? (
+                        filteredStores.map(store => (
+                          <div
+                            key={store.id}
+                            onClick={() => handleStoreSelect(store)}
+                            className="px-4 py-2.5 hover:bg-muted text-sm cursor-pointer font-medium transition-colors"
+                          >
+                            {store.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-xs text-muted-foreground">
+                          No matching stores found.
                         </div>
-                      ))}
-                      {!filteredStores.some(s => s.name.toLowerCase() === storeQuery.toLowerCase()) && (
+                      )}
+                      {storeQuery.trim() !== '' && !filteredStores.some(s => s.name.toLowerCase() === storeQuery.toLowerCase()) && (
                         <div
                           onClick={handleCreateCustomStore}
                           className="px-4 py-2.5 hover:bg-muted text-xs cursor-pointer text-primary font-bold border-t border-border/50 flex items-center justify-between"

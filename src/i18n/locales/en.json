@@ -133,6 +133,10 @@
     "Education": "Education",
     "Shopping": "Shopping",
     "Restaurant": "Restaurant",
+    "Cosmetics": "Cosmetics",
+    "Medicine": "Medicine",
+    "Book": "Book",
+    "Electronic": "Electronic",
     "Other": "Other"
   },
   "common": {

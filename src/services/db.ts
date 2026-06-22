@@ -15,7 +15,11 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c7', user_id: null, name: 'Education', icon: 'BookOpen', color: '#8b5cf6', created_at: new Date().toISOString() },
   { id: 'c8', user_id: null, name: 'Shopping', icon: 'Tag', color: '#ec4899', created_at: new Date().toISOString() },
   { id: 'c9', user_id: null, name: 'Restaurant', icon: 'Coffee', color: '#f43f5e', created_at: new Date().toISOString() },
-  { id: 'c10', user_id: null, name: 'Other', icon: 'HelpCircle', color: '#6b7280', created_at: new Date().toISOString() },
+  { id: 'c10', user_id: null, name: 'Cosmetics', icon: 'Sparkles', color: '#d946ef', created_at: new Date().toISOString() },
+  { id: 'c11', user_id: null, name: 'Medicine', icon: 'Activity', color: '#14b8a6', created_at: new Date().toISOString() },
+  { id: 'c12', user_id: null, name: 'Book', icon: 'BookOpen', color: '#a855f7', created_at: new Date().toISOString() },
+  { id: 'c13', user_id: null, name: 'Electronic', icon: 'Laptop', color: '#0ea5e9', created_at: new Date().toISOString() },
+  { id: 'c14', user_id: null, name: 'Other', icon: 'HelpCircle', color: '#6b7280', created_at: new Date().toISOString() },
 ];
 
 const DEFAULT_STORES: Store[] = [
@@ -35,8 +39,10 @@ const DEFAULT_STORES: Store[] = [
   { id: 's14', user_id: null, name: 'Washing Machine', created_at: new Date().toISOString() },
   { id: 's15', user_id: null, name: 'Flink', created_at: new Date().toISOString() },
   { id: 's16', user_id: null, name: 'Allan Pizza', created_at: new Date().toISOString() },
-  { id: 's17', user_id: null, name: '7 Days Curry', created_at: new Date().toISOString() },
+  { id: 's17', user_id: null, name: '7 days curry & Pizza', created_at: new Date().toISOString() },
   { id: 's18', user_id: null, name: 'Delhi Masala', created_at: new Date().toISOString() },
+  { id: 's19', user_id: null, name: 'Bollywood shop', created_at: new Date().toISOString() },
+  { id: 's20', user_id: null, name: 'Fleischerei', created_at: new Date().toISOString() },
 ];
 
 const DEFAULT_ACCOUNTS = (userId: string): Account[] => [
@@ -342,12 +348,37 @@ function initLocalStorage(userId: string) {
   if (!localStorage.getItem('bb-accounts')) {
     localStorage.setItem('bb-accounts', JSON.stringify(DEFAULT_ACCOUNTS(userId)));
   }
-  if (!localStorage.getItem('bb-categories')) {
+  
+  const localCats = localStorage.getItem('bb-categories');
+  if (!localCats) {
     localStorage.setItem('bb-categories', JSON.stringify(DEFAULT_CATEGORIES));
+  } else {
+    try {
+      const parsedCats = JSON.parse(localCats) as Category[];
+      const missingCats = DEFAULT_CATEGORIES.filter(dc => !parsedCats.some(pc => pc.name.toLowerCase() === dc.name.toLowerCase()));
+      if (missingCats.length > 0) {
+        localStorage.setItem('bb-categories', JSON.stringify([...parsedCats, ...missingCats]));
+      }
+    } catch (e) {
+      localStorage.setItem('bb-categories', JSON.stringify(DEFAULT_CATEGORIES));
+    }
   }
-  if (!localStorage.getItem('bb-stores')) {
+
+  const localStores = localStorage.getItem('bb-stores');
+  if (!localStores) {
     localStorage.setItem('bb-stores', JSON.stringify(DEFAULT_STORES));
+  } else {
+    try {
+      const parsedStores = JSON.parse(localStores) as Store[];
+      const missingStores = DEFAULT_STORES.filter(ds => !parsedStores.some(ps => ps.name.toLowerCase() === ds.name.toLowerCase()));
+      if (missingStores.length > 0) {
+        localStorage.setItem('bb-stores', JSON.stringify([...parsedStores, ...missingStores]));
+      }
+    } catch (e) {
+      localStorage.setItem('bb-stores', JSON.stringify(DEFAULT_STORES));
+    }
   }
+
   if (!localStorage.getItem('bb-expenses')) {
     localStorage.setItem('bb-expenses', JSON.stringify(DEFAULT_EXPENSES(userId)));
   }

@@ -133,6 +133,10 @@
     "Education": "Studium & Bildung",
     "Shopping": "Shopping & Kleidung",
     "Restaurant": "Restaurant & Café",
+    "Cosmetics": "Kosmetik",
+    "Medicine": "Medizin",
+    "Book": "Bücher",
+    "Electronic": "Elektronik",
     "Other": "Sonstiges"
   },
   "common": {
