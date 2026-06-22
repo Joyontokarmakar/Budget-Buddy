@@ -592,6 +592,7 @@ export const Expenses: React.FC = () => {
                         }
                       }}
                       placeholder="Search store (e.g., Lidl, REWE)..."
+                      autoComplete="off"
                       className="flex h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
