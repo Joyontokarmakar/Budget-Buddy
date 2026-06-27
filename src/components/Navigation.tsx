@@ -56,7 +56,7 @@ export const Navigation: React.FC = () => {
           {/* Sliding Pill Background (Glossy Water Drop Transition) */}
           {activeIndex !== -1 && (
             <div
-              className="absolute top-0 bottom-0 rounded-xl bg-secondary/80 dark:bg-muted/70 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0"
+              className="absolute top-1 bottom-1 rounded-full bg-secondary/80 dark:bg-muted/70 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0"
               style={{
                 width: 'calc(20% - 4px)',
                 left: `calc(${activeIndex} * 20% + 2px)`,
