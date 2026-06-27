@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Category } from '../../types';
-import { Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
-import { Table, Calendar, Info } from 'lucide-react';
+import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
 import { cn } from '../../utils/cn';
+import { getCategoryColor } from '../../utils/color';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { Table, Calendar, Calculator, Info, Download, FileText } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t } = useTranslation();
@@ -341,29 +342,107 @@ export const Reports: React.FC = () => {
     return history.sort((a, b) => b.timestamp - a.timestamp);
   }, [expenses, selectedBillCategory]);
 
+  const handleExportExcel = () => {
+    // Generate CSV data for Detailed Shopping Sheet
+    const headers = ['Date', 'Market', 'Items', 'Type', 'Amount', 'Sub Total'];
+    const rows = sheetData.map(row => [
+      row.formattedDate,
+      row.marketName,
+      row.itemName,
+      row.categoryCode,
+      row.amount.toFixed(2),
+      row.subTotal.toFixed(2)
+    ]);
+    
+    // Combine headers and rows, wrap each value in quotes to escape commas
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(r => r.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
+    ];
+    
+    // Add UTF-8 BOM so Excel opens it with correct characters
+    const csvContent = "\uFEFF" + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `budget_buddy_report_${selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   if (loading && expenses.length === 0) {
     return <Spinner />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 printable-report-area">
+      <style>{`
+        @media print {
+          header, nav, aside, footer, .no-print, button, .w-52 {
+            display: none !important;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .printable-report-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 20px !important;
+          }
+        }
+      `}</style>
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/40 no-print">
         <div>
           <h1 className="text-2xl font-bold tracking-tight mb-1">{t('nav.reports')}</h1>
           <p className="text-xs text-muted-foreground">Month-by-month spreadsheet breakdowns and bill historical analysis.</p>
         </div>
 
-        {/* Month Selector */}
-        <div className="w-52 shrink-0 relative">
-          <DatePicker
-            selected={selectedDate}
-            onChange={handleDateChange}
-            dateFormat="MMMM yyyy"
-            showMonthYearPicker
-            className="flex h-11 w-52 rounded-xl border border-border bg-card px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground font-semibold cursor-pointer"
-            popperPlacement="bottom-end"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11 text-xs gap-1.5 px-3 rounded-xl border border-border"
+            onClick={handleExportExcel}
+          >
+            <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Excel (CSV)</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11 text-xs gap-1.5 px-3 rounded-xl border border-border"
+            onClick={handleExportPDF}
+          >
+            <FileText className="h-4 w-4 text-primary" />
+            <span>Print PDF</span>
+          </Button>
+
+          {/* Month Selector */}
+          <div className="w-52 shrink-0 relative flex items-center">
+            <Calculator className="absolute left-3.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+            <DatePicker
+              selected={selectedDate}
+              onChange={handleDateChange}
+              dateFormat="MMMM yyyy"
+              showMonthYearPicker
+              className="flex h-11 w-52 rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground font-semibold cursor-pointer"
+              popperPlacement="bottom-end"
+            />
+          </div>
         </div>
       </div>
 
@@ -548,7 +627,7 @@ export const Reports: React.FC = () => {
                           <td className="py-2.5 px-4 border-r border-border/40 text-center">
                             <span
                               className="inline-block w-5 h-5 leading-5 text-[9px] font-black rounded-full text-white text-center shadow-xs"
-                              style={{ backgroundColor: row.categoryColor }}
+                              style={{ backgroundColor: getCategoryColor(row.categoryColor) }}
                               title={row.categoryCode}
                             >
                               {row.categoryCode}

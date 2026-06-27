@@ -61,7 +61,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full flex flex-col gap-1.5">
         {label && <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>}
-        <div className="relative flex items-center">
+        <div 
+          className={cn("relative flex items-center", type === 'date' ? 'cursor-pointer' : '')}
+          onClick={(e) => {
+            if (type === 'date') {
+              const inputEl = e.currentTarget.querySelector('input');
+              if (inputEl) {
+                try {
+                  inputEl.showPicker();
+                } catch (err) {
+                  inputEl.focus();
+                }
+              }
+            }
+          }}
+        >
           {icon && <div className="absolute left-3.5 text-muted-foreground pointer-events-none">{icon}</div>}
           <input
             type={isPasswordType && showPassword ? 'text' : type}
@@ -71,6 +85,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               icon ? 'pl-10' : '',
               isPasswordType ? 'pr-11' : '',
               error ? 'border-destructive focus:ring-destructive/20 focus:border-destructive' : '',
+              type === 'date' ? 'cursor-pointer' : '',
               className
             )}
             {...props}

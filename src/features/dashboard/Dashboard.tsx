@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, ExpenseWithDetails, IncomeWithDetails } from '../../types';
+import type { Account, ExpenseWithDetails, IncomeWithDetails, Category } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner } from '../../components/ui';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins } from 'lucide-react';
 import { usePWA } from '../../hooks/usePWA';
+import { getCategoryColor } from '../../utils/color';
+import { cn } from '../../utils/cn';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -17,20 +19,23 @@ export const Dashboard: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, exps, incs] = await Promise.all([
+      const [accs, exps, incs, cats] = await Promise.all([
         db.getAccounts(profile.id),
         db.getExpenses(profile.id),
         db.getIncome(profile.id),
+        db.getCategories(profile.id),
       ]);
       setAccounts(accs);
       setExpenses(exps);
       setIncomes(incs);
+      setCategories(cats);
     } catch (e) {
       console.error(e);
     } finally {
@@ -69,6 +74,9 @@ export const Dashboard: React.FC = () => {
   
   // Savings is total month income minus spending
   const thisMonthSavings = thisMonthIncome - monthlySpending;
+
+  // Sum up discounts in the current month
+  const thisMonthDiscounts = thisMonthExpenses.reduce((acc, curr) => acc + (curr.discount || 0), 0);
 
   // Percentage calculations
   const budgetUsedPercent = monthlyBudget > 0 ? (monthlySpending / monthlyBudget) * 100 : 0;
@@ -128,6 +136,62 @@ export const Dashboard: React.FC = () => {
   };
 
   const status = getBudgetStatus();
+
+  // Daily Average Spending
+  const daysElapsed = Math.max(now.getDate(), 1);
+  const dailyAverage = monthlySpending / daysElapsed;
+  const targetDailyLimit = monthlyBudget / 30;
+
+  // Groceries Trajectory calculations
+  const groceriesCats = categories.filter(c => c.name.toLowerCase() === 'food' || c.name.toLowerCase() === 'groceries');
+  const groceriesCatIds = groceriesCats.map(c => c.id);
+
+  const groceriesThisMonthSum = thisMonthExpenses.reduce((acc, curr) => {
+    const isMainGroceries = curr.category_id && groceriesCatIds.includes(curr.category_id);
+    if (curr.items && curr.items.length > 0) {
+      return acc + curr.items.reduce((sum, item) => {
+        const isItemGroceries = item.category_id && groceriesCatIds.includes(item.category_id);
+        return isItemGroceries ? sum + item.amount : sum;
+      }, 0);
+    }
+    return isMainGroceries ? acc + curr.amount : acc;
+  }, 0);
+
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const lastMonthMonth = lastMonthDate.getMonth();
+
+  const lastMonthExpenses = expenses.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    return d.getFullYear() === lastMonthYear && d.getMonth() === lastMonthMonth;
+  });
+
+  const groceriesLastMonthSum = lastMonthExpenses.reduce((acc, curr) => {
+    const isMainGroceries = curr.category_id && groceriesCatIds.includes(curr.category_id);
+    if (curr.items && curr.items.length > 0) {
+      return acc + curr.items.reduce((sum, item) => {
+        const isItemGroceries = item.category_id && groceriesCatIds.includes(item.category_id);
+        return isItemGroceries ? sum + item.amount : sum;
+      }, 0);
+    }
+    return isMainGroceries ? acc + curr.amount : acc;
+  }, 0);
+
+  let groceriesDiffPercent = 0;
+  let groceriesComparisonText = '';
+  if (groceriesLastMonthSum > 0) {
+    groceriesDiffPercent = ((groceriesThisMonthSum - groceriesLastMonthSum) / groceriesLastMonthSum) * 100;
+    if (groceriesDiffPercent > 0) {
+      groceriesComparisonText = `You spent ${groceriesDiffPercent.toFixed(0)}% more on groceries this month compared to last month.`;
+    } else if (groceriesDiffPercent < 0) {
+      groceriesComparisonText = `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% less on groceries this month compared to last month.`;
+    } else {
+      groceriesComparisonText = `Your groceries spending matches last month's exactly.`;
+    }
+  } else {
+    groceriesComparisonText = `Groceries spending is €${groceriesThisMonthSum.toFixed(2)} this month (no previous month comparison available).`;
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -244,8 +308,8 @@ export const Dashboard: React.FC = () => {
       {/* Secondary Financial Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         
-        {/* Income & Savings */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        {/* Income, Savings & Discounts */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card className="bg-emerald-500/5 dark:bg-emerald-500/[0.02] border-emerald-500/10">
             <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
@@ -273,6 +337,20 @@ export const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="bg-violet-500/5 dark:bg-violet-500/[0.02] border-violet-500/10">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                Monthly Discounts
+              </span>
+              <div>
+                <span className="text-base sm:text-lg font-extrabold text-violet-600 dark:text-violet-400">
+                  +€{thisMonthDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <p className="text-[9px] text-muted-foreground mt-0.5">Total Saved</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Budget Progress Bar */}
@@ -293,6 +371,55 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Smart Spending Insights */}
+      <Card className="bg-gradient-to-tr from-violet-500/5 to-indigo-500/5 border border-violet-500/10 shadow-sm animate-fade-in">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <BrainCircuit className="h-4.5 w-4.5 text-primary shrink-0" />
+            Smart Spending Insights
+          </CardTitle>
+          <span className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+            <Sparkles className="h-3 w-3 animate-pulse" /> AI Engine
+          </span>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* Grocery comparison insight */}
+          <div className="flex gap-3 items-start bg-card/65 p-3 rounded-xl border border-border/40">
+            <div className={cn(
+              "h-8 w-8 rounded-lg shrink-0 flex items-center justify-center text-white",
+              groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-primary"
+            )}>
+              {groceriesDiffPercent > 0 ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+            </div>
+            <div>
+              <h5 className="text-[11px] font-bold text-foreground">Groceries Trajectory</h5>
+              <p className="text-[10px] font-medium text-muted-foreground mt-0.5 leading-relaxed">
+                {groceriesComparisonText}
+              </p>
+            </div>
+          </div>
+
+          {/* Daily average insight */}
+          <div className="flex gap-3 items-start bg-card/65 p-3 rounded-xl border border-border/40">
+            <div className={cn(
+              "h-8 w-8 rounded-lg shrink-0 flex items-center justify-center text-white bg-primary"
+            )}>
+              <Coins className="h-4 w-4" />
+            </div>
+            <div>
+              <h5 className="text-[11px] font-bold text-foreground">Daily Avg Spending</h5>
+              <p className="text-[10px] font-medium text-muted-foreground mt-0.5 leading-relaxed">
+                Your daily avg spending is <strong className="text-foreground">€{dailyAverage.toFixed(2)}</strong>. To stay within budget, keep daily average under €{targetDailyLimit.toFixed(2)}.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions Panel */}
       <Card>
@@ -337,7 +464,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div
                     className={`h-9 w-9 rounded-xl flex items-center justify-center text-white shrink-0`}
-                    style={{ backgroundColor: tx.type === 'expense' ? (tx.categoryColor || '#f43f5e') : '#10b981' }}
+                    style={{ backgroundColor: tx.type === 'expense' ? getCategoryColor(tx.categoryColor) : '#10b981' }}
                   >
                     {tx.type === 'expense' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
                   </div>

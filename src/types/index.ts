@@ -11,6 +11,7 @@ export interface Profile {
   theme_preference: ThemeMode;
   monthly_budget: number;
   avatar_url?: string | null;
+  gemini_api_key?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +59,7 @@ export interface Expense {
   notes: string | null;
   receipt_url: string | null;
   items?: ExpenseItem[] | null;
+  discount?: number | null;
   created_at: string;
   updated_at: string;
 }

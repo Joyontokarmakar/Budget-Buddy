@@ -4,8 +4,9 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
 import { cn } from '../../utils/cn';
+import { getCategoryColor } from '../../utils/color';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
-import { ArrowUpRight, Plus, Calendar, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export const Expenses: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentAccountId, setPaymentAccountId] = useState('');
   const [notes, setNotes] = useState('');
+  const [discount, setDiscount] = useState('0'); // Discount state
 
   // Itemized breakdown state
   const [items, setItems] = useState<{ name: string; amount: number; category_id?: string | null }[]>([]);
@@ -50,6 +52,8 @@ export const Expenses: React.FC = () => {
     date: string;
     amount: number;
     fileUrl: string;
+    items?: any[];
+    discount?: number;
   } | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -181,6 +185,8 @@ export const Expenses: React.FC = () => {
           date: receiptData.extracted_date || new Date().toISOString().split('T')[0],
           amount: receiptData.extracted_amount,
           fileUrl: receiptData.file_url || '',
+          items: receiptData.extracted_items || [],
+          discount: receiptData.extracted_discount || 0,
         });
       }
     } catch (err: any) {
@@ -201,15 +207,107 @@ export const Expenses: React.FC = () => {
     setSelectedStore(store);
     setStoreQuery(store.name);
 
+    if (ocrConfirmationData.discount) {
+      setDiscount(ocrConfirmationData.discount.toString());
+    } else {
+      setDiscount('0');
+    }
+
+    if (ocrConfirmationData.items && ocrConfirmationData.items.length > 0) {
+      const mappedItems = ocrConfirmationData.items.map(it => {
+        const matchName = it.categoryName.toLowerCase();
+        let cat = categories.find(c => c.name.toLowerCase() === matchName);
+        if (!cat) {
+          if (matchName.includes('grocer') || matchName === 'food') {
+            cat = categories.find(c => c.name.toLowerCase() === 'food');
+          } else {
+            cat = categories.find(c => c.name.toLowerCase() === 'other');
+          }
+        }
+        return {
+          name: it.name,
+          amount: it.amount,
+          category_id: cat ? cat.id : null,
+        };
+      });
+      setItems(mappedItems);
+    } else {
+      setItems([]);
+    }
+
     // Auto set groceries/other based on keyword
-    const groceryCat = categories.find(c => c.name.toLowerCase() === 'groceries');
-    if (groceryCat && ['rewe', 'lidl', 'aldi', 'edeka', 'kaufland'].some(k => ocrConfirmationData.storeName.toLowerCase().includes(k))) {
+    const groceryCat = categories.find(c => c.name.toLowerCase() === 'food' || c.name.toLowerCase() === 'groceries');
+    if (groceryCat && ['rewe', 'lidl', 'aldi', 'edeka', 'kaufland', 'netto', 'penny'].some(k => ocrConfirmationData.storeName.toLowerCase().includes(k))) {
       setItemCategoryId(groceryCat.id);
     }
 
     setOcrConfirmationData(null);
     setSuccessMsg(t('expenses.receiptPrefillSuccess'));
     setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
+  // Recalculate amount dynamically when items or discount changes
+  useEffect(() => {
+    if (items.length > 0) {
+      const itemsSum = items.reduce((sum, item) => sum + item.amount, 0);
+      const discVal = parseFloat(discount) || 0;
+      const finalTotal = Math.max(itemsSum - discVal, 0);
+      setAmount(finalTotal.toFixed(2));
+    }
+  }, [items, discount]);
+
+  const isBillLogged = (catName: string) => {
+    if (!date) return false;
+    const dateParts = date.split('-');
+    const currentMonthKey = `${dateParts[0]}-${dateParts[1]}`;
+    
+    return expenses.some(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return eMonthKey === currentMonthKey && e.category?.name === catName;
+    });
+  };
+
+  const handleQuickLogBill = async (billName: string, catName: string, defaultAmount: number) => {
+    if (!profile || !paymentAccountId) return;
+    
+    const account = accounts.find(a => a.id === paymentAccountId);
+    const accountName = account ? account.name : 'selected account';
+    
+    const matchingExpenses = expenses.filter(e => e.category?.name === catName);
+    const amountToLog = matchingExpenses.length > 0 ? matchingExpenses[0].amount : defaultAmount;
+    
+    const confirmLog = window.confirm(
+      `Log ${billName} of €${amountToLog.toFixed(2)} for date ${new Date(date).toLocaleDateString('de-DE')} using ${accountName}?`
+    );
+    
+    if (!confirmLog) return;
+    
+    try {
+      setSaving(true);
+      const billCat = categories.find(c => c.name === catName);
+      const categoryId = billCat ? billCat.id : null;
+      
+      await db.createExpense(profile.id, {
+        amount: amountToLog,
+        date,
+        category_id: categoryId,
+        store_id: null,
+        payment_account_id: paymentAccountId,
+        notes: `${billName} - Recurring Bill`,
+        receipt_url: null,
+        items: null
+      });
+      
+      setSuccessMsg(`${billName} logged successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await loadData();
+    } catch (err: any) {
+      setError(err.message || 'Error logging bill');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddItem = () => {
@@ -227,11 +325,7 @@ export const Expenses: React.FC = () => {
       category_id: itemCategoryId,
     };
 
-    const newItems = [...items, newItem];
-    setItems(newItems);
-
-    const newTotal = newItems.reduce((sum, item) => sum + item.amount, 0);
-    setAmount(newTotal.toFixed(2));
+    setItems([...items, newItem]);
 
     setItemName('');
     setItemAmount('');
@@ -241,9 +335,9 @@ export const Expenses: React.FC = () => {
   const handleRemoveItem = (index: number) => {
     const newItems = items.filter((_, idx) => idx !== index);
     setItems(newItems);
-
-    const newTotal = newItems.reduce((sum, item) => sum + item.amount, 0);
-    setAmount(newItems.length > 0 ? newTotal.toFixed(2) : '');
+    if (newItems.length === 0) {
+      setAmount('');
+    }
   };
 
   const getAvailableMonths = () => {
@@ -294,14 +388,28 @@ export const Expenses: React.FC = () => {
           category_id: itemCategoryId,
         };
         activeItems.push(newItem);
-        const newTotal = activeItems.reduce((sum, item) => sum + item.amount, 0);
-        activeAmount = newTotal.toFixed(2);
         
         // Reset item input states
         setItemName('');
         setItemAmount('');
         setOtherPurpose('');
       }
+    }
+
+    // Append discount as a negative item if present
+    const discVal = parseFloat(discount) || 0;
+    if (discVal > 0 && activeItems.length > 0) {
+      activeItems.push({
+        name: 'Discount',
+        amount: -discVal,
+        category_id: null,
+      });
+    }
+
+    // Recalculate amount if there are items to ensure discount is correctly applied
+    if (activeItems.length > 0) {
+      const itemsSum = activeItems.reduce((sum, item) => sum + item.amount, 0);
+      activeAmount = Math.max(itemsSum, 0).toFixed(2);
     }
 
     if (!activeAmount.trim() || !date || !paymentAccountId) {
@@ -374,6 +482,7 @@ export const Expenses: React.FC = () => {
       setStoreQuery('');
       setSelectedStore(null);
       setNotes('');
+      setDiscount('0');
       setDate(new Date().toISOString().split('T')[0]);
       setItems([]);
       setSuccessMsg('Expense logged successfully!');
@@ -469,7 +578,119 @@ export const Expenses: React.FC = () => {
                   </div>
                 )}
 
-                {/* 1. Items Breakdown list builder */}
+                {/* Recurring Bills Quick Log Panel */}
+                <div className="mb-4 pb-4 border-b border-border/50">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+                    Quick Log Recurring Bills
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { name: 'House Rent', cat: 'House rent', amount: 264.50 },
+                      { name: 'Health Insurance', cat: 'Health Insurance', amount: 151.42 },
+                      { name: 'Radio Bill', cat: 'Radio Bill', amount: 18.36 },
+                      { name: 'Mobile bill', cat: 'Mobile bill', amount: 10.00 }
+                    ].map(bill => {
+                      const logged = isBillLogged(bill.cat);
+                      return (
+                        <button
+                          key={bill.name}
+                          type="button"
+                          disabled={logged}
+                          onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount)}
+                          className={cn(
+                            "py-2 px-2.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-between text-left",
+                            logged
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
+                              : "bg-muted/50 hover:bg-muted border-border/60 text-foreground cursor-pointer"
+                          )}
+                        >
+                          <span className="truncate">{bill.name}</span>
+                          <span className="font-mono text-[9px] shrink-0">
+                            {logged ? 'Logged' : `€${bill.amount}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 1. Date Input (On Top) */}
+                <Input
+                  type="date"
+                  label={t('expenses.date')}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  icon={<Calculator className="h-4 w-4 text-muted-foreground" />}
+                  required
+                />
+
+                {/* 2. Store Autocomplete Search */}
+                <div ref={storeDropdownRef} className="relative flex flex-col gap-1.5 w-full">
+                  <label className="text-xs font-semibold text-muted-foreground ml-1">{t('expenses.store')}</label>
+                  <div className="relative flex items-center">
+                    <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <input
+                      type="text"
+                      value={storeQuery}
+                      onChange={(e) => {
+                        setStoreQuery(e.target.value);
+                        setSelectedStore(null);
+                        setShowStoreDropdown(true);
+                      }}
+                      onFocus={() => setShowStoreDropdown(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setShowStoreDropdown(false);
+                        } else if (e.key === 'Enter') {
+                          if (showStoreDropdown && filteredStores.length > 0) {
+                            e.preventDefault();
+                            handleStoreSelect(filteredStores[0]);
+                          } else {
+                            const exactMatch = stores.find(s => s.name.toLowerCase() === storeQuery.toLowerCase());
+                            if (exactMatch) {
+                              handleStoreSelect(exactMatch);
+                            }
+                          }
+                          setShowStoreDropdown(false);
+                        }
+                      }}
+                      placeholder="Search store (e.g., Lidl, REWE)..."
+                      autoComplete="off"
+                      className="flex h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
+                  </div>
+
+                  {showStoreDropdown && (
+                    <div className="absolute top-[68px] left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                      {filteredStores.length > 0 ? (
+                        filteredStores.map(store => (
+                          <div
+                            key={store.id}
+                            onClick={() => handleStoreSelect(store)}
+                            className="px-4 py-2.5 hover:bg-muted text-sm cursor-pointer font-medium transition-colors"
+                          >
+                            {store.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-xs text-muted-foreground">
+                          No matching stores found.
+                        </div>
+                      )}
+                      {storeQuery.trim() !== '' && !filteredStores.some(s => s.name.toLowerCase() === storeQuery.toLowerCase()) && (
+                        <div
+                          onClick={handleCreateCustomStore}
+                          className="px-4 py-2.5 hover:bg-muted text-xs cursor-pointer text-primary font-bold border-t border-border/50 flex items-center justify-between"
+                        >
+                          <span>{t('expenses.customStore')} "{storeQuery}"</span>
+                          <Plus className="h-3.5 w-3.5" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Items Breakdown list builder */}
                 <div className="border border-border/60 rounded-xl p-3 bg-muted/10 space-y-3">
                   <div className="flex justify-between items-center px-0.5">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
@@ -492,7 +713,7 @@ export const Expenses: React.FC = () => {
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span
                                 className="px-1.5 py-0.5 text-[9px] font-extrabold rounded-md shrink-0 text-white"
-                                style={{ backgroundColor: cat?.color || '#6b7280' }}
+                                style={{ backgroundColor: getCategoryColor(cat?.color) }}
                               >
                                 {cat ? t(`categories.${cat.name}`, cat.name) : 'Other'}
                               </span>
@@ -580,73 +801,18 @@ export const Expenses: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 2. Store Autocomplete Search */}
-                <div ref={storeDropdownRef} className="relative flex flex-col gap-1.5 w-full">
-                  <label className="text-xs font-semibold text-muted-foreground ml-1">{t('expenses.store')}</label>
-                  <div className="relative flex items-center">
-                    <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <input
-                      type="text"
-                      value={storeQuery}
-                      onChange={(e) => {
-                        setStoreQuery(e.target.value);
-                        setSelectedStore(null);
-                        setShowStoreDropdown(true);
-                      }}
-                      onFocus={() => setShowStoreDropdown(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setShowStoreDropdown(false);
-                        } else if (e.key === 'Enter') {
-                          if (showStoreDropdown && filteredStores.length > 0) {
-                            e.preventDefault();
-                            handleStoreSelect(filteredStores[0]);
-                          } else {
-                            const exactMatch = stores.find(s => s.name.toLowerCase() === storeQuery.toLowerCase());
-                            if (exactMatch) {
-                              handleStoreSelect(exactMatch);
-                            }
-                          }
-                          setShowStoreDropdown(false);
-                        }
-                      }}
-                      placeholder="Search store (e.g., Lidl, REWE)..."
-                      autoComplete="off"
-                      className="flex h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
+                {/* 4. Discount Input */}
+                <Input
+                  type="number"
+                  step="0.01"
+                  label="Discount on this Purchase (€)"
+                  placeholder="0.00"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  icon={<Coins className="h-4 w-4 text-muted-foreground" />}
+                />
 
-                  {showStoreDropdown && (
-                    <div className="absolute top-[68px] left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg max-h-52 overflow-y-auto">
-                      {filteredStores.length > 0 ? (
-                        filteredStores.map(store => (
-                          <div
-                            key={store.id}
-                            onClick={() => handleStoreSelect(store)}
-                            className="px-4 py-2.5 hover:bg-muted text-sm cursor-pointer font-medium transition-colors"
-                          >
-                            {store.name}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-xs text-muted-foreground">
-                          No matching stores found.
-                        </div>
-                      )}
-                      {storeQuery.trim() !== '' && !filteredStores.some(s => s.name.toLowerCase() === storeQuery.toLowerCase()) && (
-                        <div
-                          onClick={handleCreateCustomStore}
-                          className="px-4 py-2.5 hover:bg-muted text-xs cursor-pointer text-primary font-bold border-t border-border/50 flex items-center justify-between"
-                        >
-                          <span>{t('expenses.customStore')} "{storeQuery}"</span>
-                          <Plus className="h-3.5 w-3.5" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Amount Input (Total Amount) */}
+                {/* 5. Amount Input (Total Amount) */}
                 <Input
                   type="number"
                   step="0.01"
@@ -657,17 +823,7 @@ export const Expenses: React.FC = () => {
                   icon={<Coins className="h-4 w-4 text-muted-foreground" />}
                 />
 
-                {/* 4. Date Input */}
-                <Input
-                  type="date"
-                  label={t('expenses.date')}
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-                  required
-                />
-
-                {/* 5. Payment Account Select */}
+                {/* 6. Payment Account Select */}
                 <Select
                   label={t('expenses.paymentAccount')}
                   value={paymentAccountId}
@@ -678,7 +834,7 @@ export const Expenses: React.FC = () => {
                   }))}
                 />
 
-                {/* 6. Notes Input */}
+                {/* 7. Notes Input */}
                 <Input
                   label={t('expenses.notes')}
                   placeholder="e.g., Weekly food shopping"
@@ -757,7 +913,7 @@ export const Expenses: React.FC = () => {
                   <div className="flex items-center gap-3.5">
                     <div
                       className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white font-bold"
-                      style={{ backgroundColor: exp.category?.color || '#3b82f6' }}
+                      style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
                     >
                       <ArrowUpRight className="h-5 w-5" />
                     </div>
@@ -904,7 +1060,7 @@ export const Expenses: React.FC = () => {
                                           <td className="py-2.5 px-4 text-center">
                                             <span
                                               className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                              style={{ backgroundColor: itemCat?.color || '#6b7280' }}
+                                              style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
                                             >
                                               {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
                                             </span>
@@ -922,7 +1078,7 @@ export const Expenses: React.FC = () => {
                                       <td className="py-2.5 px-4 text-center">
                                         <span
                                           className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                          style={{ backgroundColor: exp.category?.color || '#6b7280' }}
+                                          style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
                                         >
                                           {exp.category ? t(`categories.${exp.category.name}`, exp.category.name) : 'Other'}
                                         </span>
@@ -1089,7 +1245,7 @@ export const Expenses: React.FC = () => {
                                                           <td className="py-2 px-4 text-center">
                                                             <span
                                                               className="inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                                              style={{ backgroundColor: itemCat?.color || '#6b7280' }}
+                                                              style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
                                                             >
                                                               {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
                                                             </span>

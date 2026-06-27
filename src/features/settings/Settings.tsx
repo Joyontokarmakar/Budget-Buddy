@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
@@ -30,13 +30,27 @@ export const Settings: React.FC = () => {
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [budgetSuccess, setBudgetSuccess] = useState(false);
 
+  // Gemini API Key State
+  const [geminiApiKey, setGeminiApiKey] = useState(profile?.gemini_api_key || '');
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setBudget(profile.monthly_budget?.toString() || '700');
+      setGeminiApiKey(profile.gemini_api_key || '');
+    }
+  }, [profile]);
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setProfileSuccess(false);
     setProfileLoading(true);
     
-    const { error } = await updateProfile({ name: name.trim() });
+    const { error } = await updateProfile({ 
+      name: name.trim(),
+      gemini_api_key: geminiApiKey.trim() || null
+    });
     setProfileLoading(false);
     if (!error) {
       setProfileSuccess(true);
@@ -93,6 +107,8 @@ export const Settings: React.FC = () => {
       setTimeout(() => setBudgetSuccess(false), 3000);
     }
   };
+
+
 
   const handleThemeChange = async (themeMode: ThemeMode) => {
     await updateProfile({ theme_preference: themeMode });
@@ -178,6 +194,13 @@ export const Settings: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+              />
+              <Input
+                type="password"
+                label="Gemini API Key"
+                placeholder="AIzaSy..."
+                value={geminiApiKey}
+                onChange={(e) => setGeminiApiKey(e.target.value)}
               />
               <Input
                 label={t('settings.email')}
@@ -298,6 +321,8 @@ export const Settings: React.FC = () => {
             </form>
           </CardContent>
         </Card>
+
+
 
         {/* LOGOUT */}
         <Card className="flex flex-col justify-between">

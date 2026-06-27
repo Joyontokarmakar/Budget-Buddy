@@ -513,17 +513,27 @@ export const db = {
   },
 
   createStore: async (userId: string, name: string): Promise<Store> => {
+    // Normalize store name (e.g., Net -> Netto)
+    const normalizeStoreName = (n: string): string => {
+      const trimmed = n.trim();
+      if (/^net(to)?$/i.test(trimmed)) {
+        return 'Netto';
+      }
+      return trimmed;
+    };
+    const normalizedName = normalizeStoreName(name);
+
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
       const stores = getLocalItems<Store>('bb-stores');
       // Case insensitive check
-      const existing = stores.find(s => s.name.toLowerCase() === name.toLowerCase());
+      const existing = stores.find(s => s.name.toLowerCase() === normalizedName.toLowerCase());
       if (existing) return existing;
 
       const newStore: Store = {
         id: crypto.randomUUID(),
         user_id: userId,
-        name,
+        name: normalizedName,
         created_at: new Date().toISOString(),
       };
       stores.push(newStore);
@@ -534,7 +544,7 @@ export const db = {
     const { data: existing } = await supabase
       .from('stores')
       .select('*')
-      .eq('name', name)
+      .eq('name', normalizedName)
       .or(`user_id.is.null,user_id.eq.${userId}`);
       
     if (existing && existing.length > 0) {
@@ -543,7 +553,7 @@ export const db = {
 
     const { data, error } = await supabase
       .from('stores')
-      .insert({ user_id: userId, name })
+      .insert({ user_id: userId, name: normalizedName })
       .select()
       .single();
     if (error) throw error;
@@ -796,18 +806,139 @@ export const db = {
   },
 
   // RECEIPTS & OCR PREFILL MOCKUP
-  uploadReceipt: async (userId: string, file: File): Promise<Partial<Receipt>> => {
-    // Generate object URL for preview
+  uploadReceipt: async (userId: string, file: File): Promise<Partial<Receipt> & { extracted_items?: any[]; extracted_discount?: number }> => {
     const previewUrl = URL.createObjectURL(file);
+    let apiKey = '';
+    if (!isSupabaseConfigured) {
+      const savedProfile = localStorage.getItem('bb-mock-profile');
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          apiKey = parsed.gemini_api_key || '';
+        } catch (e) {
+          console.error('Error parsing mock profile for API key:', e);
+        }
+      }
+    } else {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('gemini_api_key')
+          .eq('id', userId)
+          .single();
+        apiKey = profile?.gemini_api_key || '';
+      } catch (e) {
+        console.error('Error fetching profile for API key:', e);
+      }
+    }
 
-    // Mock processing delay of 1.5 seconds for OCR extraction
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const fileToBase64 = (f: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(f);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+    };
 
-    // Choose random stores for student receipts
-    const mockStores = ['REWE', 'Lidl', 'Aldi Süd', 'dm-drogerie markt', 'Rossmann', 'EDEKA'];
-    const extractedStore = mockStores[Math.floor(Math.random() * mockStores.length)];
-    const extractedAmount = parseFloat((Math.random() * 45 + 5).toFixed(2)); // €5.00 - €50.00
-    const extractedDate = new Date().toISOString().split('T')[0]; // today
+    let extractedStore = '';
+    let extractedAmount = 0;
+    let extractedDate = new Date().toISOString().split('T')[0];
+    let extractedDiscount = 0;
+    let extractedItems: any[] = [];
+
+    if (apiKey) {
+      try {
+        const base64Data = await fileToBase64(file);
+        const base64Content = base64Data.split(',')[1];
+        const mimeType = file.type || 'image/jpeg';
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+        const prompt = `Analyze this receipt image and extract:
+1. Store/merchant name (e.g. Lidl, REWE, Aldi, dm, Rossmann, Netto, Penny, etc.)
+2. Transaction date in YYYY-MM-DD format
+3. Total amount (number)
+4. Total discount on this purchase (number, positive value, 0 if none)
+5. Items breakdown list. For each item, extract its name, category classification (categorize into one of: 'Food', 'Kitchen ware', 'Shopping', 'Restaurant', 'Other'), and price/amount.
+
+Output your response as a raw JSON object ONLY (do not wrap in markdown or backticks) matching this typescript interface:
+interface ReceiptAnalysis {
+  storeName: string;
+  date: string;
+  amount: number;
+  discount: number;
+  items: { name: string; amount: number; categoryName: 'Food' | 'Kitchen ware' | 'Shopping' | 'Restaurant' | 'Other' }[];
+}`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Content,
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          throw new Error('Failed to extract text from Gemini response');
+        }
+
+        // Clean the text to parse JSON
+        const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanedText);
+
+        extractedStore = parsed.storeName || '';
+        extractedDate = parsed.date || new Date().toISOString().split('T')[0];
+        extractedAmount = parsed.amount || 0;
+        extractedDiscount = parsed.discount || 0;
+        extractedItems = parsed.items || [];
+      } catch (err) {
+        console.error('Gemini OCR scan failed, falling back to mock:', err);
+        // Fallback to mock
+        const mockStores = ['REWE', 'Lidl', 'Aldi Süd', 'dm-drogerie markt', 'Rossmann', 'EDEKA'];
+        extractedStore = mockStores[Math.floor(Math.random() * mockStores.length)];
+        extractedAmount = parseFloat((Math.random() * 45 + 5).toFixed(2));
+        extractedDate = new Date().toISOString().split('T')[0];
+      }
+    } else {
+      // Mock processing delay of 1.5 seconds for OCR extraction
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const mockStores = ['REWE', 'Lidl', 'Aldi Süd', 'dm-drogerie markt', 'Rossmann', 'EDEKA'];
+      extractedStore = mockStores[Math.floor(Math.random() * mockStores.length)];
+      extractedAmount = parseFloat((Math.random() * 45 + 5).toFixed(2));
+      extractedDate = new Date().toISOString().split('T')[0];
+    }
+
+    // Now normalize the store name
+    const normalizeStoreName = (name: string): string => {
+      const trimmed = name.trim();
+      if (/^net(to)?$/i.test(trimmed)) {
+        return 'Netto';
+      }
+      return trimmed;
+    };
+
+    extractedStore = normalizeStoreName(extractedStore);
 
     if (!isSupabaseConfigured) {
       const receipts = getLocalItems<Receipt>('bb-receipts');
@@ -823,12 +954,11 @@ export const db = {
       };
       receipts.push(newRec);
       setLocalItems('bb-receipts', receipts);
-      return newRec;
+      return { ...newRec, extracted_items: extractedItems, extracted_discount: extractedDiscount };
     }
 
     try {
       // 1. Upload to Supabase Storage Bucket 'receipts'
-      // Path: receipts/<user_id>/<timestamp>-<name>
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
@@ -859,7 +989,7 @@ export const db = {
         .single();
 
       if (dbError) throw dbError;
-      return receipt;
+      return { ...receipt, extracted_items: extractedItems, extracted_discount: extractedDiscount };
     } catch (e) {
       console.error('Supabase Receipt upload/OCR error, falling back to local simulation:', e);
       // Fallback
@@ -869,6 +999,8 @@ export const db = {
         extracted_date: extractedDate,
         extracted_amount: extractedAmount,
         status: 'processed',
+        extracted_items: extractedItems,
+        extracted_discount: extractedDiscount,
       };
     }
   },
