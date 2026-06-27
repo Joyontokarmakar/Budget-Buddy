@@ -213,9 +213,9 @@ export const Dashboard: React.FC = () => {
     groceriesComparisonText = `Groceries spending is €${groceriesThisMonthSum.toFixed(2)} this month (no previous month comparison available).`;
   }
 
-  // Store Analytics: Top 3 stores this month with amount
+  // Store Analytics: Top 3 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
-  thisMonthExpenses.forEach(e => {
+  nonBillExpenses.forEach(e => {
     const storeName = e.store?.name || 'Other/Unknown';
     storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
   });

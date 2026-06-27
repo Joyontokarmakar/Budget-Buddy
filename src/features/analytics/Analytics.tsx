@@ -130,15 +130,25 @@ export const Analytics: React.FC = () => {
     expenses: parseFloat(m.expenses.toFixed(2)),
     income: parseFloat(m.income.toFixed(2)),
   }));
-  // 4. Store Analytics: Top 3 stores this month with amount
+  // 4. Store Analytics: Top 3 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
   const activeYear = new Date().getFullYear();
   const activeMonth = new Date().getMonth();
+  
+  const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+  const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
   
   expenses.forEach(e => {
     if (!e.date) return;
     const d = new Date(e.date);
     if (d.getFullYear() === activeYear && d.getMonth() === activeMonth) {
+      // Exclude common bills
+      if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return;
+      const catName = e.category?.name?.toLowerCase();
+      if (catName && commonBillsCategories.includes(catName)) return;
+      const notes = e.notes?.toLowerCase() || '';
+      if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return;
+
       const storeName = e.store?.name || 'Other/Unknown';
       storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
     }

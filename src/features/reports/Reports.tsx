@@ -296,10 +296,10 @@ export const Reports: React.FC = () => {
   const monthlyBudget = profile?.monthly_budget || 0;
   const remainingBudgetRest = monthlyBudget - totalExpenses;
 
-  // Store Analytics for selected month
+  // Store Analytics for selected month (excluding common bills)
   const topStores = useMemo(() => {
     const storeSpendingMap: { [key: string]: number } = {};
-    currentMonthExpenses.forEach(e => {
+    shoppingExpenses.forEach(e => {
       const storeName = e.store?.name || 'Other/Unknown';
       storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
     });
@@ -308,7 +308,7 @@ export const Reports: React.FC = () => {
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 3);
-  }, [currentMonthExpenses]);
+  }, [shoppingExpenses]);
 
   // Product Analytics for selected month
   const topProducts = useMemo(() => {
