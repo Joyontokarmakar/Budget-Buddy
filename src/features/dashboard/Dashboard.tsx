@@ -8,7 +8,7 @@ import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner } f
 import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { cn } from '../../utils/cn';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -137,9 +137,15 @@ export const Dashboard: React.FC = () => {
 
   const status = getBudgetStatus();
 
-  // Daily Average Spending
+  // Daily Average Spending (excluding common bills)
+  const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+  const nonBillExpenses = thisMonthExpenses.filter(e => {
+    const catName = e.category?.name?.toLowerCase();
+    return !catName || !commonBillsCategories.includes(catName);
+  });
+  const nonBillSpending = nonBillExpenses.reduce((acc, curr) => acc + curr.amount, 0);
   const daysElapsed = Math.max(now.getDate(), 1);
-  const dailyAverage = monthlySpending / daysElapsed;
+  const dailyAverage = nonBillSpending / daysElapsed;
   const targetDailyLimit = monthlyBudget / 30;
 
   // Groceries Trajectory calculations
@@ -192,6 +198,47 @@ export const Dashboard: React.FC = () => {
   } else {
     groceriesComparisonText = `Groceries spending is €${groceriesThisMonthSum.toFixed(2)} this month (no previous month comparison available).`;
   }
+
+  // Store Analytics: Top 3 stores this month with amount
+  const storeSpendingMap: { [key: string]: number } = {};
+  thisMonthExpenses.forEach(e => {
+    const storeName = e.store?.name || 'Other/Unknown';
+    storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
+  });
+
+  const topStores = Object.entries(storeSpendingMap)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+
+  // Product Analytics: Top bought Products (Product, Month, Amount) scanning items
+  const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
+  expenses.forEach(e => {
+    if (!e.date) return;
+    const d = new Date(e.date);
+    const monthLabel = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    
+    if (e.items && e.items.length > 0) {
+      e.items.forEach(item => {
+        const name = item.name.trim();
+        if (!name || name.toLowerCase() === 'discount') return;
+        const key = `${name.toLowerCase()}_${monthLabel}`;
+        if (productMap[key]) {
+          productMap[key].amount += item.amount;
+        } else {
+          productMap[key] = {
+            name,
+            month: monthLabel,
+            amount: item.amount
+          };
+        }
+      });
+    }
+  });
+
+  const topProducts = Object.values(productMap)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -420,6 +467,69 @@ export const Dashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Store & Product Analytics widgets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        {/* Top Stores */}
+        <Card className="hover:border-primary/20 transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Store className="h-4.5 w-4.5 text-indigo-500" />
+              Top Stores (This Month)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {topStores.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged this month.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {topStores.map((store, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px]">
+                        {index + 1}
+                      </span>
+                      <span className="text-foreground/90">{store.name}</span>
+                    </div>
+                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                      -€{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Products */}
+        <Card className="hover:border-primary/20 transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <ShoppingBag className="h-4.5 w-4.5 text-violet-500" />
+              Product Purchases Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {topProducts.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center font-medium">No itemized products logged yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {topProducts.map((prod, index) => (
+                  <div key={index} className="flex items-center justify-between p-2.5 rounded-xl border border-border/30 bg-muted/10 font-semibold text-xs">
+                    <div>
+                      <p className="text-foreground/90 font-bold">{prod.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
+                    </div>
+                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                      €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Quick Actions Panel */}
       <Card>
