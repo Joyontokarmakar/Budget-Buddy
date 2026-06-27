@@ -109,6 +109,8 @@
     "budget": "Monthly Budget Settings",
     "budgetLabel": "Monthly Budget Limit (€)",
     "saveBudget": "Update Budget Limit",
+    "saveFinancialPlan": "Save Financial Plan",
+    "commonBills": "Common Recurring Bills",
     "logout": "Log Out",
     "themes": {
       "light": "Light Mode",

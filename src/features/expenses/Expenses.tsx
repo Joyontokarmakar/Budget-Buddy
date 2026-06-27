@@ -1479,7 +1479,7 @@ export const Expenses: React.FC = () => {
             <div className="pt-2">
               <Input
                 type="date"
-                label="Select Date for Log"
+                label={t('expenses.date')}
                 value={modalDate}
                 onChange={(e) => setModalDate(e.target.value)}
                 required
@@ -1489,7 +1489,7 @@ export const Expenses: React.FC = () => {
           {confirmState?.showAccountPicker && (
             <div className="pt-2">
               <Select
-                label="Paid From"
+                label={t('expenses.paymentAccount')}
                 value={modalAccountId}
                 onChange={(e) => setModalAccountId(e.target.value)}
                 options={accounts.map(a => ({ value: a.id, label: a.name }))}

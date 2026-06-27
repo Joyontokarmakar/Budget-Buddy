@@ -294,7 +294,7 @@ export const Settings: React.FC = () => {
                 required
               />
               <div className="border-t border-border/50 pt-3 mt-3">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">Common Recurring Bills</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">{t('settings.commonBills')}</span>
                 <div className="space-y-4">
                   {/* Rent */}
                   <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
@@ -395,7 +395,7 @@ export const Settings: React.FC = () => {
               </div>
               <Button type="submit" loading={budgetLoading} className="w-full mt-2">
                 {budgetSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                Save Financial Plan
+                {t('settings.saveFinancialPlan')}
               </Button>
             </form>
           </CardContent>

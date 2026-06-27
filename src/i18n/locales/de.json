@@ -109,6 +109,8 @@
     "budget": "Monatliches Budget",
     "budgetLabel": "Monatliches Budget-Limit (€)",
     "saveBudget": "Budget aktualisieren",
+    "saveFinancialPlan": "Finanzplan speichern",
+    "commonBills": "Monatliche Fixkosten",
     "logout": "Abmelden",
     "themes": {
       "light": "Heller Modus",
