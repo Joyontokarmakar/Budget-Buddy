@@ -139,7 +139,8 @@
     "Medicine": "Medicine",
     "Book": "Book",
     "Electronic": "Electronic",
-    "Other": "Other"
+    "Other": "Other",
+    "Discount": "Discount"
   },
   "common": {
     "save": "Save",

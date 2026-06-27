@@ -6,6 +6,7 @@ import type { ExpenseWithDetails, Category } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
+import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag } from 'lucide-react';
@@ -133,16 +134,18 @@ export const Reports: React.FC = () => {
       // Count total items on this date for rowSpan
       let totalDateItems = 0;
       dayExpenses.forEach(exp => {
-        totalDateItems += exp.items && exp.items.length > 0 ? exp.items.length : 1;
+        const safeItems = getSafeItems(exp.items);
+        totalDateItems += safeItems.length > 0 ? safeItems.length : 1;
       });
 
       let dateItemCounter = 0;
 
       dayExpenses.forEach(exp => {
         const storeName = exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other');
-        const items = exp.items && exp.items.length > 0 
-          ? exp.items 
-          : [{ name: exp.notes || 'Purchase', amount: exp.amount, category_id: exp.category_id }];
+        const safeItems = getSafeItems(exp.items);
+        const items = safeItems.length > 0 
+          ? safeItems 
+          : [{ name: exp.notes || 'Purchase', amount: Number(exp.amount), category_id: exp.category_id }];
 
         const totalMarketItems = items.length;
 
@@ -193,13 +196,14 @@ export const Reports: React.FC = () => {
   const foodTotal = useMemo(() => {
     let sum = 0;
     shoppingExpenses.forEach(e => {
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(it => {
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(it => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
-          if (cat?.name === 'Food') sum += it.amount;
+          if (cat?.name === 'Food') sum += Number(it.amount);
         });
       } else if (e.category?.name === 'Food') {
-        sum += e.amount;
+        sum += Number(e.amount);
       }
     });
     return sum;
@@ -208,13 +212,14 @@ export const Reports: React.FC = () => {
   const kitchenTotal = useMemo(() => {
     let sum = 0;
     shoppingExpenses.forEach(e => {
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(it => {
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(it => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
-          if (cat?.name === 'Kitchen ware') sum += it.amount;
+          if (cat?.name === 'Kitchen ware') sum += Number(it.amount);
         });
       } else if (e.category?.name === 'Kitchen ware') {
-        sum += e.amount;
+        sum += Number(e.amount);
       }
     });
     return sum;
@@ -223,13 +228,14 @@ export const Reports: React.FC = () => {
   const restaurantTotal = useMemo(() => {
     let sum = 0;
     shoppingExpenses.forEach(e => {
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(it => {
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(it => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
-          if (cat?.name === 'Restaurant') sum += it.amount;
+          if (cat?.name === 'Restaurant') sum += Number(it.amount);
         });
       } else if (e.category?.name === 'Restaurant') {
-        sum += e.amount;
+        sum += Number(e.amount);
       }
     });
     return sum;
@@ -238,13 +244,14 @@ export const Reports: React.FC = () => {
   const shoppingTotalCategory = useMemo(() => {
     let sum = 0;
     shoppingExpenses.forEach(e => {
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(it => {
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(it => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
-          if (cat?.name === 'Shopping') sum += it.amount;
+          if (cat?.name === 'Shopping') sum += Number(it.amount);
         });
       } else if (e.category?.name === 'Shopping') {
-        sum += e.amount;
+        sum += Number(e.amount);
       }
     });
     return sum;
@@ -259,12 +266,13 @@ export const Reports: React.FC = () => {
         return cat ? !['Food', 'Kitchen ware', 'Restaurant', 'Shopping', ...fixedBillCategories].includes(cat.name) : true;
       };
 
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(it => {
-          if (checkOther(it.category_id)) sum += it.amount;
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(it => {
+          if (checkOther(it.category_id)) sum += Number(it.amount);
         });
       } else {
-        if (checkOther(e.category_id)) sum += e.amount;
+        if (checkOther(e.category_id)) sum += Number(e.amount);
       }
     });
     return sum;

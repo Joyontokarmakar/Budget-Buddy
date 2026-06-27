@@ -6,6 +6,7 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
 import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
+import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
 import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 
@@ -122,7 +123,12 @@ export const Expenses: React.FC = () => {
       }
       // Default item category
       if (catData.length > 0 && !itemCategoryId) {
-        setItemCategoryId(catData[0].id);
+        const allowedCats = catData.filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()));
+        if (allowedCats.length > 0) {
+          setItemCategoryId(allowedCats[0].id);
+        } else {
+          setItemCategoryId(catData[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -275,7 +281,7 @@ export const Expenses: React.FC = () => {
   // Recalculate amount dynamically when items or discount changes
   useEffect(() => {
     if (items.length > 0) {
-      const itemsSum = items.reduce((sum, item) => sum + item.amount, 0);
+      const itemsSum = items.reduce((sum, item) => sum + Number(item.amount), 0);
       const discVal = parseFloat(discount) || 0;
       const finalTotal = Math.max(itemsSum - discVal, 0);
       setAmount(finalTotal.toFixed(2));
@@ -433,10 +439,11 @@ export const Expenses: React.FC = () => {
     // Append discount as a negative item if present
     const discVal = parseFloat(discount) || 0;
     if (discVal > 0 && activeItems.length > 0) {
+      const discountCat = categories.find(c => c.name.toLowerCase() === 'discount');
       activeItems.push({
         name: 'Discount',
         amount: -discVal,
-        category_id: null,
+        category_id: discountCat ? discountCat.id : null,
       });
     }
 
@@ -574,7 +581,7 @@ export const Expenses: React.FC = () => {
 
       {/* Loggers row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="sticky top-20 shadow-md">
+        <Card className="lg:sticky lg:top-20 shadow-md">
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Plus className="h-5 w-5 text-primary" />
@@ -782,11 +789,13 @@ export const Expenses: React.FC = () => {
                           onChange={(e) => setItemCategoryId(e.target.value)}
                           className="flex h-9 w-full rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80"
                         >
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {t(`categories.${cat.name}`, cat.name)}
-                            </option>
-                          ))}
+                          {categories
+                            .filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()))
+                            .map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {t(`categories.${cat.name}`, cat.name)}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
@@ -861,7 +870,7 @@ export const Expenses: React.FC = () => {
         </Card>
 
         {/* Quick Log Recurring Bills Card */}
-        <Card className="sticky top-20 shadow-md h-fit bg-card/75 backdrop-blur-md">
+        <Card className="lg:sticky lg:top-20 shadow-md h-fit bg-card/75 backdrop-blur-md">
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -1034,7 +1043,7 @@ export const Expenses: React.FC = () => {
                   year: '2-digit',
                 });
                 
-                const dailyTotal = dateExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const dailyTotal = dateExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
                 return (
                   <Card key={dateString} className="border-border shadow-sm overflow-hidden bg-card/65 backdrop-blur-md">
@@ -1048,7 +1057,7 @@ export const Expenses: React.FC = () => {
                         </span>
                       </div>
                       <span className="text-xs font-extrabold text-foreground bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-xl border border-emerald-500/20">
-                        Total: €{dailyTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        Total: €{Number(dailyTotal).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </CardHeader>
                     
@@ -1083,7 +1092,7 @@ export const Expenses: React.FC = () => {
                                 <div className="text-right">
                                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Sub Total</span>
                                   <span className="text-sm font-extrabold text-foreground">
-                                    €{exp.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    €{Number(exp.amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
                                 <button
@@ -1107,43 +1116,46 @@ export const Expenses: React.FC = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/30">
-                                  {exp.items && exp.items.length > 0 ? (
-                                    exp.items.map((item, idx) => {
-                                      const itemCat = item.category_id ? categories.find(c => c.id === item.category_id) : null;
-                                      return (
-                                        <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                                          <td className="py-2.5 px-4 font-semibold text-foreground/90">{item.name}</td>
-                                          <td className="py-2.5 px-4 text-center">
-                                            <span
-                                              className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                              style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
-                                            >
-                                              {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
-                                            </span>
-                                          </td>
-                                          <td className="py-2.5 px-4 text-right font-extrabold text-foreground">
-                                            €{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
-                                          </td>
-                                        </tr>
-                                      );
-                                    })
-                                  ) : (
-                                    /* Single item placeholder row when there are no subitems */
-                                    <tr className="hover:bg-muted/30 transition-colors">
-                                      <td className="py-2.5 px-4 font-semibold text-foreground/90">{exp.notes || 'Transaction purchase'}</td>
-                                      <td className="py-2.5 px-4 text-center">
-                                        <span
-                                          className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                          style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
-                                        >
-                                          {exp.category ? t(`categories.${exp.category.name}`, exp.category.name) : 'Other'}
-                                        </span>
-                                      </td>
-                                      <td className="py-2.5 px-4 text-right font-extrabold text-foreground">
-                                        €{exp.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </td>
-                                    </tr>
-                                  )}
+                                  {(() => {
+                                    const safeItems = getSafeItems(exp.items);
+                                    return safeItems.length > 0 ? (
+                                      safeItems.map((item, idx) => {
+                                        const itemCat = item.category_id ? categories.find(c => c.id === item.category_id) : null;
+                                        return (
+                                          <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                                            <td className="py-2.5 px-4 font-semibold text-foreground/90">{item.name}</td>
+                                            <td className="py-2.5 px-4 text-center">
+                                              <span
+                                                className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
+                                                style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
+                                              >
+                                                {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
+                                              </span>
+                                            </td>
+                                            <td className="py-2.5 px-4 text-right font-extrabold text-foreground">
+                                              €{Number(item.amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })
+                                    ) : (
+                                      /* Single item placeholder row when there are no subitems */
+                                      <tr className="hover:bg-muted/30 transition-colors">
+                                        <td className="py-2.5 px-4 font-semibold text-foreground/90">{exp.notes || 'Transaction purchase'}</td>
+                                        <td className="py-2.5 px-4 text-center">
+                                          <span
+                                            className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md text-white shadow-xs shrink-0"
+                                            style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
+                                          >
+                                            {exp.category ? t(`categories.${exp.category.name}`, exp.category.name) : 'Other'}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-4 text-right font-extrabold text-foreground">
+                                          €{Number(exp.amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })()}
                                 </tbody>
                               </table>
                             </div>
@@ -1292,42 +1304,45 @@ export const Expenses: React.FC = () => {
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border/20">
-                                                  {exp.items && exp.items.length > 0 ? (
-                                                    exp.items.map((item: any, idx: number) => {
-                                                      const itemCat = item.category_id ? categories.find(c => c.id === item.category_id) : null;
-                                                      return (
-                                                        <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                                                          <td className="py-2 px-4 font-semibold text-foreground/80">{item.name}</td>
-                                                          <td className="py-2 px-4 text-center">
-                                                            <span
-                                                              className="inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                                              style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
-                                                            >
-                                                              {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
-                                                            </span>
-                                                          </td>
-                                                          <td className="py-2 px-4 text-right font-extrabold text-foreground/90">
-                                                            €{item.amount.toFixed(2)}
-                                                          </td>
-                                                        </tr>
-                                                      );
-                                                    })
-                                                  ) : (
-                                                    <tr>
-                                                      <td className="py-2 px-4 font-semibold text-foreground/70">{exp.notes || 'Transaction purchase'}</td>
-                                                      <td className="py-2 px-4 text-center">
-                                                        <span
-                                                          className="inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md text-white shadow-xs shrink-0"
-                                                          style={{ backgroundColor: exp.category?.color || '#6b7280' }}
-                                                        >
-                                                          {exp.category ? t(`categories.${exp.category.name}`, exp.category.name) : 'Other'}
-                                                        </span>
-                                                      </td>
-                                                      <td className="py-2 px-4 text-right font-extrabold text-foreground/90">
-                                                        €{exp.amount.toFixed(2)}
-                                                      </td>
-                                                    </tr>
-                                                  )}
+                                                  {(() => {
+                                                    const safeItems = getSafeItems(exp.items);
+                                                    return safeItems.length > 0 ? (
+                                                      safeItems.map((item: any, idx: number) => {
+                                                        const itemCat = item.category_id ? categories.find(c => c.id === item.category_id) : null;
+                                                        return (
+                                                          <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                                                            <td className="py-2 px-4 font-semibold text-foreground/80">{item.name}</td>
+                                                            <td className="py-2 px-4 text-center">
+                                                              <span
+                                                                className="inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md text-white shadow-xs shrink-0"
+                                                                style={{ backgroundColor: getCategoryColor(itemCat?.color) }}
+                                                              >
+                                                                {itemCat ? t(`categories.${itemCat.name}`, itemCat.name) : 'Other'}
+                                                              </span>
+                                                            </td>
+                                                            <td className="py-2 px-4 text-right font-extrabold text-foreground/90">
+                                                              €{Number(item.amount).toFixed(2)}
+                                                            </td>
+                                                          </tr>
+                                                        );
+                                                      })
+                                                    ) : (
+                                                      <tr>
+                                                        <td className="py-2 px-4 font-semibold text-foreground/70">{exp.notes || 'Transaction purchase'}</td>
+                                                        <td className="py-2 px-4 text-center">
+                                                          <span
+                                                            className="inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md text-white shadow-xs shrink-0"
+                                                            style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
+                                                          >
+                                                            {exp.category ? t(`categories.${exp.category.name}`, exp.category.name) : 'Other'}
+                                                          </span>
+                                                        </td>
+                                                        <td className="py-2 px-4 text-right font-extrabold text-foreground/90">
+                                                          €{Number(exp.amount).toFixed(2)}
+                                                        </td>
+                                                      </tr>
+                                                    );
+                                                  })()}
                                                 </tbody>
                                               </table>
                                             </div>

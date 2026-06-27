@@ -139,7 +139,8 @@
     "Medicine": "Medizin",
     "Book": "Bücher",
     "Electronic": "Elektronik",
-    "Other": "Sonstiges"
+    "Other": "Sonstiges",
+    "Discount": "Rabatt"
   },
   "common": {
     "save": "Speichern",

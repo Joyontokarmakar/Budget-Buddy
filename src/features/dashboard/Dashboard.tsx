@@ -7,6 +7,7 @@ import type { Account, ExpenseWithDetails, IncomeWithDetails, Category } from '.
 import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner } from '../../components/ui';
 import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
+import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
 import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag } from 'lucide-react';
 
@@ -168,13 +169,14 @@ export const Dashboard: React.FC = () => {
 
   const groceriesThisMonthSum = thisMonthExpenses.reduce((acc, curr) => {
     const isMainGroceries = curr.category_id && groceriesCatIds.includes(curr.category_id);
-    if (curr.items && curr.items.length > 0) {
-      return acc + curr.items.reduce((sum, item) => {
+    const safeItems = getSafeItems(curr.items);
+    if (safeItems.length > 0) {
+      return acc + safeItems.reduce((sum, item) => {
         const isItemGroceries = item.category_id && groceriesCatIds.includes(item.category_id);
-        return isItemGroceries ? sum + item.amount : sum;
+        return isItemGroceries ? sum + Number(item.amount) : sum;
       }, 0);
     }
-    return isMainGroceries ? acc + curr.amount : acc;
+    return isMainGroceries ? acc + Number(curr.amount) : acc;
   }, 0);
 
   const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
@@ -189,13 +191,14 @@ export const Dashboard: React.FC = () => {
 
   const groceriesLastMonthSum = lastMonthExpenses.reduce((acc, curr) => {
     const isMainGroceries = curr.category_id && groceriesCatIds.includes(curr.category_id);
-    if (curr.items && curr.items.length > 0) {
-      return acc + curr.items.reduce((sum, item) => {
+    const safeItems = getSafeItems(curr.items);
+    if (safeItems.length > 0) {
+      return acc + safeItems.reduce((sum, item) => {
         const isItemGroceries = item.category_id && groceriesCatIds.includes(item.category_id);
-        return isItemGroceries ? sum + item.amount : sum;
+        return isItemGroceries ? sum + Number(item.amount) : sum;
       }, 0);
     }
-    return isMainGroceries ? acc + curr.amount : acc;
+    return isMainGroceries ? acc + Number(curr.amount) : acc;
   }, 0);
 
   let groceriesDiffPercent = 0;

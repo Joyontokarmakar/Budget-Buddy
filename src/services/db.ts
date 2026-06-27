@@ -20,6 +20,7 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c12', user_id: null, name: 'Book', icon: 'BookOpen', color: '#a855f7', created_at: new Date().toISOString() },
   { id: 'c13', user_id: null, name: 'Electronic', icon: 'Laptop', color: '#0ea5e9', created_at: new Date().toISOString() },
   { id: 'c14', user_id: null, name: 'Other', icon: 'HelpCircle', color: '#6b7280', created_at: new Date().toISOString() },
+  { id: 'c15', user_id: null, name: 'Discount', icon: 'Percent', color: '#10b981', created_at: new Date().toISOString() },
 ];
 
 const DEFAULT_STORES: Store[] = [
