@@ -35,6 +35,10 @@ const MOCK_PROFILE: Profile = {
   health_insurance: 151.42,
   radio_bill: 18.36,
   mobile_bill: 10.00,
+  house_rent_account_id: 'a1',
+  health_insurance_account_id: 'a1',
+  radio_bill_account_id: 'a2',
+  mobile_bill_account_id: 'a2',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

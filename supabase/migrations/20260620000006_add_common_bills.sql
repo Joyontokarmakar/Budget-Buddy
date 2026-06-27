@@ -3,3 +3,8 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS house_rent NUMERIC(10,2) DE
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS health_insurance NUMERIC(10,2) DEFAULT 151.42;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS radio_bill NUMERIC(10,2) DEFAULT 18.36;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS mobile_bill NUMERIC(10,2) DEFAULT 10.00;
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS house_rent_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS health_insurance_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS radio_bill_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS mobile_bill_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;

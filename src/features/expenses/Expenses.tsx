@@ -295,10 +295,11 @@ export const Expenses: React.FC = () => {
     });
   };
 
-  const handleQuickLogBill = async (billName: string, catName: string, defaultAmount: number) => {
+  const handleQuickLogBill = async (billName: string, catName: string, defaultAmount: number, preferredAccountId?: string | null) => {
     if (!profile || !paymentAccountId) return;
     
-    const account = accounts.find(a => a.id === paymentAccountId);
+    const accountIdToUse = preferredAccountId || paymentAccountId;
+    const account = accounts.find(a => a.id === accountIdToUse) || accounts.find(a => a.id === paymentAccountId);
     const accountName = account ? account.name : 'selected account';
     
     const matchingExpenses = expenses.filter(e => e.category?.name === catName);
@@ -313,7 +314,7 @@ export const Expenses: React.FC = () => {
       showDatePicker: true,
       initialDate: date,
       showAccountPicker: true,
-      initialAccountId: paymentAccountId,
+      initialAccountId: accountIdToUse,
       onConfirm: async (selectedDate, selectedAccountId) => {
         try {
           setSaving(true);
@@ -325,7 +326,7 @@ export const Expenses: React.FC = () => {
             date: selectedDate || date,
             category_id: categoryId,
             store_id: null,
-            payment_account_id: selectedAccountId || paymentAccountId,
+            payment_account_id: selectedAccountId || accountIdToUse,
             notes: `${billName} - Recurring Bill`,
             receipt_url: null,
             items: null
@@ -873,10 +874,10 @@ export const Expenses: React.FC = () => {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               {[
-                { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50 },
-                { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42 },
-                { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36 },
-                { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00 }
+                { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id },
+                { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id },
+                { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id },
+                { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id }
               ].map(bill => {
                 const logged = isBillLogged(bill.cat);
                 return (
@@ -884,7 +885,7 @@ export const Expenses: React.FC = () => {
                     key={bill.name}
                     type="button"
                     disabled={logged}
-                    onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount)}
+                    onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount, bill.preferredAccountId)}
                     className={cn(
                       "p-4 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between h-24 text-left shadow-xs",
                       logged

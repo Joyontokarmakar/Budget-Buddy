@@ -16,6 +16,10 @@ export interface Profile {
   health_insurance?: number | null;
   radio_bill?: number | null;
   mobile_bill?: number | null;
+  house_rent_account_id?: string | null;
+  health_insurance_account_id?: string | null;
+  radio_bill_account_id?: string | null;
+  mobile_bill_account_id?: string | null;
   created_at: string;
   updated_at: string;
 }

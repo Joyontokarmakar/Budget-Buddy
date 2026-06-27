@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Language, ThemeMode } from '../../types';
+import type { Language, ThemeMode, Account } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
 import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check, Camera, Upload } from 'lucide-react';
 
@@ -37,8 +37,31 @@ export const Settings: React.FC = () => {
   const [radioBill, setRadioBill] = useState(profile?.radio_bill?.toString() || '18.36');
   const [mobileBill, setMobileBill] = useState(profile?.mobile_bill?.toString() || '10.00');
 
+  // Preferred payment account IDs
+  const [rentAccountId, setRentAccountId] = useState(profile?.house_rent_account_id || '');
+  const [healthAccountId, setHealthAccountId] = useState(profile?.health_insurance_account_id || '');
+  const [radioAccountId, setRadioAccountId] = useState(profile?.radio_bill_account_id || '');
+  const [mobileAccountId, setMobileAccountId] = useState(profile?.mobile_bill_account_id || '');
+
+  // Accounts state
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
   // Gemini API Key State
   const [geminiApiKey, setGeminiApiKey] = useState(profile?.gemini_api_key || '');
+
+  useEffect(() => {
+    const loadAccounts = async () => {
+      if (profile) {
+        try {
+          const accs = await db.getAccounts(profile.id);
+          setAccounts(accs);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    };
+    loadAccounts();
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
@@ -49,6 +72,10 @@ export const Settings: React.FC = () => {
       setHealthInsurance(profile.health_insurance !== undefined && profile.health_insurance !== null ? profile.health_insurance.toString() : '151.42');
       setRadioBill(profile.radio_bill !== undefined && profile.radio_bill !== null ? profile.radio_bill.toString() : '18.36');
       setMobileBill(profile.mobile_bill !== undefined && profile.mobile_bill !== null ? profile.mobile_bill.toString() : '10.00');
+      setRentAccountId(profile.house_rent_account_id || '');
+      setHealthAccountId(profile.health_insurance_account_id || '');
+      setRadioAccountId(profile.radio_bill_account_id || '');
+      setMobileAccountId(profile.mobile_bill_account_id || '');
     }
   }, [profile]);
 
@@ -126,7 +153,11 @@ export const Settings: React.FC = () => {
       house_rent: parsedRent,
       health_insurance: parsedHealth,
       radio_bill: parsedRadio,
-      mobile_bill: parsedMobile
+      mobile_bill: parsedMobile,
+      house_rent_account_id: rentAccountId || null,
+      health_insurance_account_id: healthAccountId || null,
+      radio_bill_account_id: radioAccountId || null,
+      mobile_bill_account_id: mobileAccountId || null
     });
     setBudgetLoading(false);
     if (!error) {
@@ -264,39 +295,102 @@ export const Settings: React.FC = () => {
               />
               <div className="border-t border-border/50 pt-3 mt-3">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">Common Recurring Bills</span>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="House Rent (€)"
-                    value={rent}
-                    onChange={(e) => setRent(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Health Insurance (€)"
-                    value={healthInsurance}
-                    onChange={(e) => setHealthInsurance(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Radio Bill (€)"
-                    value={radioBill}
-                    onChange={(e) => setRadioBill(e.target.value)}
-                    required
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label="Mobile Bill (€)"
-                    value={mobileBill}
-                    onChange={(e) => setMobileBill(e.target.value)}
-                    required
-                  />
+                <div className="space-y-4">
+                  {/* Rent */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">House Rent</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={rent}
+                        onChange={(e) => setRent(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={rentAccountId}
+                        onChange={(e) => setRentAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Health Insurance */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Health Insurance</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={healthInsurance}
+                        onChange={(e) => setHealthInsurance(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={healthAccountId}
+                        onChange={(e) => setHealthAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Radio Bill */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Radio Bill</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={radioBill}
+                        onChange={(e) => setRadioBill(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={radioAccountId}
+                        onChange={(e) => setRadioAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile Bill */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Mobile Bill</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={mobileBill}
+                        onChange={(e) => setMobileBill(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={mobileAccountId}
+                        onChange={(e) => setMobileAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <Button type="submit" loading={budgetLoading} className="w-full mt-2">
