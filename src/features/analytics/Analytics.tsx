@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
@@ -13,6 +14,7 @@ export const Analytics: React.FC = () => {
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,6 +98,30 @@ export const Analytics: React.FC = () => {
     week,
     amount: parseFloat(amount.toFixed(2)),
   }));
+
+  // Daily Spending Trend (last 30 days)
+  const dailySpendingMap: { [key: string]: number } = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    dailySpendingMap[dateStr] = 0;
+  }
+
+  expenses.forEach(e => {
+    if (dailySpendingMap[e.date] !== undefined) {
+      dailySpendingMap[e.date] += e.amount;
+    }
+  });
+
+  const dailyTrendData = Object.entries(dailySpendingMap).map(([dateStr, amount]) => {
+    const d = new Date(dateStr);
+    const formattedDate = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return {
+      date: formattedDate,
+      amount: parseFloat(amount.toFixed(2)),
+    };
+  });
 
   // 3. Monthly Spending Comparison (Last 3 Months)
   const monthlySpendingMap: { [key: string]: { month: string; expenses: number; income: number } } = {};
@@ -255,20 +281,57 @@ export const Analytics: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* WEEKLY TREND LINE */}
+          {/* WEEKLY & DAILY TREND LINE */}
           <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <LineIcon className="h-4.5 w-4.5 text-rose-500" />
-                {t('analytics.weeklyTrend')}
-              </CardTitle>
-              <CardDescription>Spending trajectory over the last 4 weeks</CardDescription>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <LineIcon className="h-4.5 w-4.5 text-rose-500" />
+                  {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
+                </CardTitle>
+                <CardDescription>
+                  {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
+                </CardDescription>
+              </div>
+              <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
+                <button
+                  type="button"
+                  onClick={() => setTrendView('weekly')}
+                  className={cn(
+                    "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                    trendView === 'weekly' 
+                      ? "bg-background text-foreground shadow-xs border border-border/30" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Weekly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTrendView('daily')}
+                  className={cn(
+                    "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                    trendView === 'daily' 
+                      ? "bg-background text-foreground shadow-xs border border-border/30" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Daily
+                </button>
+              </div>
             </CardHeader>
             <CardContent className="h-64 pt-2">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart 
+                  data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                  <XAxis dataKey="week" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                  <XAxis 
+                    dataKey={trendView === 'weekly' ? 'week' : 'date'} 
+                    stroke={textColor} 
+                    style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                  />
                   <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                   <Tooltip
                     contentStyle={{
@@ -284,7 +347,7 @@ export const Analytics: React.FC = () => {
                     dataKey="amount"
                     stroke="#f43f5e"
                     strokeWidth={3}
-                    dot={{ r: 4, strokeWidth: 2 }}
+                    dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
@@ -390,7 +453,7 @@ export const Analytics: React.FC = () => {
                         <span className="text-foreground/90">{store.name}</span>
                       </div>
                       <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                        -€{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   ))}

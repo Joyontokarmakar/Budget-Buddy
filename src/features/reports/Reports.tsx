@@ -848,7 +848,7 @@ export const Reports: React.FC = () => {
                     <div key={idx} className="flex justify-between items-center text-xs font-semibold">
                       <span className="text-muted-foreground">{idx + 1}. {store.name}</span>
                       <span className="font-mono text-rose-500 font-bold">
-                        -€{store.amount.toFixed(2)}
+                        €{store.amount.toFixed(2)}
                       </span>
                     </div>
                   ))}
