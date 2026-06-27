@@ -157,7 +157,7 @@ export const Analytics: React.FC = () => {
   const topStores = Object.entries(storeSpendingMap)
     .map(([name, amount]) => ({ name, amount }))
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 3);
+    .slice(0, 5);
 
   // 5. Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
@@ -374,7 +374,7 @@ export const Analytics: React.FC = () => {
                 <Store className="h-4.5 w-4.5 text-indigo-500" />
                 Top Stores (This Month)
               </CardTitle>
-              <CardDescription>Top 3 stores you spent the most at this month</CardDescription>
+              <CardDescription>Top 5 stores you spent the most at this month</CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
               {topStores.length === 0 ? (

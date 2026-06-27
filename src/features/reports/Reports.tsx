@@ -307,7 +307,7 @@ export const Reports: React.FC = () => {
     return Object.entries(storeSpendingMap)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
-      .slice(0, 3);
+      .slice(0, 5);
   }, [shoppingExpenses]);
 
   // Product Analytics for selected month (excluding common bills)
