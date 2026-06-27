@@ -68,13 +68,21 @@ export const Expenses: React.FC = () => {
     confirmVariant?: 'primary' | 'destructive' | 'secondary';
     showDatePicker?: boolean;
     initialDate?: string;
-    onConfirm: (selectedDate?: string) => void;
+    showAccountPicker?: boolean;
+    initialAccountId?: string;
+    onConfirm: (selectedDate?: string, selectedAccountId?: string) => void;
   } | null>(null);
   const [modalDate, setModalDate] = useState('');
+  const [modalAccountId, setModalAccountId] = useState('');
 
   useEffect(() => {
-    if (confirmState?.isOpen && confirmState.initialDate) {
-      setModalDate(confirmState.initialDate);
+    if (confirmState?.isOpen) {
+      if (confirmState.initialDate) {
+        setModalDate(confirmState.initialDate);
+      }
+      if (confirmState.initialAccountId) {
+        setModalAccountId(confirmState.initialAccountId);
+      }
     }
   }, [confirmState]);
   const [viewMode, setViewMode] = useState<'list' | 'journal' | 'summary'>('journal');
@@ -304,7 +312,9 @@ export const Expenses: React.FC = () => {
       confirmVariant: 'primary',
       showDatePicker: true,
       initialDate: date,
-      onConfirm: async (selectedDate) => {
+      showAccountPicker: true,
+      initialAccountId: paymentAccountId,
+      onConfirm: async (selectedDate, selectedAccountId) => {
         try {
           setSaving(true);
           const billCat = categories.find(c => c.name === catName);
@@ -315,7 +325,7 @@ export const Expenses: React.FC = () => {
             date: selectedDate || date,
             category_id: categoryId,
             store_id: null,
-            payment_account_id: paymentAccountId,
+            payment_account_id: selectedAccountId || paymentAccountId,
             notes: `${billName} - Recurring Bill`,
             receipt_url: null,
             items: null
@@ -1451,7 +1461,7 @@ export const Expenses: React.FC = () => {
             <Button 
               variant={confirmState?.confirmVariant || 'primary'} 
               onClick={() => {
-                confirmState?.onConfirm(modalDate);
+                confirmState?.onConfirm(modalDate, modalAccountId);
                 setConfirmState(null);
               }}
             >
@@ -1471,6 +1481,17 @@ export const Expenses: React.FC = () => {
                 label="Select Date for Log"
                 value={modalDate}
                 onChange={(e) => setModalDate(e.target.value)}
+                required
+              />
+            </div>
+          )}
+          {confirmState?.showAccountPicker && (
+            <div className="pt-2">
+              <Select
+                label="Paid From"
+                value={modalAccountId}
+                onChange={(e) => setModalAccountId(e.target.value)}
+                options={accounts.map(a => ({ value: a.id, label: a.name }))}
                 required
               />
             </div>
