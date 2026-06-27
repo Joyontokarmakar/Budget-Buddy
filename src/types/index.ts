@@ -12,6 +12,10 @@ export interface Profile {
   monthly_budget: number;
   avatar_url?: string | null;
   gemini_api_key?: string | null;
+  house_rent?: number | null;
+  health_insurance?: number | null;
+  radio_bill?: number | null;
+  mobile_bill?: number | null;
   created_at: string;
   updated_at: string;
 }

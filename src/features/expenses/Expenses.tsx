@@ -851,10 +851,10 @@ export const Expenses: React.FC = () => {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               {[
-                { name: 'House Rent', cat: 'House rent', amount: 264.50 },
-                { name: 'Health Insurance', cat: 'Health Insurance', amount: 151.42 },
-                { name: 'Radio Bill', cat: 'Radio Bill', amount: 18.36 },
-                { name: 'Mobile bill', cat: 'Mobile bill', amount: 10.00 }
+                { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50 },
+                { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42 },
+                { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36 },
+                { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00 }
               ].map(bill => {
                 const logged = isBillLogged(bill.cat);
                 return (

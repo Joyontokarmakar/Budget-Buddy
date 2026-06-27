@@ -31,6 +31,10 @@ const MOCK_PROFILE: Profile = {
   preferred_language: 'de',
   theme_preference: 'system',
   monthly_budget: 700.00,
+  house_rent: 264.50,
+  health_insurance: 151.42,
+  radio_bill: 18.36,
+  mobile_bill: 10.00,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

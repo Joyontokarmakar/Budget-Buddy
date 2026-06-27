@@ -30,6 +30,12 @@ export const Settings: React.FC = () => {
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [budgetSuccess, setBudgetSuccess] = useState(false);
 
+  // Common Bills State
+  const [rent, setRent] = useState(profile?.house_rent?.toString() || '264.50');
+  const [healthInsurance, setHealthInsurance] = useState(profile?.health_insurance?.toString() || '151.42');
+  const [radioBill, setRadioBill] = useState(profile?.radio_bill?.toString() || '18.36');
+  const [mobileBill, setMobileBill] = useState(profile?.mobile_bill?.toString() || '10.00');
+
   // Gemini API Key State
   const [geminiApiKey, setGeminiApiKey] = useState(profile?.gemini_api_key || '');
 
@@ -38,6 +44,10 @@ export const Settings: React.FC = () => {
       setName(profile.name || '');
       setBudget(profile.monthly_budget?.toString() || '700');
       setGeminiApiKey(profile.gemini_api_key || '');
+      setRent(profile.house_rent !== undefined && profile.house_rent !== null ? profile.house_rent.toString() : '264.50');
+      setHealthInsurance(profile.health_insurance !== undefined && profile.health_insurance !== null ? profile.health_insurance.toString() : '151.42');
+      setRadioBill(profile.radio_bill !== undefined && profile.radio_bill !== null ? profile.radio_bill.toString() : '18.36');
+      setMobileBill(profile.mobile_bill !== undefined && profile.mobile_bill !== null ? profile.mobile_bill.toString() : '10.00');
     }
   }, [profile]);
 
@@ -96,11 +106,27 @@ export const Settings: React.FC = () => {
   const handleUpdateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedBudget = parseFloat(budget);
+    const parsedRent = parseFloat(rent);
+    const parsedHealth = parseFloat(healthInsurance);
+    const parsedRadio = parseFloat(radioBill);
+    const parsedMobile = parseFloat(mobileBill);
+
     if (isNaN(parsedBudget) || parsedBudget < 0) return;
+    if (isNaN(parsedRent) || parsedRent < 0) return;
+    if (isNaN(parsedHealth) || parsedHealth < 0) return;
+    if (isNaN(parsedRadio) || parsedRadio < 0) return;
+    if (isNaN(parsedMobile) || parsedMobile < 0) return;
+
     setBudgetSuccess(false);
     setBudgetLoading(true);
 
-    const { error } = await updateProfile({ monthly_budget: parsedBudget });
+    const { error } = await updateProfile({ 
+      monthly_budget: parsedBudget,
+      house_rent: parsedRent,
+      health_insurance: parsedHealth,
+      radio_bill: parsedRadio,
+      mobile_bill: parsedMobile
+    });
     setBudgetLoading(false);
     if (!error) {
       setBudgetSuccess(true);
@@ -235,9 +261,46 @@ export const Settings: React.FC = () => {
                 onChange={(e) => setBudget(e.target.value)}
                 required
               />
-              <Button type="submit" loading={budgetLoading} className="w-full">
+              <div className="border-t border-border/50 pt-3 mt-3">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">Common Recurring Bills</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    label="House Rent (€)"
+                    value={rent}
+                    onChange={(e) => setRent(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    label="Health Insurance (€)"
+                    value={healthInsurance}
+                    onChange={(e) => setHealthInsurance(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    label="Radio Bill (€)"
+                    value={radioBill}
+                    onChange={(e) => setRadioBill(e.target.value)}
+                    required
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    label="Mobile Bill (€)"
+                    value={mobileBill}
+                    onChange={(e) => setMobileBill(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <Button type="submit" loading={budgetLoading} className="w-full mt-2">
                 {budgetSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                {t('settings.saveBudget')}
+                Save Financial Plan
               </Button>
             </form>
           </CardContent>
