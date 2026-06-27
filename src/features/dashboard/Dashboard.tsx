@@ -139,9 +139,23 @@ export const Dashboard: React.FC = () => {
 
   // Daily Average Spending (excluding common bills)
   const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+  const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
   const nonBillExpenses = thisMonthExpenses.filter(e => {
+    // 1. Exclude by category ID
+    if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) {
+      return false;
+    }
+    // 2. Exclude by category name
     const catName = e.category?.name?.toLowerCase();
-    return !catName || !commonBillsCategories.includes(catName);
+    if (catName && commonBillsCategories.includes(catName)) {
+      return false;
+    }
+    // 3. Exclude by notes keyword matching
+    const notes = e.notes?.toLowerCase() || '';
+    if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) {
+      return false;
+    }
+    return true;
   });
   const nonBillSpending = nonBillExpenses.reduce((acc, curr) => acc + curr.amount, 0);
   const daysElapsed = Math.max(now.getDate(), 1);

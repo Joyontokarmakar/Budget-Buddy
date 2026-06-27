@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Table, Calendar, Calculator, Info, Download, FileText } from 'lucide-react';
+import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t } = useTranslation();
@@ -295,6 +295,42 @@ export const Reports: React.FC = () => {
 
   const monthlyBudget = profile?.monthly_budget || 0;
   const remainingBudgetRest = monthlyBudget - totalExpenses;
+
+  // Store Analytics for selected month
+  const topStores = useMemo(() => {
+    const storeSpendingMap: { [key: string]: number } = {};
+    currentMonthExpenses.forEach(e => {
+      const storeName = e.store?.name || 'Other/Unknown';
+      storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
+    });
+
+    return Object.entries(storeSpendingMap)
+      .map(([name, amount]) => ({ name, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+  }, [currentMonthExpenses]);
+
+  // Product Analytics for selected month
+  const topProducts = useMemo(() => {
+    const productMap: { [key: string]: { name: string; amount: number } } = {};
+    currentMonthExpenses.forEach(e => {
+      if (e.items && e.items.length > 0) {
+        e.items.forEach(item => {
+          const name = item.name.trim();
+          if (!name || name.toLowerCase() === 'discount') return;
+          if (productMap[name.toLowerCase()]) {
+            productMap[name.toLowerCase()].amount += item.amount;
+          } else {
+            productMap[name.toLowerCase()] = { name, amount: item.amount };
+          }
+        });
+      }
+    });
+
+    return Object.values(productMap)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [currentMonthExpenses]);
 
   // Monthly stats for Bill Analyzer (filtering category payments month-over-month)
   const billHistory = useMemo(() => {
@@ -792,6 +828,58 @@ export const Reports: React.FC = () => {
                   </tr>
                 </tbody>
               </table>
+            </CardContent>
+          </Card>
+
+          {/* Store Analytics for Selected Month */}
+          <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md no-print">
+            <CardHeader className="bg-muted/20 border-b border-border/50 py-3 px-4 flex flex-row items-center gap-2">
+              <Store className="h-4 w-4 text-indigo-500" />
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Top Stores (This Month)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {topStores.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2 text-center">No purchases this month.</p>
+              ) : (
+                <div className="space-y-2">
+                  {topStores.map((store, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-muted-foreground">{idx + 1}. {store.name}</span>
+                      <span className="font-mono text-rose-500 font-bold">
+                        -€{store.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Product Analytics for Selected Month */}
+          <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md no-print">
+            <CardHeader className="bg-muted/20 border-b border-border/50 py-3 px-4 flex flex-row items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-violet-500" />
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Top Bought Products
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {topProducts.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2 text-center">No items logged this month.</p>
+              ) : (
+                <div className="space-y-2">
+                  {topProducts.map((prod, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-muted-foreground truncate max-w-[120px]">{idx + 1}. {prod.name}</span>
+                      <span className="font-mono text-rose-500 font-bold">
+                        €{prod.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
