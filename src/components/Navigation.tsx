@@ -40,8 +40,8 @@ export const Navigation: React.FC = () => {
   return (
     <>
       {/* Mobile Sticky Bottom Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border px-1 pt-2 pb-safe md:hidden shadow-lg shadow-black/5">
-        <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
+      <nav className="fixed bottom-5 left-4 right-4 z-40 md:hidden max-w-md mx-auto bg-card/85 dark:bg-card/75 backdrop-blur-xl border border-border/80 rounded-2xl shadow-xl shadow-black/10 px-2 py-1.5 transition-all duration-300">
+        <div className="flex items-center justify-around h-11 max-w-lg mx-auto gap-1">
           {primaryItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -50,20 +50,15 @@ export const Navigation: React.FC = () => {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    'flex flex-col items-center justify-center flex-1 h-full text-muted-foreground transition-colors relative',
-                    isActive ? 'text-primary' : 'hover:text-foreground'
+                    'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer',
+                    isActive 
+                      ? 'bg-secondary dark:bg-muted text-primary font-bold shadow-xs scale-102' 
+                      : 'hover:text-foreground hover:bg-secondary/40 dark:hover:bg-muted/30 active:scale-95'
                   )
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <Icon className="h-5 w-5 transition-transform duration-200 active:scale-95" />
-                    <span className="text-[10px] font-semibold mt-1 tracking-tight truncate max-w-[65px]">{item.label}</span>
-                    {isActive && (
-                      <span className="absolute top-0 w-1.5 h-1.5 rounded-full bg-primary -translate-y-1" />
-                    )}
-                  </>
-                )}
+                <Icon className="h-4.5 w-4.5 transition-transform duration-200" />
+                <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate max-w-[65px]">{item.label}</span>
               </NavLink>
             );
           })}
@@ -73,15 +68,14 @@ export const Navigation: React.FC = () => {
             type="button"
             onClick={() => setIsMoreOpen(!isMoreOpen)}
             className={cn(
-              'flex flex-col items-center justify-center flex-1 h-full text-muted-foreground transition-colors relative',
-              isSecondaryActive || isMoreOpen ? 'text-primary' : 'hover:text-foreground'
+              'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer',
+              isSecondaryActive || isMoreOpen 
+                ? 'bg-secondary dark:bg-muted text-primary font-bold shadow-xs scale-102' 
+                : 'hover:text-foreground hover:bg-secondary/40 dark:hover:bg-muted/30 active:scale-95'
             )}
           >
-            <Menu className="h-5 w-5 transition-transform duration-200 active:scale-95" />
-            <span className="text-[10px] font-semibold mt-1 tracking-tight truncate">{t('common.more')}</span>
-            {isSecondaryActive && (
-              <span className="absolute top-0 w-1.5 h-1.5 rounded-full bg-primary -translate-y-1" />
-            )}
+            <Menu className="h-4.5 w-4.5 transition-transform duration-200" />
+            <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate">{t('common.more')}</span>
           </button>
         </div>
       </nav>
