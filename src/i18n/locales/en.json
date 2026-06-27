@@ -149,5 +149,23 @@
     "loading": "Loading...",
     "more": "More",
     "moreFeatures": "More Features"
+  },
+  "search": {
+    "placeholder": "Search transactions, products, shops...",
+    "noResults": "No results found for \"{{query}}\"",
+    "monthlySummaries": "Monthly Summaries",
+    "products": "Products & Prices",
+    "shops": "Shops & Merchants",
+    "transactions": "Transactions",
+    "pages": "Navigation Shortcuts",
+    "itemsCount": "{{count}} items",
+    "income": "Income",
+    "expenses": "Expenses",
+    "savings": "Savings",
+    "spentAt": "Spent {{amount}} at {{store}} on {{date}}",
+    "receivedFrom": "Received {{amount}} from {{source}} on {{date}}",
+    "assetAt": "Asset: {{name}} - {{price}} at {{store}} on {{date}}",
+    "clickToVisit": "Click to visit page",
+    "searchHelp": "Use ↑↓ to navigate, Enter to select, Esc to close"
   }
 }

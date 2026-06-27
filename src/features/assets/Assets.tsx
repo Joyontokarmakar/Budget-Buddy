@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { PermanentAsset } from '../../types';
-import { Button, Input, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
+import { Button, Input, Card, CardHeader, CardTitle, CardContent, Spinner, Dialog } from '../../components/ui';
 import { Gem, PlusCircle, Trash2, Calendar, ShoppingBag, Euro } from 'lucide-react';
 
 export const Assets: React.FC = () => {
@@ -20,6 +20,15 @@ export const Assets: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    confirmVariant?: 'primary' | 'destructive' | 'secondary';
+    onConfirm: () => void;
+  } | null>(null);
 
   const loadData = async () => {
     if (!profile) return;
@@ -80,13 +89,22 @@ export const Assets: React.FC = () => {
   };
 
   const handleDeleteAsset = async (id: string) => {
-    if (!profile || !window.confirm('Delete this asset record?')) return;
-    try {
-      await db.deletePermanentAsset(profile.id, id);
-      await loadData();
-    } catch (e: any) {
-      console.error(e);
-    }
+    if (!profile) return;
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Asset Record',
+      description: 'Are you sure you want to delete this asset record? This action cannot be undone.',
+      confirmText: 'Delete',
+      confirmVariant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await db.deletePermanentAsset(profile.id, id);
+          await loadData();
+        } catch (e: any) {
+          console.error(e);
+        }
+      }
+    });
   };
 
   if (loading && assets.length === 0) {
@@ -224,6 +242,32 @@ export const Assets: React.FC = () => {
           </div>
         )}
       </div>
+
+      <Dialog
+        isOpen={!!confirmState}
+        onClose={() => setConfirmState(null)}
+        title={confirmState?.title || ''}
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => setConfirmState(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              variant={confirmState?.confirmVariant || 'primary'} 
+              onClick={() => {
+                confirmState?.onConfirm();
+                setConfirmState(null);
+              }}
+            >
+              {confirmState?.confirmText || 'Confirm'}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm font-semibold text-muted-foreground">
+          {confirmState?.description}
+        </p>
+      </Dialog>
     </div>
   );
 };

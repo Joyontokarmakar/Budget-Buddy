@@ -149,5 +149,23 @@
     "loading": "Lädt...",
     "more": "Mehr",
     "moreFeatures": "Weitere Funktionen"
+  },
+  "search": {
+    "placeholder": "Transaktionen, Produkte, Geschäfte suchen...",
+    "noResults": "Keine Ergebnisse für \"{{query}}\" gefunden",
+    "monthlySummaries": "Monatliche Zusammenfassungen",
+    "products": "Produkte & Preise",
+    "shops": "Geschäfte & Händler",
+    "transactions": "Transaktionen",
+    "pages": "Navigations-Shortcuts",
+    "itemsCount": "{{count}} Artikel",
+    "income": "Einnahmen",
+    "expenses": "Ausgaben",
+    "savings": "Ersparnisse",
+    "spentAt": "{{amount}} ausgegeben bei {{store}} am {{date}}",
+    "receivedFrom": "{{amount}} erhalten von {{source}} am {{date}}",
+    "assetAt": "Anlagegut: {{name}} - {{price}} bei {{store}} am {{date}}",
+    "clickToVisit": "Klicken, um die Seite zu besuchen",
+    "searchHelp": "Nutzen Sie ↑↓ zum Navigieren, Enter zum Auswählen, Esc zum Schließen"
   }
 }

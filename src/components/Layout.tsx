@@ -2,12 +2,13 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, LogOut, Laptop, Globe } from 'lucide-react';
+import { Sun, Moon, LogOut, Laptop, Globe, Search } from 'lucide-react';
 import { Button } from './ui';
+import { GlobalSearch } from './GlobalSearch';
 
 export const Layout: React.FC = () => {
   const { profile, signOut } = useAuthStore();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const currentTheme = profile?.theme_preference || 'system';
@@ -66,7 +67,32 @@ export const Layout: React.FC = () => {
             </div>
           </div>
 
+          {/* Desktop Search trigger */}
+          <div className="flex-1 max-w-sm mx-8 hidden md:block">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground text-xs font-semibold tracking-wide transition-all cursor-pointer shadow-xs animate-in fade-in duration-200"
+            >
+              <Search className="h-4 w-4 text-muted-foreground/60" />
+              <span className="truncate">{t('search.placeholder')}</span>
+              <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted px-1.5 font-mono text-[9px] font-bold text-muted-foreground/80">
+                <span>⌘</span>K
+              </kbd>
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
+            {/* Quick Search Toggle for Mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-global-search'))}
+              title="Search"
+              className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+
             {/* Quick Language Toggle */}
             <Button
               variant="ghost"
@@ -108,6 +134,9 @@ export const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Search command palette */}
+      <GlobalSearch />
     </div>
   );
 };

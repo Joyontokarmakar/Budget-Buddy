@@ -515,7 +515,7 @@ export const Dashboard: React.FC = () => {
                       <span className="text-foreground/90">{store.name}</span>
                     </div>
                     <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                      -€{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 ))}

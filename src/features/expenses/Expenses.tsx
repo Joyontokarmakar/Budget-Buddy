@@ -59,6 +59,14 @@ export const Expenses: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    confirmVariant?: 'primary' | 'destructive' | 'secondary';
+    onConfirm: () => void;
+  } | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'journal' | 'summary'>('journal');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -278,36 +286,39 @@ export const Expenses: React.FC = () => {
     const matchingExpenses = expenses.filter(e => e.category?.name === catName);
     const amountToLog = matchingExpenses.length > 0 ? matchingExpenses[0].amount : defaultAmount;
     
-    const confirmLog = window.confirm(
-      `Log ${billName} of €${amountToLog.toFixed(2)} for date ${new Date(date).toLocaleDateString('de-DE')} using ${accountName}?`
-    );
-    
-    if (!confirmLog) return;
-    
-    try {
-      setSaving(true);
-      const billCat = categories.find(c => c.name === catName);
-      const categoryId = billCat ? billCat.id : null;
-      
-      await db.createExpense(profile.id, {
-        amount: amountToLog,
-        date,
-        category_id: categoryId,
-        store_id: null,
-        payment_account_id: paymentAccountId,
-        notes: `${billName} - Recurring Bill`,
-        receipt_url: null,
-        items: null
-      });
-      
-      setSuccessMsg(`${billName} logged successfully!`);
-      setTimeout(() => setSuccessMsg(null), 3000);
-      await loadData();
-    } catch (err: any) {
-      setError(err.message || 'Error logging bill');
-    } finally {
-      setSaving(false);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: `Log ${billName}`,
+      description: `Log ${billName} of €${amountToLog.toFixed(2)} for date ${new Date(date).toLocaleDateString('de-DE')} using ${accountName}?`,
+      confirmText: 'Log Bill',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        try {
+          setSaving(true);
+          const billCat = categories.find(c => c.name === catName);
+          const categoryId = billCat ? billCat.id : null;
+          
+          await db.createExpense(profile.id, {
+            amount: amountToLog,
+            date,
+            category_id: categoryId,
+            store_id: null,
+            payment_account_id: paymentAccountId,
+            notes: `${billName} - Recurring Bill`,
+            receipt_url: null,
+            items: null
+          });
+          
+          setSuccessMsg(`${billName} logged successfully!`);
+          setTimeout(() => setSuccessMsg(null), 3000);
+          await loadData();
+        } catch (err: any) {
+          setError(err.message || 'Error logging bill');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
   };
 
   const handleAddItem = () => {
@@ -496,13 +507,22 @@ export const Expenses: React.FC = () => {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!profile || !window.confirm('Delete this expense? This will restore the account balance.')) return;
-    try {
-      await db.deleteExpense(profile.id, id);
-      await loadData();
-    } catch (e: any) {
-      console.error(e);
-    }
+    if (!profile) return;
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Expense',
+      description: 'Are you sure you want to delete this expense transaction? This will restore the account balance and cannot be undone.',
+      confirmText: 'Delete',
+      confirmVariant: 'destructive',
+      onConfirm: async () => {
+        try {
+          await db.deleteExpense(profile.id, id);
+          await loadData();
+        } catch (e: any) {
+          console.error(e);
+        }
+      }
+    });
   };
 
   // Filter stores for autocomplete
@@ -1404,6 +1424,33 @@ export const Expenses: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Dialog>
+
+      {/* CONFIRMATION DIALOG */}
+      <Dialog
+        isOpen={!!confirmState}
+        onClose={() => setConfirmState(null)}
+        title={confirmState?.title || ''}
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => setConfirmState(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              variant={confirmState?.confirmVariant || 'primary'} 
+              onClick={() => {
+                confirmState?.onConfirm();
+                setConfirmState(null);
+              }}
+            >
+              {confirmState?.confirmText || 'Confirm'}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm font-semibold text-muted-foreground">
+          {confirmState?.description}
+        </p>
       </Dialog>
     </div>
   );
