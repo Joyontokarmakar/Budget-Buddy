@@ -37,11 +37,33 @@ export const Navigation: React.FC = () => {
 
   const isSecondaryActive = secondaryItems.some(item => location.pathname === item.to);
 
+  const getActiveIndex = () => {
+    if (isSecondaryActive || isMoreOpen) return 4;
+    if (location.pathname === '/') return 0;
+    if (location.pathname === '/expenses') return 1;
+    if (location.pathname === '/income') return 2;
+    if (location.pathname === '/reports') return 3;
+    return -1;
+  };
+  const activeIndex = getActiveIndex();
+
   return (
     <>
       {/* Mobile Sticky Bottom Tab Bar */}
       <nav className="fixed bottom-5 left-4 right-4 z-40 md:hidden max-w-md mx-auto bg-card/85 dark:bg-card/75 backdrop-blur-xl border border-border/80 rounded-2xl shadow-xl shadow-black/10 px-2 py-1.5 transition-all duration-300">
-        <div className="flex items-center justify-around h-11 max-w-lg mx-auto gap-1">
+        <div className="flex items-center justify-around h-11 max-w-lg mx-auto gap-1 relative">
+          
+          {/* Sliding Pill Background (Glossy Water Drop Transition) */}
+          {activeIndex !== -1 && (
+            <div
+              className="absolute top-0 bottom-0 rounded-xl bg-secondary/80 dark:bg-muted/70 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0"
+              style={{
+                width: 'calc(20% - 4px)',
+                left: `calc(${activeIndex} * 20% + 2px)`,
+              }}
+            />
+          )}
+
           {primaryItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -50,10 +72,10 @@ export const Navigation: React.FC = () => {
                 to={item.to}
                 className={({ isActive }) =>
                   cn(
-                    'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer',
+                    'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer z-10',
                     isActive 
-                      ? 'bg-secondary dark:bg-muted text-primary font-bold shadow-xs scale-102' 
-                      : 'hover:text-foreground hover:bg-secondary/40 dark:hover:bg-muted/30 active:scale-95'
+                      ? 'text-primary font-bold scale-102' 
+                      : 'hover:text-foreground active:scale-95'
                   )
                 }
               >
@@ -68,10 +90,10 @@ export const Navigation: React.FC = () => {
             type="button"
             onClick={() => setIsMoreOpen(!isMoreOpen)}
             className={cn(
-              'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer',
+              'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer z-10',
               isSecondaryActive || isMoreOpen 
-                ? 'bg-secondary dark:bg-muted text-primary font-bold shadow-xs scale-102' 
-                : 'hover:text-foreground hover:bg-secondary/40 dark:hover:bg-muted/30 active:scale-95'
+                ? 'text-primary font-bold scale-102' 
+                : 'hover:text-foreground active:scale-95'
             )}
           >
             <Menu className="h-4.5 w-4.5 transition-transform duration-200" />
