@@ -65,8 +65,17 @@ export const Expenses: React.FC = () => {
     description: string;
     confirmText?: string;
     confirmVariant?: 'primary' | 'destructive' | 'secondary';
-    onConfirm: () => void;
+    showDatePicker?: boolean;
+    initialDate?: string;
+    onConfirm: (selectedDate?: string) => void;
   } | null>(null);
+  const [modalDate, setModalDate] = useState('');
+
+  useEffect(() => {
+    if (confirmState?.isOpen && confirmState.initialDate) {
+      setModalDate(confirmState.initialDate);
+    }
+  }, [confirmState]);
   const [viewMode, setViewMode] = useState<'list' | 'journal' | 'summary'>('journal');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -289,10 +298,12 @@ export const Expenses: React.FC = () => {
     setConfirmState({
       isOpen: true,
       title: `Log ${billName}`,
-      description: `Log ${billName} of €${amountToLog.toFixed(2)} for date ${new Date(date).toLocaleDateString('de-DE')} using ${accountName}?`,
+      description: `Log ${billName} of €${amountToLog.toFixed(2)} using ${accountName}?`,
       confirmText: 'Log Bill',
       confirmVariant: 'primary',
-      onConfirm: async () => {
+      showDatePicker: true,
+      initialDate: date,
+      onConfirm: async (selectedDate) => {
         try {
           setSaving(true);
           const billCat = categories.find(c => c.name === catName);
@@ -300,7 +311,7 @@ export const Expenses: React.FC = () => {
           
           await db.createExpense(profile.id, {
             amount: amountToLog,
-            date,
+            date: selectedDate || date,
             category_id: categoryId,
             store_id: null,
             payment_account_id: paymentAccountId,
@@ -1439,7 +1450,7 @@ export const Expenses: React.FC = () => {
             <Button 
               variant={confirmState?.confirmVariant || 'primary'} 
               onClick={() => {
-                confirmState?.onConfirm();
+                confirmState?.onConfirm(modalDate);
                 setConfirmState(null);
               }}
             >
@@ -1448,9 +1459,22 @@ export const Expenses: React.FC = () => {
           </div>
         }
       >
-        <p className="text-sm font-semibold text-muted-foreground">
-          {confirmState?.description}
-        </p>
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-muted-foreground">
+            {confirmState?.description}
+          </p>
+          {confirmState?.showDatePicker && (
+            <div className="pt-2">
+              <Input
+                type="date"
+                label="Select Date for Log"
+                value={modalDate}
+                onChange={(e) => setModalDate(e.target.value)}
+                required
+              />
+            </div>
+          )}
+        </div>
       </Dialog>
     </div>
   );
