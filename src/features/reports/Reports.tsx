@@ -310,10 +310,10 @@ export const Reports: React.FC = () => {
       .slice(0, 3);
   }, [shoppingExpenses]);
 
-  // Product Analytics for selected month
+  // Product Analytics for selected month (excluding common bills)
   const topProducts = useMemo(() => {
     const productMap: { [key: string]: { name: string; amount: number } } = {};
-    currentMonthExpenses.forEach(e => {
+    shoppingExpenses.forEach(e => {
       if (e.items && e.items.length > 0) {
         e.items.forEach(item => {
           const name = item.name.trim();
@@ -330,7 +330,7 @@ export const Reports: React.FC = () => {
     return Object.values(productMap)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
-  }, [currentMonthExpenses]);
+  }, [shoppingExpenses]);
 
   // Monthly stats for Bill Analyzer (filtering category payments month-over-month)
   const billHistory = useMemo(() => {

@@ -159,11 +159,19 @@ export const Analytics: React.FC = () => {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
-  // 5. Product Analytics: Top bought Products (Product, Month, Amount) scanning items
+  // 5. Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
   
   expenses.forEach(e => {
     if (!e.date) return;
+    
+    // Exclude common bills
+    if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return;
+    const catName = e.category?.name?.toLowerCase();
+    if (catName && commonBillsCategories.includes(catName)) return;
+    const notes = e.notes?.toLowerCase() || '';
+    if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return;
+
     const d = new Date(e.date);
     const monthLabel = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
     
