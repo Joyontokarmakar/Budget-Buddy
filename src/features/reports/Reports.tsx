@@ -428,21 +428,86 @@ export const Reports: React.FC = () => {
     <div className="space-y-6 printable-report-area">
       <style>{`
         @media print {
-          header, nav, aside, footer, .no-print, button, .w-52 {
+          /* 1. Hide unwanted UI components */
+          header, 
+          nav, 
+          aside, 
+          footer, 
+          .no-print, 
+          button, 
+          input, 
+          select,
+          .react-datepicker-popper,
+          [role="navigation"],
+          .fixed,
+          [class*="fixed"] {
             display: none !important;
           }
-          body {
+
+          /* 2. Reset margins, paddings & widths for standard printing layout */
+          html, body {
             background: white !important;
             color: black !important;
-            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
             margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
+
+          /* Reset desktop sidebar offset pl-64 */
+          .md\\:pl-64,
+          div[class*="md:pl-64"],
+          div[class*="pl-64"],
+          main {
+            padding-left: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          /* 3. Style printable area container */
           .printable-report-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 20px !important;
+            display: block !important;
+            position: static !important; /* Critical for multipage document breaking */
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 10px !important;
+          }
+
+          /* 4. Table page break configurations */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+          }
+          thead {
+            display: table-header-group !important; /* Repeats table header on next pages */
+          }
+          tr {
+            page-break-inside: avoid !important; /* Prevents rows from breaking half-way */
+            page-break-after: auto !important;
+          }
+          th, td {
+            border: 1px solid #e2e8f0 !important;
+            padding: 8px 12px !important;
+            font-size: 10pt !important;
+            color: #0f172a !important;
+            background: transparent !important;
+          }
+
+          /* Keep badges and backgrounds filled in print */
+          [style*="background-color"] {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color: white !important;
+          }
+
+          @page {
+            size: portrait;
+            margin: 1.5cm 1.2cm 1.5cm 1.2cm;
           }
         }
       `}</style>
