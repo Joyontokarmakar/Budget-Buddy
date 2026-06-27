@@ -6,7 +6,7 @@ import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
 import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
-import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
   const { t } = useTranslation();
@@ -523,14 +523,14 @@ export const Expenses: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-full">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-bold tracking-tight mb-1">{t('expenses.title')}</h1>
         <p className="text-xs text-muted-foreground">Log expenses immediately or snap a receipt to pre-fill</p>
       </div>
 
-      {/* Expense Log Form */}
-      <div className="lg:col-span-1">
+      {/* Loggers row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="sticky top-20 shadow-md">
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -578,41 +578,7 @@ export const Expenses: React.FC = () => {
                   </div>
                 )}
 
-                {/* Recurring Bills Quick Log Panel */}
-                <div className="mb-4 pb-4 border-b border-border/50">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-                    Quick Log Recurring Bills
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { name: 'House Rent', cat: 'House rent', amount: 264.50 },
-                      { name: 'Health Insurance', cat: 'Health Insurance', amount: 151.42 },
-                      { name: 'Radio Bill', cat: 'Radio Bill', amount: 18.36 },
-                      { name: 'Mobile bill', cat: 'Mobile bill', amount: 10.00 }
-                    ].map(bill => {
-                      const logged = isBillLogged(bill.cat);
-                      return (
-                        <button
-                          key={bill.name}
-                          type="button"
-                          disabled={logged}
-                          onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount)}
-                          className={cn(
-                            "py-2 px-2.5 rounded-xl border text-[10px] font-bold transition-all flex items-center justify-between text-left",
-                            logged
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
-                              : "bg-muted/50 hover:bg-muted border-border/60 text-foreground cursor-pointer"
-                          )}
-                        >
-                          <span className="truncate">{bill.name}</span>
-                          <span className="font-mono text-[9px] shrink-0">
-                            {logged ? 'Logged' : `€${bill.amount}`}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+
 
                 {/* 1. Date Input (On Top) */}
                 <Input
@@ -850,10 +816,57 @@ export const Expenses: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Quick Log Recurring Bills Card */}
+        <Card className="sticky top-20 shadow-md h-fit bg-card/75 backdrop-blur-md">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Quick Log Recurring Bills
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
+              Log common monthly student utilities in a single click with pre-filled amounts:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {[
+                { name: 'House Rent', cat: 'House rent', amount: 264.50 },
+                { name: 'Health Insurance', cat: 'Health Insurance', amount: 151.42 },
+                { name: 'Radio Bill', cat: 'Radio Bill', amount: 18.36 },
+                { name: 'Mobile bill', cat: 'Mobile bill', amount: 10.00 }
+              ].map(bill => {
+                const logged = isBillLogged(bill.cat);
+                return (
+                  <button
+                    key={bill.name}
+                    type="button"
+                    disabled={logged}
+                    onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount)}
+                    className={cn(
+                      "p-4 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between h-24 text-left shadow-xs",
+                      logged
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
+                        : "bg-muted/30 hover:bg-muted border-border/60 text-foreground cursor-pointer hover:border-primary/20"
+                    )}
+                  >
+                    <span className="opacity-95">{bill.name}</span>
+                    <span className="font-mono text-[11px] font-black block mt-2 text-primary">
+                      {logged ? 'Logged' : `€${bill.amount.toFixed(2)}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 font-semibold leading-relaxed pt-2">
+              Note: Quick logs process immediately to Giro account after a confirmation modal. Once logged, the button stays disabled for the active month.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Expense History Timeline */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Expense History Log</h3>
           
