@@ -417,7 +417,342 @@ export const Reports: React.FC = () => {
   };
 
   const handleExportPDF = () => {
-    window.print();
+    const monthLabel = formatMonthKey(selectedMonth);
+    const userName = profile?.name || profile?.email || 'Student';
+    
+    // Generate shopping categories list
+    const categoryRowsHtml = `
+      <tr><td>Food (Lebensmittel)</td><td class="amount">€${foodTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td>Crockery / Kitchen ware</td><td class="amount">€${kitchenTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td>Restaurant</td><td class="amount">€${restaurantTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td>Shopping</td><td class="amount">€${shoppingTotalCategory.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr><td>Others</td><td class="amount">€${othersTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+      <tr class="total-row"><td>Shopping Sub Total</td><td class="amount">€${shoppingSubTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
+    `;
+
+    // Generate common bills rows
+    const commonBillsRowsHtml = `
+      <tr><td>House Rent</td><td class="amount">€${rentAmount.toFixed(2)}</td></tr>
+      <tr><td>Health Insurance</td><td class="amount">€${insuranceAmount.toFixed(2)}</td></tr>
+      <tr><td>Radio Bill</td><td class="amount">€${radioAmount.toFixed(2)}</td></tr>
+      <tr><td>Mobile bill</td><td class="amount">€${mobileAmount.toFixed(2)}</td></tr>
+      <tr class="total-row"><td>Total Common Bill</td><td class="amount">€${totalCommonBill.toFixed(2)}</td></tr>
+    `;
+
+    // Detailed Shopping list rows
+    let shoppingListRowsHtml = '';
+    sheetData.forEach((row) => {
+      shoppingListRowsHtml += `
+        <tr>
+          <td>${row.formattedDate}</td>
+          <td>${row.marketName}</td>
+          <td>${row.itemName}</td>
+          <td style="text-align: center;">${row.categoryCode}</td>
+          <td class="amount">€${row.amount.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    if (sheetData.length === 0) {
+      shoppingListRowsHtml = '<tr><td colspan="5" style="text-align: center; color: #888;">No transactions logged for this month.</td></tr>';
+    }
+
+    // Top Stores
+    let topStoresHtml = '';
+    topStores.slice(0, 5).forEach((store, idx) => {
+      topStoresHtml += `
+        <tr>
+          <td>${idx + 1}. ${store.name}</td>
+          <td class="amount">€${store.amount.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+    if (topStores.length === 0) {
+      topStoresHtml = '<tr><td colspan="2" style="text-align: center; color: #888;">No store logs.</td></tr>';
+    }
+
+    // Top Products
+    let topProductsHtml = '';
+    topProducts.slice(0, 5).forEach((prod, idx) => {
+      topProductsHtml += `
+        <tr>
+          <td>${idx + 1}. ${prod.name}</td>
+          <td class="amount">€${prod.amount.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+    if (topProducts.length === 0) {
+      topProductsHtml = '<tr><td colspan="2" style="text-align: center; color: #888;">No item logs.</td></tr>';
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Financial Report - ${monthLabel}</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #1e293b;
+            margin: 40px;
+            background: #fff;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+          }
+          .header .subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+          }
+          .branding {
+            text-align: right;
+          }
+          .branding-logo {
+            font-size: 16px;
+            font-weight: 900;
+            color: #0f172a;
+          }
+          .branding-sub {
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+          }
+          .summary-banner {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+          }
+          .summary-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+          }
+          .summary-card.accent {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+          }
+          .summary-card.danger {
+            background: #fef2f2;
+            border-color: #fecaca;
+          }
+          .summary-val {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: monospace;
+            color: #0f172a;
+          }
+          .summary-card.accent .summary-val {
+            color: #16a34a;
+          }
+          .summary-card.danger .summary-val {
+            color: #dc2626;
+          }
+          .summary-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-top: 2px;
+          }
+          .section-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 20px 0 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+          }
+          th {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding: 6px 8px;
+            background: #f8fafc;
+          }
+          td {
+            font-size: 10px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+          }
+          .amount {
+            text-align: right;
+            font-family: monospace;
+            font-weight: 700;
+          }
+          .total-row {
+            font-weight: 800;
+            background: #f8fafc;
+          }
+          .total-row td {
+            border-top: 1.5px solid #cbd5e1;
+            color: #0f172a;
+          }
+          .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+          }
+          .page-break {
+            page-break-before: always;
+          }
+          @media print {
+            body {
+              margin: 15px;
+            }
+            .grid-2, .summary-banner {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>Financial Report</h1>
+            <div class="subtitle">Month: <strong>${monthLabel}</strong> &bull; Generated for: <strong>${userName}</strong></div>
+          </div>
+          <div class="branding">
+            <div class="branding-logo">BudgetBuddy</div>
+            <div class="branding-sub">Premium PWA Tracker</div>
+          </div>
+        </div>
+
+        <div class="summary-banner">
+          <div class="summary-card">
+            <div class="summary-val">€${monthlyBudget.toFixed(2)}</div>
+            <div class="summary-label">Budget Limit</div>
+          </div>
+          <div class="summary-card danger">
+            <div class="summary-val">€${totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div class="summary-label">Total Expenses</div>
+          </div>
+          <div class="summary-card ${remainingBudgetRest >= 0 ? 'accent' : 'danger'}">
+            <div class="summary-val">€${remainingBudgetRest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div class="summary-label">Remaining Rest</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <div class="section-title">Common Fixed Bills</div>
+            <table>
+              <tbody>
+                ${commonBillsRowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="section-title">Shopping Categories Sum</div>
+            <table>
+              <tbody>
+                ${categoryRowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 15px;">
+          <div>
+            <div class="section-title">Top Stores (This Month)</div>
+            <table>
+              <tbody>
+                ${topStoresHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div class="section-title">Top Bought Products</div>
+            <table>
+              <tbody>
+                ${topProductsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <div class="section-title" style="margin-top: 10px;">Detailed Shopping Sheet</div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Date</th>
+              <th style="width: 120px;">Market</th>
+              <th>Item Description</th>
+              <th style="width: 50px; text-align: center;">Type</th>
+              <th style="width: 80px; text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shoppingListRowsHtml}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // Create an iframe to print the clean HTML
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+    }
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.error('Print failed:', err);
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+          }
+        }, 2000);
+      }
+    }, 500);
   };
 
   if (loading && expenses.length === 0) {
