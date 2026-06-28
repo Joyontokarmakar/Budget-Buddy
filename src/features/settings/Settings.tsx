@@ -211,6 +211,11 @@ export const Settings: React.FC = () => {
     return total;
   };
 
+  useEffect(() => {
+    const total = calculateTotalPlannedBudget();
+    setBudget(total.toFixed(2));
+  }, [rent, healthInsurance, radioBill, mobileBill, semesterFee, foodBudget, otherBudget, disabledCategories, showSemesterFee]);
+
   const handleToggleCategory = (categoryKey: string) => {
     if (disabledCategories.includes(categoryKey)) {
       setDisabledCategories(disabledCategories.filter(c => c !== categoryKey));
@@ -391,7 +396,7 @@ export const Settings: React.FC = () => {
                 <div className="flex-1">
                   <Input
                     type="number"
-                    step="1"
+                    step="0.01"
                     label={t('settings.budgetLabel')}
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
