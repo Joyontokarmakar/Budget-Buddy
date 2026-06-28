@@ -56,7 +56,7 @@ export const Navigation: React.FC = () => {
           {/* Active Tab Indicator (Regular Inset Sized Pill) */}
           {activeIndex !== -1 && (
             <div
-              className="absolute inset-y-0 rounded-full bg-secondary/85 dark:bg-muted/80 border border-black/5 dark:border-white/5 transition-all duration-300 ease-out pointer-events-none z-0 shadow-xs"
+              className="absolute inset-y-0 rounded-full bg-secondary/85 dark:bg-muted/80 border border-black/5 dark:border-white/5 transition-all duration-450 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-xs"
               style={{
                 width: 'calc(20% - 4px)',
                 left: `calc(${activeIndex} * 20% + 2px)`,
