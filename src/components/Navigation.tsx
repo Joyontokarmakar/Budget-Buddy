@@ -82,7 +82,7 @@ export const Navigation: React.FC = () => {
           <div
             className={cn(
               "absolute inset-y-0 rounded-full bg-secondary/40 dark:bg-secondary/20 border-2 border-primary/25 dark:border-white/25 backdrop-blur-xs transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-md",
-              hoveredIndex !== null ? "opacity-100 scale-110" : "opacity-0 scale-95"
+              hoveredIndex !== null && hoveredIndex !== activeIndex ? "opacity-100 scale-110" : "opacity-0 scale-95"
             )}
             style={{
               width: 'calc(20% - 4px)',
@@ -217,7 +217,7 @@ export const Navigation: React.FC = () => {
           <div
             className={cn(
               "absolute left-0 right-0 h-11 rounded-xl bg-secondary dark:bg-muted transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0",
-              hoveredDesktopIndex !== null ? "opacity-100 scale-102" : "opacity-0 scale-95"
+              hoveredDesktopIndex !== null && hoveredDesktopIndex !== desktopActiveIndex ? "opacity-100 scale-102" : "opacity-0 scale-95"
             )}
             style={{
               top: `${(hoveredDesktopIndex ?? 0) * 50}px`,
