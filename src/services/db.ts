@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset } from '../types';
+import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession } from '../types';
 
 // =========================================================================
 // MOCK DATA SEED INITIALIZATION (FOR LOCAL OFFLINE / NO-SUPABASE MODE)
@@ -1099,4 +1099,100 @@ interface ReceiptAnalysis {
       .eq('id', id);
     if (error) throw error;
   },
+
+  // USER SESSIONS / DEVICES
+  getUserSessions: async (userId: string): Promise<UserSession[]> => {
+    if (!isSupabaseConfigured) {
+      return getLocalItems<UserSession>('bb-sessions').filter(s => s.user_id === userId);
+    }
+    const { data, error } = await supabase
+      .from('user_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_active_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  createUserSession: async (userId: string, session: { session_key: string, device_name: string, user_agent: string }): Promise<UserSession> => {
+    if (!isSupabaseConfigured) {
+      const sessions = getLocalItems<UserSession>('bb-sessions');
+      const existingIdx = sessions.findIndex(s => s.user_id === userId && s.session_key === session.session_key);
+      
+      if (existingIdx !== -1) {
+        sessions[existingIdx] = {
+          ...sessions[existingIdx],
+          user_agent: session.user_agent,
+          device_name: session.device_name,
+          last_active_at: new Date().toISOString()
+        };
+        setLocalItems('bb-sessions', sessions);
+        return sessions[existingIdx];
+      }
+
+      const newSession: UserSession = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        session_key: session.session_key,
+        user_agent: session.user_agent,
+        device_name: session.device_name,
+        last_active_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
+      sessions.push(newSession);
+      setLocalItems('bb-sessions', sessions);
+      return newSession;
+    }
+
+    const { data, error } = await supabase
+      .from('user_sessions')
+      .upsert({
+        user_id: userId,
+        session_key: session.session_key,
+        device_name: session.device_name,
+        user_agent: session.user_agent,
+        last_active_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,session_key'
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  deleteUserSession: async (userId: string, sessionId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      const sessions = getLocalItems<UserSession>('bb-sessions');
+      const filtered = sessions.filter(s => s.id !== sessionId);
+      setLocalItems('bb-sessions', filtered);
+      return;
+    }
+    const { error } = await supabase
+      .from('user_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  },
+
+  updateUserSessionActivity: async (userId: string, sessionKey: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      const sessions = getLocalItems<UserSession>('bb-sessions');
+      const idx = sessions.findIndex(s => s.user_id === userId && s.session_key === sessionKey);
+      if (idx !== -1) {
+        sessions[idx].last_active_at = new Date().toISOString();
+        setLocalItems('bb-sessions', sessions);
+      }
+      return;
+    }
+    const { error } = await supabase
+      .from('user_sessions')
+      .update({ last_active_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('session_key', sessionKey);
+    if (error) throw error;
+  },
 };
+
+

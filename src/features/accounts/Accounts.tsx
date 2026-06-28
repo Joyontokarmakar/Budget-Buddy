@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, AccountType } from '../../types';
+import type { Account, AccountType, IncomeType, IncomeWithDetails } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
 import { Wallet, Landmark, PiggyBank, Plus, TrendingUp } from 'lucide-react';
 
@@ -10,6 +10,8 @@ export const Accounts: React.FC = () => {
   const { t } = useTranslation();
   const { profile } = useAuthStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -17,15 +19,97 @@ export const Accounts: React.FC = () => {
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('bank');
   const [balance, setBalance] = useState('');
+  const [initialSourceType, setInitialSourceType] = useState<IncomeType>('other');
+  const [initialSourceName, setInitialSourceName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Deposit Form State
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositType, setDepositType] = useState<IncomeType>('other');
+  const [depositNotes, setDepositNotes] = useState('');
+  const [depositDate, setDepositDate] = useState(new Date().toISOString().split('T')[0]);
+  const [depositSaving, setDepositSaving] = useState(false);
+  const [depositError, setDepositError] = useState<string | null>(null);
+
+  const getSourceLabel = (srcType: IncomeType) => {
+    switch (srcType) {
+      case 'werkstudent': return 'Salary (Job)';
+      case 'scholarship': return 'Scholarship';
+      case 'family': return 'Family / Gift';
+      case 'freelance': return 'Freelance';
+      default: return 'Other Deposit';
+    }
+  };
+
+  const handleOpenAddAccountDialog = () => {
+    setName('');
+    setType('bank');
+    setBalance('');
+    setInitialSourceType('other');
+    setInitialSourceName('');
+    setError(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenDepositDialog = (account: Account) => {
+    setSelectedAccount(account);
+    setDepositAmount('');
+    setDepositType('other');
+    setDepositNotes('');
+    setDepositDate(new Date().toISOString().split('T')[0]);
+    setDepositError(null);
+    setIsDepositOpen(true);
+  };
+
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !selectedAccount) return;
+    setDepositError(null);
+
+    if (!depositAmount.trim()) {
+      setDepositError('Please enter an amount');
+      return;
+    }
+
+    const numAmount = parseFloat(depositAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setDepositError('Please enter a valid positive amount');
+      return;
+    }
+
+    try {
+      setDepositSaving(true);
+      await db.createIncome(profile.id, {
+        amount: numAmount,
+        type: depositType,
+        date: depositDate,
+        notes: depositNotes.trim() || `Deposit to ${selectedAccount.name}`,
+        source_name: getSourceLabel(depositType),
+        destination_account_id: selectedAccount.id,
+      });
+
+      setIsDepositOpen(false);
+      await fetchAccounts();
+    } catch (err: any) {
+      setDepositError(err.message || 'Error processing deposit');
+    } finally {
+      setDepositSaving(false);
+    }
+  };
 
   const fetchAccounts = async () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const data = await db.getAccounts(profile.id);
-      setAccounts(data);
+      const [accs, incs] = await Promise.all([
+        db.getAccounts(profile.id),
+        db.getIncome(profile.id),
+      ]);
+      setAccounts(accs);
+      setIncomes(incs);
     } catch (e) {
       console.error(e);
     } finally {
@@ -55,16 +139,31 @@ export const Accounts: React.FC = () => {
 
     try {
       setSaving(true);
-      await db.createAccount(profile.id, {
+      // 1. Create account with 0 initial balance so that any initial balance is correctly logged as a transaction
+      const newAcc = await db.createAccount(profile.id, {
         name: name.trim(),
         type,
-        balance: numericBalance,
+        balance: 0,
       });
+      
+      // 2. Log initial balance income if > 0
+      if (numericBalance > 0) {
+        await db.createIncome(profile.id, {
+          amount: numericBalance,
+          date: new Date().toISOString().split('T')[0],
+          type: initialSourceType,
+          notes: 'Initial Account Balance',
+          source_name: initialSourceName.trim() || 'Opening Balance',
+          destination_account_id: newAcc.id,
+        });
+      }
       
       // Reset & Reload
       setName('');
       setType('bank');
       setBalance('');
+      setInitialSourceType('other');
+      setInitialSourceName('');
       setIsDialogOpen(false);
       await fetchAccounts();
     } catch (e: any) {
@@ -105,7 +204,7 @@ export const Accounts: React.FC = () => {
           <h1 className="text-2xl font-bold tracking-tight">{t('accounts.title')}</h1>
           <p className="text-xs text-muted-foreground">Keep your cash, bank balances, and savings pools in sync</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="sm:self-start">
+        <Button onClick={handleOpenAddAccountDialog} className="sm:self-start">
           <Plus className="h-4 w-4 mr-2" />
           {t('accounts.addAccount')}
         </Button>
@@ -160,6 +259,52 @@ export const Accounts: React.FC = () => {
                     €{acc.balance.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs py-1.5 h-auto rounded-xl border-primary/20 hover:border-primary/50 text-primary hover:bg-primary/5 font-bold transition-all"
+                    onClick={() => handleOpenDepositDialog(acc)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add Balance
+                  </Button>
+                </div>
+                {(() => {
+                  const accountIncomes = incomes.filter(inc => inc.destination_account_id === acc.id);
+                  if (accountIncomes.length === 0) return null;
+                  return (
+                    <div className="mt-3.5 border-t border-border/50 pt-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAccountId(expandedAccountId === acc.id ? null : acc.id)}
+                        className="flex items-center justify-between w-full text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+                      >
+                        <span>{expandedAccountId === acc.id ? 'Hide Source History' : 'Show Source History'} ({accountIncomes.length})</span>
+                        <span className="text-[10px]">{expandedAccountId === acc.id ? '▲' : '▼'}</span>
+                      </button>
+
+                      {expandedAccountId === acc.id && (
+                        <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 animate-in slide-in-from-top-2 duration-200">
+                          {accountIncomes.map((inc) => (
+                            <div key={inc.id} className="flex justify-between items-center text-[11px] p-2 rounded-xl bg-secondary/50 dark:bg-muted/30 border border-border/40">
+                              <div className="min-w-0 flex-1 pr-2">
+                                <div className="font-bold text-foreground truncate">
+                                  {inc.source_name || getSourceLabel(inc.type)}
+                                </div>
+                                <div className="text-[9px] text-muted-foreground">
+                                  {new Date(inc.date).toLocaleDateString('de-DE')} {inc.notes ? `• ${inc.notes}` : ''}
+                                </div>
+                              </div>
+                              <div className="font-black text-emerald-600 dark:text-emerald-400 shrink-0">
+                                +€{inc.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           ))
@@ -208,12 +353,99 @@ export const Accounts: React.FC = () => {
             required
           />
 
+          {parseFloat(balance) > 0 && (
+            <div className="space-y-4 p-3 bg-secondary/30 dark:bg-muted/20 rounded-xl border border-border/50 animate-in fade-in duration-200">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Initial Balance Source</span>
+              <Select
+                label="Source of Amount"
+                value={initialSourceType}
+                onChange={(e) => setInitialSourceType(e.target.value as IncomeType)}
+                options={[
+                  { value: 'werkstudent', label: 'Salary / Job (Werkstudent)' },
+                  { value: 'scholarship', label: 'Scholarship' },
+                  { value: 'family', label: 'Family / Gift' },
+                  { value: 'freelance', label: 'Freelance' },
+                  { value: 'other', label: 'Other' },
+                ]}
+              />
+              <Input
+                label="Source Name (Optional)"
+                placeholder="e.g. DAAD, Sparkasse Savings, Parents"
+                value={initialSourceName}
+                onChange={(e) => setInitialSourceName(e.target.value)}
+              />
+            </div>
+          )}
+
           <div className="flex gap-3 justify-end pt-2">
             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
               {t('common.cancel')}
             </Button>
             <Button type="submit" loading={saving}>
               {t('accounts.save')}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Deposit / Add Balance Dialog */}
+      <Dialog
+        isOpen={isDepositOpen}
+        onClose={() => setIsDepositOpen(false)}
+        title={selectedAccount ? `Add Balance to ${selectedAccount.name}` : 'Add Balance'}
+      >
+        <form onSubmit={handleDeposit} className="space-y-4">
+          {depositError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {depositError}
+            </div>
+          )}
+
+          <Input
+            type="number"
+            step="0.01"
+            label="Amount (€)"
+            placeholder="0.00"
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+            required
+            autoFocus
+          />
+
+          <Select
+            label="Source of Amount"
+            value={depositType}
+            onChange={(e) => setDepositType(e.target.value as IncomeType)}
+            options={[
+              { value: 'werkstudent', label: 'Salary / Job (Werkstudent)' },
+              { value: 'scholarship', label: 'Scholarship' },
+              { value: 'family', label: 'Family / Gift' },
+              { value: 'freelance', label: 'Freelance' },
+              { value: 'other', label: 'Other' },
+            ]}
+          />
+
+          <Input
+            type="date"
+            label="Date"
+            value={depositDate}
+            onChange={(e) => setDepositDate(e.target.value)}
+            required
+          />
+
+          <Input
+            label="Notes (Optional)"
+            placeholder="e.g. Pocket money, June Salary"
+            value={depositNotes}
+            onChange={(e) => setDepositNotes(e.target.value)}
+          />
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button type="button" variant="outline" onClick={() => setIsDepositOpen(false)} disabled={depositSaving}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" loading={depositSaving}>
+              Save
             </Button>
           </div>
         </form>

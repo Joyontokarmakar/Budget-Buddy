@@ -3,9 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Language, ThemeMode, Account } from '../../types';
+import type { Language, ThemeMode, Account, UserSession } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
-import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check, Camera, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -49,6 +49,36 @@ export const Settings: React.FC = () => {
   // Gemini API Key State
   const [geminiApiKey, setGeminiApiKey] = useState(profile?.gemini_api_key || '');
 
+  // Session / Device states
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [currentSessionKey, setCurrentSessionKey] = useState<string | null>(null);
+
+  const fetchSessions = async () => {
+    if (!profile) return;
+    try {
+      setLoadingSessions(true);
+      const data = await db.getUserSessions(profile.id);
+      setSessions(data);
+      const key = localStorage.getItem('bb_device_session_key');
+      setCurrentSessionKey(key);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    if (!profile) return;
+    try {
+      await db.deleteUserSession(profile.id, sessionId);
+      await fetchSessions();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     const loadAccounts = async () => {
       if (profile) {
@@ -61,6 +91,7 @@ export const Settings: React.FC = () => {
       }
     };
     loadAccounts();
+    fetchSessions();
   }, [profile]);
 
   useEffect(() => {
@@ -481,6 +512,73 @@ export const Settings: React.FC = () => {
         </Card>
 
 
+
+        {/* LOGGED-IN DEVICES & SESSIONS */}
+        <Card className="col-span-1 md:col-span-2 bg-card/75 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Laptop className="h-4.5 w-4.5 text-primary" />
+              Logged-in Devices & Sessions
+            </CardTitle>
+            <CardDescription>Track and manage active sessions on your account</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingSessions && sessions.length === 0 ? (
+              <div className="flex items-center justify-center py-6">
+                <span className="text-xs text-muted-foreground animate-pulse">Loading sessions...</span>
+              </div>
+            ) : sessions.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No active sessions found.</p>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {sessions.map((sess) => {
+                  const isCurrent = sess.session_key === currentSessionKey;
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(sess.user_agent);
+                  return (
+                    <div key={sess.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="h-9 w-9 rounded-xl bg-secondary/80 flex items-center justify-center shrink-0">
+                          {isMobile ? (
+                            <Smartphone className="h-4.5 w-4.5 text-primary/80" />
+                          ) : (
+                            <Laptop className="h-4.5 w-4.5 text-primary/80" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-foreground truncate">{sess.device_name}</span>
+                            {isCurrent && (
+                              <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-md">
+                                Current Device
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground truncate mt-0.5 max-w-[220px] sm:max-w-sm md:max-w-xl" title={sess.user_agent}>
+                            {sess.user_agent}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground/80 mt-0.5">
+                            Last Active: {new Date(sess.last_active_at).toLocaleString('de-DE')} • Signed In: {new Date(sess.created_at).toLocaleDateString('de-DE')}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeSession(sess.id)}
+                          className="p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 text-rose-500 hover:text-rose-600 active:scale-95 transition-all shrink-0 cursor-pointer"
+                          title="Revoke session / Log out device"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* LOGOUT */}
         <Card className="flex flex-col justify-between">

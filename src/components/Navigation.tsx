@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Trash2, UserPlus, LogOut, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useAuthStore } from '../stores/authStore';
 
 export const Navigation: React.FC = () => {
   const { t } = useTranslation();
@@ -10,6 +11,14 @@ export const Navigation: React.FC = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoveredDesktopIndex, setHoveredDesktopIndex] = useState<number | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMobileProfileMenuOpen, setIsMobileProfileMenuOpen] = useState(false);
+
+  const { profile, switchAccount, addAnotherAccount, signOutAccount, signOut } = useAuthStore();
+
+  const savedProfilesJson = localStorage.getItem('bb_saved_profiles');
+  const savedProfiles = savedProfilesJson ? JSON.parse(savedProfilesJson) : [];
+  const otherProfiles = savedProfiles.filter((p: any) => p.id !== profile?.id);
 
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -148,6 +157,92 @@ export const Navigation: React.FC = () => {
         {/* Drawer Drag Bar */}
         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-5 cursor-pointer" onClick={() => setIsMoreOpen(false)} />
 
+        {/* User Profile / Account Switcher (Mobile) */}
+        {profile && (
+          <div className="mb-4 bg-muted/40 border border-border/60 rounded-2xl p-3 relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-sm">
+                  {profile.name?.charAt(0).toUpperCase() || 'S'}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-foreground">{profile.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{profile.email}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileProfileMenuOpen(!isMobileProfileMenuOpen)}
+                className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-lg hover:bg-primary/20 active:scale-95 transition-all"
+              >
+                {isMobileProfileMenuOpen ? 'Close' : 'Switch'}
+              </button>
+            </div>
+
+            {isMobileProfileMenuOpen && (
+              <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5 max-h-48 overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">Switch Account</div>
+                
+                {otherProfiles.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/80 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => switchAccount(p.id)}
+                      className="flex items-center gap-2.5 flex-1 text-left min-w-0"
+                    >
+                      <div className="h-7 w-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs">
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">{p.name}</div>
+                        <div className="text-[9px] text-muted-foreground truncate">{p.email}</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => signOutAccount(p.id)}
+                      className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                      title="Remove Account"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsMoreOpen(false);
+                    await addAnotherAccount();
+                    window.location.reload();
+                  }}
+                  className="flex items-center gap-2.5 w-full p-1.5 rounded-xl hover:bg-primary/5 text-primary text-xs font-bold text-left transition-colors"
+                >
+                  <div className="h-7 w-7 rounded-full border border-dashed border-primary/40 flex items-center justify-center shrink-0">
+                    <UserPlus className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Add Another Account</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsMoreOpen(false);
+                    await signOut();
+                    window.location.reload();
+                  }}
+                  className="flex items-center gap-2.5 w-full p-1.5 rounded-xl hover:bg-destructive/5 text-destructive text-xs font-bold text-left transition-colors"
+                >
+                  <div className="h-7 w-7 rounded-full border border-dashed border-destructive/40 flex items-center justify-center shrink-0">
+                    <LogOut className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Sign Out Active</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-1">{t('common.moreFeatures')}</h3>
           <button
@@ -247,6 +342,89 @@ export const Navigation: React.FC = () => {
             );
           })}
         </div>
+
+        {/* User Profile / Account Switcher (Desktop) */}
+        {profile && (
+          <div className="border-t border-border/50 pt-4 mb-4 relative z-20">
+            <button
+              onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-secondary/80 active:scale-[0.98] transition-all text-left"
+            >
+              <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-md">
+                {profile.name?.charAt(0).toUpperCase() || 'S'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-foreground truncate">{profile.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{profile.email}</div>
+              </div>
+              {isProfileMenuOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              ) : (
+                <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-xl p-3 shadow-xl space-y-2.5 max-h-56 overflow-y-auto animate-in slide-in-from-bottom-2 duration-200">
+                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">Switch Account</div>
+                
+                {otherProfiles.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between p-1.5 rounded-xl hover:bg-muted/80 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => switchAccount(p.id)}
+                      className="flex items-center gap-2.5 flex-1 text-left min-w-0"
+                    >
+                      <div className="h-7 w-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs">
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-foreground truncate">{p.name}</div>
+                        <div className="text-[9px] text-muted-foreground truncate">{p.email}</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => signOutAccount(p.id)}
+                      className="p-1 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                      title="Remove Account"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await addAnotherAccount();
+                    window.location.reload();
+                  }}
+                  className="flex items-center gap-2.5 w-full p-1.5 rounded-xl hover:bg-primary/5 text-primary text-xs font-bold text-left transition-colors"
+                >
+                  <div className="h-7 w-7 rounded-full border border-dashed border-primary/40 flex items-center justify-center shrink-0">
+                    <UserPlus className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Add Another Account</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await signOut();
+                    window.location.reload();
+                  }}
+                  className="flex items-center gap-2.5 w-full p-1.5 rounded-xl hover:bg-destructive/5 text-destructive text-xs font-bold text-left transition-colors"
+                >
+                  <div className="h-7 w-7 rounded-full border border-dashed border-destructive/40 flex items-center justify-center shrink-0">
+                    <LogOut className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Sign Out Active</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer Credit */}
         <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center space-y-1">

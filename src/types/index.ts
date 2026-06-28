@@ -34,6 +34,16 @@ export interface Account {
   updated_at: string;
 }
 
+export interface UserSession {
+  id: string;
+  user_id: string;
+  session_key: string;
+  user_agent: string;
+  device_name: string;
+  last_active_at: string;
+  created_at: string;
+}
+
 export interface Category {
   id: string;
   user_id: string | null; // null for system defaults

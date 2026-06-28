@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import type { Profile, Language, ThemeMode } from '../types';
 import i18n from '../i18n/config';
+import { db } from '../services/db';
 
 interface AuthState {
   user: any | null;
@@ -16,6 +17,9 @@ interface AuthState {
   updatePassword: (password: string) => Promise<{ error: any }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
   initialize: () => Promise<void>;
+  switchAccount: (targetUserId: string) => Promise<void>;
+  addAnotherAccount: () => Promise<void>;
+  signOutAccount: (targetUserId: string) => Promise<void>;
 }
 
 const MOCK_USER = {
@@ -43,6 +47,66 @@ const MOCK_PROFILE: Profile = {
   updated_at: new Date().toISOString(),
 };
 
+function parseUserAgent(ua: string): string {
+  let os = 'Unknown OS';
+  if (/Windows/i.test(ua)) os = 'Windows';
+  else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+  else if (/Android/i.test(ua)) os = 'Android';
+  else if (/Linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Unknown Browser';
+  if (/Chrome/i.test(ua) && !/Edge|Edg/i.test(ua) && !/OPR|Opera/i.test(ua)) browser = 'Chrome';
+  else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+  else if (/Firefox/i.test(ua)) browser = 'Firefox';
+  else if (/Edge|Edg/i.test(ua)) browser = 'Edge';
+  else if (/OPR|Opera/i.test(ua)) browser = 'Opera';
+
+  return `${browser} on ${os}`;
+}
+
+function getOrCreateDeviceSessionKey(): string {
+  let key = localStorage.getItem('bb_device_session_key');
+  if (!key) {
+    key = crypto.randomUUID();
+    localStorage.setItem('bb_device_session_key', key);
+  }
+  return key;
+}
+
+async function saveActiveProfileSession(profile: Profile, _user: any) {
+  const saved = localStorage.getItem('bb_saved_profiles');
+  const profiles = saved ? JSON.parse(saved) : [];
+  
+  let access_token = 'mock-access-token';
+  let refresh_token = 'mock-refresh-token';
+  
+  if (isSupabaseConfigured) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      access_token = data.session.access_token;
+      refresh_token = data.session.refresh_token;
+    }
+  }
+
+  const profileInfo = {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    session_tokens: { access_token, refresh_token },
+    avatar_url: (profile as any).avatar_url || null,
+    last_active: new Date().toISOString()
+  };
+
+  const idx = profiles.findIndex((p: any) => p.id === profile.id);
+  if (idx !== -1) {
+    profiles[idx] = profileInfo;
+  } else {
+    profiles.push(profileInfo);
+  }
+  localStorage.setItem('bb_saved_profiles', JSON.stringify(profiles));
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
@@ -53,6 +117,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().initialized) return;
 
     set({ loading: true });
+
+    const checkAndRegisterSession = async (userProfile: Profile, activeUser: any) => {
+      try {
+        const sessionKey = getOrCreateDeviceSessionKey();
+        const deviceName = parseUserAgent(navigator.userAgent);
+        await db.createUserSession(userProfile.id, {
+          session_key: sessionKey,
+          device_name: deviceName,
+          user_agent: navigator.userAgent
+        });
+        await saveActiveProfileSession(userProfile, activeUser);
+        
+        // Verify if session was revoked remotely
+        const activeSessions = await db.getUserSessions(userProfile.id);
+        const currentExists = activeSessions.some(s => s.session_key === sessionKey);
+        if (!currentExists && activeSessions.length > 0) {
+          // Remotely revoked! Log out.
+          await get().signOut();
+        }
+      } catch (err) {
+        console.error('Session sync error:', err);
+      }
+    };
 
     if (!isSupabaseConfigured) {
       // Local development/mock fallback
@@ -66,6 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Apply theme and language from mock profile
         applyLanguageAndTheme(parsedProfile.preferred_language, parsedProfile.theme_preference);
+        await checkAndRegisterSession(parsedProfile, parsedUser);
       }
       set({ initialized: true, loading: false });
       return;
@@ -88,6 +176,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (profile) {
           set({ profile });
           applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
+          await checkAndRegisterSession(profile, session.user);
         } else if (error) {
           console.error('Error fetching profile:', error);
         }
@@ -106,6 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (profile) {
             set({ profile });
             applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
+            await checkAndRegisterSession(profile, session.user);
           }
         } else {
           set({ user: null, profile: null });
@@ -123,14 +213,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (!isSupabaseConfigured) {
       // Successful mock log in
-      const mockUser = { ...MOCK_USER, email };
-      const mockProfile = { ...MOCK_PROFILE, email, name: email.split('@')[0] };
+      // Try to find if user already existed to keep their ID
+      const savedProfiles = JSON.parse(localStorage.getItem('bb_saved_profiles') || '[]');
+      const existingProfile = savedProfiles.find((p: any) => p.email.toLowerCase() === email.toLowerCase());
+      
+      const userId = existingProfile ? existingProfile.id : crypto.randomUUID();
+      const mockUser = { id: userId, email, user_metadata: { name: email.split('@')[0] } };
+      const mockProfile = { ...MOCK_PROFILE, id: userId, email, name: email.split('@')[0] };
 
       localStorage.setItem('bb-mock-user', JSON.stringify(mockUser));
       localStorage.setItem('bb-mock-profile', JSON.stringify(mockProfile));
 
       set({ user: mockUser, profile: mockProfile, loading: false });
       applyLanguageAndTheme(mockProfile.preferred_language, mockProfile.theme_preference);
+
+      // Register session
+      const sessionKey = getOrCreateDeviceSessionKey();
+      const deviceName = parseUserAgent(navigator.userAgent);
+      await db.createUserSession(mockProfile.id, {
+        session_key: sessionKey,
+        device_name: deviceName,
+        user_agent: navigator.userAgent
+      });
+      await saveActiveProfileSession(mockProfile, mockUser);
+
       return { error: null };
     }
 
@@ -149,6 +255,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({ user: data.user, profile });
       applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
+
+      // Register session
+      const sessionKey = getOrCreateDeviceSessionKey();
+      const deviceName = parseUserAgent(navigator.userAgent);
+      await db.createUserSession(profile.id, {
+        session_key: sessionKey,
+        device_name: deviceName,
+        user_agent: navigator.userAgent
+      });
+      await saveActiveProfileSession(profile, data.user);
+
       return { error: null };
     } catch (error: any) {
       set({ loading: false });
@@ -174,6 +291,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({ user: mockUser, profile: mockProfile, loading: false });
       applyLanguageAndTheme(mockProfile.preferred_language, mockProfile.theme_preference);
+
+      // Register session
+      const sessionKey = getOrCreateDeviceSessionKey();
+      const deviceName = parseUserAgent(navigator.userAgent);
+      await db.createUserSession(mockProfile.id, {
+        session_key: sessionKey,
+        device_name: deviceName,
+        user_agent: navigator.userAgent
+      });
+      await saveActiveProfileSession(mockProfile, mockUser);
+
       return { error: null };
     }
 
@@ -197,6 +325,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         .eq('id', data.user!.id)
         .single();
 
+      let finalProfile = profile;
       if (pError) {
         // Fallback profile insert in case trigger didn't run (e.g. local emulator issues)
         const newProfile = {
@@ -213,9 +342,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .select()
           .single();
         
-        set({ user: data.user, profile: insProfile || newProfile as Profile });
+        finalProfile = insProfile || newProfile as Profile;
+        set({ user: data.user, profile: finalProfile });
       } else {
         set({ user: data.user, profile });
+      }
+
+      if (finalProfile) {
+        applyLanguageAndTheme(finalProfile.preferred_language, finalProfile.theme_preference);
+        // Register session
+        const sessionKey = getOrCreateDeviceSessionKey();
+        const deviceName = parseUserAgent(navigator.userAgent);
+        await db.createUserSession(finalProfile.id, {
+          session_key: sessionKey,
+          device_name: deviceName,
+          user_agent: navigator.userAgent
+        });
+        await saveActiveProfileSession(finalProfile, data.user);
       }
 
       set({ loading: false });
@@ -252,6 +395,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     set({ loading: true });
+
+    const userId = get().profile?.id;
+    if (userId) {
+      try {
+        const sessionKey = getOrCreateDeviceSessionKey();
+        const activeSessions = await db.getUserSessions(userId);
+        const currentSession = activeSessions.find(s => s.session_key === sessionKey);
+        if (currentSession) {
+          await db.deleteUserSession(userId, currentSession.id);
+        }
+        
+        // Remove from saved profiles
+        const saved = localStorage.getItem('bb_saved_profiles');
+        if (saved) {
+          const profiles = JSON.parse(saved);
+          const filtered = profiles.filter((p: any) => p.id !== userId);
+          localStorage.setItem('bb_saved_profiles', JSON.stringify(filtered));
+        }
+      } catch (err) {
+        console.error('Error clearing session:', err);
+      }
+    }
 
     if (!isSupabaseConfigured) {
       localStorage.removeItem('bb-mock-user');
@@ -349,6 +514,133 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Revert state if failed
       set({ profile: currentProfile });
       return { error: error.message || error };
+    }
+  },
+
+  switchAccount: async (targetUserId: string) => {
+    set({ loading: true });
+    try {
+      const saved = localStorage.getItem('bb_saved_profiles');
+      if (!saved) throw new Error('No saved profiles found');
+
+      const profiles = JSON.parse(saved);
+      const targetProfile = profiles.find((p: any) => p.id === targetUserId);
+      if (!targetProfile) throw new Error('Target profile not found');
+
+      if (!isSupabaseConfigured) {
+        // Mock switch: restore their local user and profile info
+        const mockUser = { id: targetProfile.id, email: targetProfile.email, user_metadata: { name: targetProfile.name } };
+        const mockProfile = { ...MOCK_PROFILE, id: targetProfile.id, email: targetProfile.email, name: targetProfile.name };
+
+        localStorage.setItem('bb-mock-user', JSON.stringify(mockUser));
+        localStorage.setItem('bb-mock-profile', JSON.stringify(mockProfile));
+
+        set({ user: mockUser, profile: mockProfile, loading: false });
+        applyLanguageAndTheme(mockProfile.preferred_language, mockProfile.theme_preference);
+        
+        // Register/update session activity
+        const sessionKey = getOrCreateDeviceSessionKey();
+        const deviceName = parseUserAgent(navigator.userAgent);
+        await db.createUserSession(targetProfile.id, {
+          session_key: sessionKey,
+          device_name: deviceName,
+          user_agent: navigator.userAgent
+        });
+        await saveActiveProfileSession(mockProfile, mockUser);
+
+        window.location.reload(); // Force page refresh to update all contexts
+        return;
+      }
+
+      // Supabase switch
+      const { data, error } = await supabase.auth.setSession({
+        access_token: targetProfile.session_tokens.access_token,
+        refresh_token: targetProfile.session_tokens.refresh_token
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const { data: profile, error: pError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (pError) throw pError;
+
+        set({ user: data.user, profile, loading: false });
+        applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
+
+        // Register session
+        const sessionKey = getOrCreateDeviceSessionKey();
+        const deviceName = parseUserAgent(navigator.userAgent);
+        await db.createUserSession(profile.id, {
+          session_key: sessionKey,
+          device_name: deviceName,
+          user_agent: navigator.userAgent
+        });
+        await saveActiveProfileSession(profile, data.user);
+
+        window.location.reload();
+      }
+    } catch (err: any) {
+      set({ loading: false });
+      alert(`Could not switch account: Session expired or invalid.`);
+      get().signOutAccount(targetUserId);
+    }
+  },
+
+  addAnotherAccount: async () => {
+    // Sign out from supabase session/mock active states only, leaving bb_saved_profiles intact
+    set({ loading: true });
+    
+    if (!isSupabaseConfigured) {
+      localStorage.removeItem('bb-mock-user');
+      localStorage.removeItem('bb-mock-profile');
+      set({ user: null, profile: null, loading: false });
+      return;
+    }
+
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      set({ user: null, profile: null, loading: false });
+    }
+  },
+
+  signOutAccount: async (targetUserId: string) => {
+    // Delete session from DB
+    try {
+      const sessionKey = getOrCreateDeviceSessionKey();
+      const activeSessions = await db.getUserSessions(targetUserId);
+      const currentSession = activeSessions.find(s => s.session_key === sessionKey);
+      if (currentSession) {
+        await db.deleteUserSession(targetUserId, currentSession.id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    const saved = localStorage.getItem('bb_saved_profiles');
+    if (saved) {
+      const profiles = JSON.parse(saved);
+      const filtered = profiles.filter((p: any) => p.id !== targetUserId);
+      localStorage.setItem('bb_saved_profiles', JSON.stringify(filtered));
+    }
+
+    // If signed out account was the current active one, reset authState
+    if (get().profile?.id === targetUserId) {
+      if (!isSupabaseConfigured) {
+        localStorage.removeItem('bb-mock-user');
+        localStorage.removeItem('bb-mock-profile');
+      } else {
+        await supabase.auth.signOut();
+      }
+      set({ user: null, profile: null });
+      window.location.reload();
     }
   },
 }));
