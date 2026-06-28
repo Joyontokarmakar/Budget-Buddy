@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
-import { Settings as SettingsIcon, User, Shield, Palette, Languages, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -432,55 +432,50 @@ export const Settings: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* APPEARANCE SETTINGS */}
-        <Card>
+        {/* PREFERENCES (APPEARANCE & LANGUAGE) */}
+        <Card className="bg-card/75 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Palette className="h-4.5 w-4.5 text-muted-foreground" />
-              {t('settings.appearance')}
+              Preferences
             </CardTitle>
-            <CardDescription>Switch between visual themes</CardDescription>
+            <CardDescription>Customize your language and theme options</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Select
-              value={profile?.theme_preference || 'system'}
-              onChange={(e) => handleThemeChange(e.target.value as ThemeMode)}
-              options={[
-                { value: 'light', label: t('settings.themes.light') },
-                { value: 'dark', label: t('settings.themes.dark') },
-                { value: 'system', label: t('settings.themes.system') },
-              ]}
-            />
-          </CardContent>
-        </Card>
-
-        {/* LANGUAGE SETTINGS */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Languages className="h-4.5 w-4.5 text-muted-foreground" />
-              {t('settings.language')}
-            </CardTitle>
-            <CardDescription>Select your preferred interface language</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={profile?.preferred_language || 'de'}
-              onChange={(e) => handleLangChange(e.target.value as Language)}
-              options={[
-                { value: 'de', label: t('settings.languages.de') },
-                { value: 'en', label: t('settings.languages.en') },
-                { value: 'bn', label: 'বাংলা (Bengali - Coming Soon)' },
-                { value: 'hi', label: 'हिन्दी (Hindi - Coming Soon)' },
-                { value: 'ar', label: 'العربية (Arabic - Coming Soon)' },
-                { value: 'tr', label: 'Türkçe (Turkish - Coming Soon)' },
-              ]}
-            />
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">{t('settings.appearance')}</span>
+                <Select
+                  value={profile?.theme_preference || 'system'}
+                  onChange={(e) => handleThemeChange(e.target.value as ThemeMode)}
+                  options={[
+                    { value: 'light', label: t('settings.themes.light') },
+                    { value: 'dark', label: t('settings.themes.dark') },
+                    { value: 'system', label: t('settings.themes.system') },
+                  ]}
+                />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">{t('settings.language')}</span>
+                <Select
+                  value={profile?.preferred_language || 'de'}
+                  onChange={(e) => handleLangChange(e.target.value as Language)}
+                  options={[
+                    { value: 'de', label: t('settings.languages.de') },
+                    { value: 'en', label: t('settings.languages.en') },
+                    { value: 'bn', label: 'বাংলা (Bengali - Coming Soon)' },
+                    { value: 'hi', label: 'हिन्दी (Hindi - Coming Soon)' },
+                    { value: 'ar', label: 'العربية (Arabic - Coming Soon)' },
+                    { value: 'tr', label: 'Türkçe (Turkish - Coming Soon)' },
+                  ]}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* SECURITY SETTINGS */}
-        <Card>
+        <Card className="bg-card/75 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Shield className="h-4.5 w-4.5 text-muted-foreground" />
@@ -511,88 +506,90 @@ export const Settings: React.FC = () => {
           </CardContent>
         </Card>
 
-
-
         {/* LOGGED-IN DEVICES & SESSIONS */}
         <Card className="col-span-1 md:col-span-2 bg-card/75 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Laptop className="h-4.5 w-4.5 text-primary" />
-              Logged-in Devices & Sessions
+              Logged-in Devices & Session Management
             </CardTitle>
-            <CardDescription>Track and manage active sessions on your account</CardDescription>
+            <CardDescription>Track active login sessions or sign out of your account</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {loadingSessions && sessions.length === 0 ? (
-              <div className="flex items-center justify-center py-6">
-                <span className="text-xs text-muted-foreground animate-pulse">Loading sessions...</span>
-              </div>
-            ) : sessions.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No active sessions found.</p>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {sessions.map((sess) => {
-                  const isCurrent = sess.session_key === currentSessionKey;
-                  const isMobile = /iPhone|iPad|iPod|Android/i.test(sess.user_agent);
-                  return (
-                    <div key={sess.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 gap-4">
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="h-9 w-9 rounded-xl bg-secondary/80 flex items-center justify-center shrink-0">
-                          {isMobile ? (
-                            <Smartphone className="h-4.5 w-4.5 text-primary/80" />
-                          ) : (
-                            <Laptop className="h-4.5 w-4.5 text-primary/80" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-foreground truncate">{sess.device_name}</span>
-                            {isCurrent && (
-                              <span className="px-2 py-0.5 text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-md">
-                                Current Device
-                              </span>
+          <CardContent className="space-y-6">
+            
+            {/* Active Sessions List */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Active Devices</span>
+              {loadingSessions && sessions.length === 0 ? (
+                <div className="flex items-center justify-center py-6">
+                  <span className="text-xs text-muted-foreground animate-pulse">Loading sessions...</span>
+                </div>
+              ) : sessions.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No active sessions found.</p>
+              ) : (
+                <div className="divide-y divide-border/40 border border-border/50 rounded-2xl px-4 bg-muted/10">
+                  {sessions.map((sess) => {
+                    const isCurrent = sess.session_key === currentSessionKey;
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(sess.user_agent);
+                    return (
+                      <div key={sess.id} className="flex items-center justify-between py-4 gap-4">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="h-9 w-9 rounded-xl bg-secondary/80 flex items-center justify-center shrink-0 border border-border/40">
+                            {isMobile ? (
+                              <Smartphone className="h-4.5 w-4.5 text-primary/80" />
+                            ) : (
+                              <Laptop className="h-4.5 w-4.5 text-primary/80" />
                             )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground truncate mt-0.5 max-w-[220px] sm:max-w-sm md:max-w-xl" title={sess.user_agent}>
-                            {sess.user_agent}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground/80 mt-0.5">
-                            Last Active: {new Date(sess.last_active_at).toLocaleString('de-DE')} • Signed In: {new Date(sess.created_at).toLocaleDateString('de-DE')}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-foreground truncate">{sess.device_name}</span>
+                              {isCurrent && (
+                                <span className="px-2 py-0.5 text-[8px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 rounded-md">
+                                  Current Device
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground truncate mt-0.5 max-w-[220px] sm:max-w-sm md:max-w-xl" title={sess.user_agent}>
+                              {sess.user_agent}
+                            </p>
+                            <p className="text-[9px] text-muted-foreground/80 mt-0.5">
+                              Last Active: {new Date(sess.last_active_at).toLocaleString('de-DE')} • Signed In: {new Date(sess.created_at).toLocaleDateString('de-DE')}
+                            </p>
+                          </div>
                         </div>
+                        
+                        {!isCurrent && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeSession(sess.id)}
+                            className="p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 text-rose-500 hover:text-rose-600 active:scale-95 transition-all shrink-0 cursor-pointer"
+                            title="Revoke session / Log out device"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
-                      
-                      {!isCurrent && (
-                        <button
-                          type="button"
-                          onClick={() => handleRevokeSession(sess.id)}
-                          className="p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/15 border border-rose-500/10 hover:border-rose-500/30 text-rose-500 hover:text-rose-600 active:scale-95 transition-all shrink-0 cursor-pointer"
-                          title="Revoke session / Log out device"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-        {/* LOGOUT */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-rose-600 dark:text-rose-400">
-              <LogOut className="h-4.5 w-4.5" />
-              Session Management
-            </CardTitle>
-            <CardDescription>Log out of your BudgetBuddy account</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <Button variant="destructive" onClick={signOut} className="w-full">
-              {t('settings.logout')}
-            </Button>
+            {/* Current Session Logout */}
+            <div className="border-t border-border/50 pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </span>
+                <p className="text-[11px] text-muted-foreground">Log out of your active session on this device</p>
+              </div>
+              <Button variant="destructive" onClick={signOut} className="sm:w-auto w-full px-6 h-10 text-xs font-bold">
+                Log Out Current Device
+              </Button>
+            </div>
+
           </CardContent>
         </Card>
       </div>
