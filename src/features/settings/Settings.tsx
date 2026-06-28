@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession } from '../../types';
-import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
+import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
-import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -28,8 +28,10 @@ export const Settings: React.FC = () => {
   const [securityError, setSecurityError] = useState<string | null>(null);
 
   // Budget State
+  const [budget, setBudget] = useState(profile?.monthly_budget?.toString() || '700');
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [budgetSuccess, setBudgetSuccess] = useState(false);
+  const [isPlannerOpen, setIsPlannerOpen] = useState(false);
 
   // Common Bills State
   const [rent, setRent] = useState(profile?.house_rent?.toString() || '264.50');
@@ -126,6 +128,7 @@ export const Settings: React.FC = () => {
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
+      setBudget(profile.monthly_budget?.toString() || '700');
       setGeminiApiKey(profile.gemini_api_key || '');
       setRent(profile.house_rent !== undefined && profile.house_rent !== null ? profile.house_rent.toString() : '264.50');
       setHealthInsurance(profile.health_insurance !== undefined && profile.health_insurance !== null ? profile.health_insurance.toString() : '151.42');
@@ -216,17 +219,11 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleToggleSemesterFee = (active: boolean) => {
-    setShowSemesterFee(active);
-    if (active) {
-      setDisabledCategories(disabledCategories.filter(c => c !== 'semester_fee'));
-    } else {
-      setDisabledCategories([...disabledCategories.filter(c => c !== 'semester_fee'), 'semester_fee']);
-    }
-  };
+
 
   const handleUpdateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsedBudget = parseFloat(budget);
     const parsedRent = parseFloat(rent);
     const parsedHealth = parseFloat(healthInsurance);
     const parsedRadio = parseFloat(radioBill);
@@ -235,6 +232,7 @@ export const Settings: React.FC = () => {
     const parsedFood = parseFloat(foodBudget);
     const parsedOther = parseFloat(otherBudget);
 
+    if (isNaN(parsedBudget) || parsedBudget < 0) return;
     if (isNaN(parsedRent) || parsedRent < 0) return;
     if (isNaN(parsedHealth) || parsedHealth < 0) return;
     if (isNaN(parsedRadio) || parsedRadio < 0) return;
@@ -246,10 +244,8 @@ export const Settings: React.FC = () => {
     setBudgetSuccess(false);
     setBudgetLoading(true);
 
-    const calculatedTotal = calculateTotalPlannedBudget();
-
     const { error } = await updateProfile({ 
-      monthly_budget: calculatedTotal,
+      monthly_budget: parsedBudget,
       house_rent: parsedRent,
       health_insurance: parsedHealth,
       radio_bill: parsedRadio,
@@ -381,313 +377,180 @@ export const Settings: React.FC = () => {
         </Card>
 
         {/* BUDGET SETTINGS CARD */}
-        <Card className="col-span-1 md:col-span-2 bg-card/75 backdrop-blur-md shadow-md">
+        <Card className="bg-card/75 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <PiggyBank className="h-4.5 w-4.5 text-primary" />
-              Next Month Budget Plan
+              <PiggyBank className="h-4.5 w-4.5 text-muted-foreground" />
+              {t('settings.budget')}
             </CardTitle>
-            <CardDescription>Plan individual monthly expenses and toggle categories to calculate your next month budget limit.</CardDescription>
+            <CardDescription>Adjust your monthly student spending limit and configure common utilities.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpdateBudget} className="space-y-4">
-              <div className="overflow-x-auto rounded-2xl border border-border/50 bg-muted/10">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-muted/40 text-muted-foreground font-bold border-b border-border/40 uppercase tracking-wider text-[9px]">
-                      <th className="py-3 px-4">Category / Bill</th>
-                      <th className="py-3 px-4">Details</th>
-                      <th className="py-3 px-4 w-36">Amount (€)</th>
-                      <th className="py-3 px-4 text-center w-24">Active</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/30">
-                    {/* House Rent */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('house_rent') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">House Rent</td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={rentAccountId}
-                          onChange={(e) => setRentAccountId(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80 cursor-pointer"
-                        >
-                          <option value="">Select Preferred Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} (€{a.balance.toFixed(2)})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={rent}
-                          onChange={(e) => setRent(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('house_rent')}
-                            onChange={() => handleToggleCategory('house_rent')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Health Insurance */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('health_insurance') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">Health Insurance</td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={healthAccountId}
-                          onChange={(e) => setHealthAccountId(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80 cursor-pointer"
-                        >
-                          <option value="">Select Preferred Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} (€{a.balance.toFixed(2)})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={healthInsurance}
-                          onChange={(e) => setHealthInsurance(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('health_insurance')}
-                            onChange={() => handleToggleCategory('health_insurance')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Radio Bill */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('radio_bill') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">Radio Bill</td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={radioAccountId}
-                          onChange={(e) => setRadioAccountId(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80 cursor-pointer"
-                        >
-                          <option value="">Select Preferred Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} (€{a.balance.toFixed(2)})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={radioBill}
-                          onChange={(e) => setRadioBill(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('radio_bill')}
-                            onChange={() => handleToggleCategory('radio_bill')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Mobile Bill */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('mobile_bill') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">Mobile Bill</td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={mobileAccountId}
-                          onChange={(e) => setMobileAccountId(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80 cursor-pointer"
-                        >
-                          <option value="">Select Preferred Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} (€{a.balance.toFixed(2)})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={mobileBill}
-                          onChange={(e) => setMobileBill(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('mobile_bill')}
-                            onChange={() => handleToggleCategory('mobile_bill')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Semester Fee */}
-                    <tr className={cn(
-                      "transition-colors",
-                      !showSemesterFee ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">
-                        <div>
-                          <span>Semester Fee</span>
-                          <span className="block text-[8px] text-muted-foreground font-semibold mt-0.5">Every 6 Months</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={semesterFeeAccountId}
-                          onChange={(e) => setSemesterFeeAccountId(e.target.value)}
-                          disabled={!showSemesterFee}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80 disabled:opacity-50 cursor-pointer"
-                        >
-                          <option value="">Select Preferred Account</option>
-                          {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name} (€{a.balance.toFixed(2)})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={semesterFee}
-                          onChange={(e) => setSemesterFee(e.target.value)}
-                          disabled={!showSemesterFee}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right disabled:opacity-50"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={showSemesterFee}
-                            onChange={(e) => handleToggleSemesterFee(e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Food / Groceries */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('food') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">Food / Groceries</td>
-                      <td className="py-3 px-4 text-muted-foreground">
-                        <span className="text-[10px] block leading-tight">
-                          Actual spending this month:
-                          <strong className="text-foreground block font-mono mt-0.5">
-                            {suggestedFoodBudget !== null ? `€${suggestedFoodBudget.toFixed(2)}` : '€0.00'}
-                          </strong>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={foodBudget}
-                          onChange={(e) => setFoodBudget(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('food')}
-                            onChange={() => handleToggleCategory('food')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-
-                    {/* Other Expenses */}
-                    <tr className={cn(
-                      "transition-colors",
-                      disabledCategories.includes('other') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30"
-                    )}>
-                      <td className="py-3 px-4 font-bold text-foreground">Other Expenses</td>
-                      <td className="py-3 px-4 text-muted-foreground text-[10px]">
-                        Shopping, Leisure, Transport, etc.
-                      </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={otherBudget}
-                          onChange={(e) => setOtherBudget(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-border bg-card px-2.5 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <label className="relative inline-flex items-center cursor-pointer justify-center w-full">
-                          <input
-                            type="checkbox"
-                            checked={!disabledCategories.includes('other')}
-                            onChange={() => handleToggleCategory('other')}
-                            className="sr-only peer"
-                          />
-                          <div className="w-8 h-4 bg-muted-foreground/35 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    step="1"
+                    label={t('settings.budgetLabel')}
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPlannerOpen(true)}
+                  className="sm:w-auto w-full h-11 text-xs font-bold gap-2 shrink-0 cursor-pointer"
+                >
+                  <Calculator className="h-4 w-4 text-primary" />
+                  Budget Calculator
+                </Button>
               </div>
 
-              {/* Dynamic Planner Total Sum Display */}
-              <div className="flex justify-between items-center bg-muted/30 p-4 border border-border/50 rounded-2xl font-bold text-xs">
-                <div className="space-y-0.5">
-                  <span className="text-foreground font-extrabold uppercase tracking-wide text-[9px] block">Total Planned Budget (Next Month)</span>
-                  <span className="text-[10px] text-muted-foreground font-normal">Calculated dynamically from enabled items above.</span>
+              <div className="border-t border-border/50 pt-3 mt-3">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">{t('settings.commonBills')}</span>
+                <div className="space-y-4">
+                  {/* Rent */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">House Rent</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={rent}
+                        onChange={(e) => setRent(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={rentAccountId}
+                        onChange={(e) => setRentAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Health Insurance */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Health Insurance</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={healthInsurance}
+                        onChange={(e) => setHealthInsurance(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={healthAccountId}
+                        onChange={(e) => setHealthAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Radio Bill */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Radio Bill</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={radioBill}
+                        onChange={(e) => setRadioBill(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={radioAccountId}
+                        onChange={(e) => setRadioAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile Bill */}
+                  <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                    <span className="text-xs font-bold text-foreground">Mobile Bill</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        label="Amount (€)"
+                        value={mobileBill}
+                        onChange={(e) => setMobileBill(e.target.value)}
+                        required
+                      />
+                      <Select
+                        label="Payment Account"
+                        value={mobileAccountId}
+                        onChange={(e) => setMobileAccountId(e.target.value)}
+                        options={[
+                          { value: '', label: 'Select Preferred Account' },
+                          ...accounts.map(a => ({ value: a.id, label: a.name }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Semester Fee Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/50 bg-muted/20">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-foreground">Semester Contribution Fee</span>
+                      <p className="text-[10px] text-muted-foreground">Show payment quick log on Semester starts (every 6 months)</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showSemesterFee}
+                        onChange={(e) => setShowSemesterFee(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-8 h-4 bg-muted-foreground/35 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+
+                  {/* Semester Fee Inputs (Shown conditionally) */}
+                  {showSemesterFee && (
+                    <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-3">
+                      <span className="text-xs font-bold text-foreground">Semester Fee Details</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          label="Amount (€)"
+                          value={semesterFee}
+                          onChange={(e) => setSemesterFee(e.target.value)}
+                          required
+                        />
+                        <Select
+                          label="Payment Account"
+                          value={semesterFeeAccountId}
+                          onChange={(e) => setSemesterFeeAccountId(e.target.value)}
+                          options={[
+                            { value: '', label: 'Select Preferred Account' },
+                            ...accounts.map(a => ({ value: a.id, label: a.name }))
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <span className="font-mono text-primary text-lg">
-                  €{calculateTotalPlannedBudget().toFixed(2)}
-                </span>
               </div>
 
               <Button type="submit" loading={budgetLoading} className="w-full mt-2">
@@ -859,6 +722,231 @@ export const Settings: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* BUDGET PLANNER CALCULATOR DIALOG */}
+      <Dialog
+        isOpen={isPlannerOpen}
+        onClose={() => setIsPlannerOpen(false)}
+        title="Next Month Budget Planner"
+        description="Compose your next month's spending plan by toggling categories. The sum will be saved as your target budget."
+      >
+        <div className="space-y-4">
+          <div className="overflow-x-auto rounded-2xl border border-border/50 bg-muted/10 max-h-96 overflow-y-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted/40 text-muted-foreground font-bold border-b border-border/40 uppercase tracking-wider text-[9px]">
+                  <th className="py-2.5 px-3">Category / Bill</th>
+                  <th className="py-2.5 px-3">Details</th>
+                  <th className="py-2.5 px-3 w-28 text-right">Amount (€)</th>
+                  <th className="py-2.5 px-3 text-center w-16">Active</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {/* House Rent */}
+                <tr className={cn("transition-colors", disabledCategories.includes('house_rent') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">House Rent</td>
+                  <td className="py-2 px-3 font-semibold text-muted-foreground/80 truncate max-w-[120px]" title={rentAccountId ? accounts.find(a => a.id === rentAccountId)?.name : 'None'}>
+                    {rentAccountId ? accounts.find(a => a.id === rentAccountId)?.name : 'No Account'}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={rent}
+                      onChange={(e) => setRent(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('house_rent')}
+                      onChange={() => handleToggleCategory('house_rent')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+
+                {/* Health Insurance */}
+                <tr className={cn("transition-colors", disabledCategories.includes('health_insurance') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">Health Insurance</td>
+                  <td className="py-2 px-3 font-semibold text-muted-foreground/80 truncate max-w-[120px]" title={healthAccountId ? accounts.find(a => a.id === healthAccountId)?.name : 'None'}>
+                    {healthAccountId ? accounts.find(a => a.id === healthAccountId)?.name : 'No Account'}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={healthInsurance}
+                      onChange={(e) => setHealthInsurance(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('health_insurance')}
+                      onChange={() => handleToggleCategory('health_insurance')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+
+                {/* Radio Bill */}
+                <tr className={cn("transition-colors", disabledCategories.includes('radio_bill') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">Radio Bill</td>
+                  <td className="py-2 px-3 font-semibold text-muted-foreground/80 truncate max-w-[120px]" title={radioAccountId ? accounts.find(a => a.id === radioAccountId)?.name : 'None'}>
+                    {radioAccountId ? accounts.find(a => a.id === radioAccountId)?.name : 'No Account'}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={radioBill}
+                      onChange={(e) => setRadioBill(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('radio_bill')}
+                      onChange={() => handleToggleCategory('radio_bill')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+
+                {/* Mobile Bill */}
+                <tr className={cn("transition-colors", disabledCategories.includes('mobile_bill') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">Mobile Bill</td>
+                  <td className="py-2 px-3 font-semibold text-muted-foreground/80 truncate max-w-[120px]" title={mobileAccountId ? accounts.find(a => a.id === mobileAccountId)?.name : 'None'}>
+                    {mobileAccountId ? accounts.find(a => a.id === mobileAccountId)?.name : 'No Account'}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={mobileBill}
+                      onChange={(e) => setMobileBill(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('mobile_bill')}
+                      onChange={() => handleToggleCategory('mobile_bill')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+
+                {/* Semester Fee */}
+                {showSemesterFee && (
+                  <tr className={cn("transition-colors", disabledCategories.includes('semester_fee') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                    <td className="py-2 px-3 font-bold text-foreground">Semester Fee</td>
+                    <td className="py-2 px-3 font-semibold text-muted-foreground/80 truncate max-w-[120px]" title={semesterFeeAccountId ? accounts.find(a => a.id === semesterFeeAccountId)?.name : 'None'}>
+                      {semesterFeeAccountId ? accounts.find(a => a.id === semesterFeeAccountId)?.name : 'No Account'}
+                    </td>
+                    <td className="py-2 px-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={semesterFee}
+                        onChange={(e) => setSemesterFee(e.target.value)}
+                        className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                      />
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={!disabledCategories.includes('semester_fee')}
+                        onChange={() => handleToggleCategory('semester_fee')}
+                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                      />
+                    </td>
+                  </tr>
+                )}
+
+                {/* Food / Groceries */}
+                <tr className={cn("transition-colors", disabledCategories.includes('food') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">Food / Groceries</td>
+                  <td className="py-2 px-3 text-muted-foreground text-[10px]">
+                    {suggestedFoodBudget !== null ? `Spent: €${suggestedFoodBudget.toFixed(2)}` : 'Spent: €0.00'}
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={foodBudget}
+                      onChange={(e) => setFoodBudget(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('food')}
+                      onChange={() => handleToggleCategory('food')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+
+                {/* Other Expenses */}
+                <tr className={cn("transition-colors", disabledCategories.includes('other') ? "bg-muted/10 opacity-60" : "hover:bg-muted/30")}>
+                  <td className="py-2 px-3 font-bold text-foreground">Other Expenses</td>
+                  <td className="py-2 px-3 text-muted-foreground text-[10px]">
+                    Shopping/Leisure
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={otherBudget}
+                      onChange={(e) => setOtherBudget(e.target.value)}
+                      className="w-full h-8 rounded-lg border border-border bg-card px-2 py-0.5 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-mono text-right"
+                    />
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!disabledCategories.includes('other')}
+                      onChange={() => handleToggleCategory('other')}
+                      className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-between items-center bg-muted/40 p-3.5 rounded-xl border border-border/50 font-bold text-xs">
+            <span className="text-foreground uppercase tracking-wide text-[9px]">Projected Total Budget</span>
+            <span className="font-mono text-primary text-base">
+              €{calculateTotalPlannedBudget().toFixed(2)}
+            </span>
+          </div>
+
+          <div className="flex gap-2.5 justify-end">
+            <Button variant="outline" onClick={() => setIsPlannerOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                const total = calculateTotalPlannedBudget();
+                setBudget(total.toFixed(0));
+                setIsPlannerOpen(false);
+              }}
+              className="gap-2"
+            >
+              <Check className="h-4 w-4" />
+              Apply to Budget Limit
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };
