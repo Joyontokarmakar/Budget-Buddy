@@ -43,6 +43,12 @@ const MOCK_PROFILE: Profile = {
   health_insurance_account_id: 'a1',
   radio_bill_account_id: 'a2',
   mobile_bill_account_id: 'a2',
+  show_semester_fee: false,
+  semester_fee: 350.00,
+  semester_fee_account_id: 'a1',
+  food_budget: 200.00,
+  other_budget: 100.00,
+  disabled_categories: [],
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

@@ -20,6 +20,12 @@ export interface Profile {
   health_insurance_account_id?: string | null;
   radio_bill_account_id?: string | null;
   mobile_bill_account_id?: string | null;
+  show_semester_fee?: boolean | null;
+  semester_fee?: number | null;
+  semester_fee_account_id?: string | null;
+  food_budget?: number | null;
+  other_budget?: number | null;
+  disabled_categories?: string[] | null;
   created_at: string;
   updated_at: string;
 }
