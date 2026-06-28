@@ -49,14 +49,13 @@ export const Navigation: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Sticky Bottom Tab Bar */}
-      <nav className="fixed bottom-5 left-4 right-4 z-40 md:hidden max-w-md mx-auto bg-card/85 dark:bg-card/75 backdrop-blur-xl border border-border/80 rounded-2xl shadow-xl shadow-black/10 px-2 py-1.5 transition-all duration-300">
+      <nav className="fixed bottom-5 left-4 right-4 z-40 md:hidden max-w-md mx-auto bg-card/85 dark:bg-card/75 backdrop-blur-xl border border-border/80 rounded-full shadow-xl shadow-black/10 px-2 py-1.5 transition-all duration-300">
         <div className="flex items-center justify-around h-11 max-w-lg mx-auto gap-1 relative">
           
           {/* Sliding Pill Background (Glossy Water Drop Transition) */}
           {activeIndex !== -1 && (
             <div
-              className="absolute inset-y-0 rounded-xl bg-secondary/60 dark:bg-secondary/20 border border-black/10 dark:border-white/10 backdrop-blur-md transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-inner"
+              className="absolute inset-y-0 rounded-full bg-secondary/60 dark:bg-secondary/20 border border-black/10 dark:border-white/10 backdrop-blur-md transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-inner"
               style={{
                 width: 'calc(20% - 4px)',
                 left: `calc(${activeIndex} * 20% + 2px)`,
