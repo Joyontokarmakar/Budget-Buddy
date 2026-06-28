@@ -8,6 +8,7 @@ export const Navigation: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -52,23 +53,37 @@ export const Navigation: React.FC = () => {
       <nav className="fixed bottom-5 left-4 right-4 z-40 md:hidden max-w-md mx-auto bg-card/85 dark:bg-card/75 backdrop-blur-xl border border-border/80 rounded-full shadow-xl shadow-black/10 px-2 py-1.5 transition-all duration-300">
         <div className="flex items-center justify-around h-11 max-w-lg mx-auto gap-1 relative">
           
-          {/* Sliding Pill Background (Glossy Water Drop Transition) */}
+          {/* Active Tab Indicator (Regular Inset Sized Pill) */}
           {activeIndex !== -1 && (
             <div
-              className="absolute -top-2.5 -bottom-2.5 rounded-full bg-secondary dark:bg-background border-2 border-primary/20 dark:border-white/20 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-lg shadow-black/10"
+              className="absolute top-1 bottom-1 rounded-full bg-secondary/80 dark:bg-secondary/40 border border-black/5 dark:border-white/5 transition-all duration-300 ease-out pointer-events-none z-0"
               style={{
-                width: 'calc(20% + 6px)',
-                left: `calc(${activeIndex} * 20% - 3px)`,
+                width: 'calc(20% - 4px)',
+                left: `calc(${activeIndex} * 20% + 2px)`,
               }}
             />
           )}
 
-          {primaryItems.map((item) => {
+          {/* Hover Tab Indicator (Larger Bulging Liquid Sized Pill) */}
+          <div
+            className={cn(
+              "absolute -top-2.5 -bottom-2.5 rounded-full bg-secondary dark:bg-background border-2 border-primary/20 dark:border-white/20 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-lg shadow-black/10",
+              hoveredIndex !== null ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            )}
+            style={{
+              width: 'calc(20% + 6px)',
+              left: `calc(${hoveredIndex ?? 0} * 20% - 3px)`,
+            }}
+          />
+
+          {primaryItems.map((item, idx) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
+                onMouseEnter={() => setHoveredIndex(idx)}
+                onMouseLeave={() => setHoveredIndex(null)}
                 className={({ isActive }) =>
                   cn(
                     'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer z-10',
@@ -88,6 +103,8 @@ export const Navigation: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMoreOpen(!isMoreOpen)}
+            onMouseEnter={() => setHoveredIndex(4)}
+            onMouseLeave={() => setHoveredIndex(null)}
             className={cn(
               'flex flex-col items-center justify-center flex-1 h-full py-1 px-2 rounded-xl text-muted-foreground transition-all duration-300 relative cursor-pointer z-10',
               isSecondaryActive || isMoreOpen 
