@@ -260,6 +260,7 @@ export const Analytics: React.FC = () => {
                     cy="50%"
                     outerRadius={80}
                     dataKey="value"
+                    nameKey="name"
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -274,7 +275,12 @@ export const Analytics: React.FC = () => {
                     itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
                     formatter={(value) => [`€${Number(value).toFixed(2)}`]}
                   />
-                  <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                  <Legend 
+                    iconSize={8} 
+                    iconType="circle" 
+                    wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                    formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
