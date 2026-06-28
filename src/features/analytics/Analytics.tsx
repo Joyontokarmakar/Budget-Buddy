@@ -5,8 +5,8 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner } from '../../components/ui';
-import { ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
-import { LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
+import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag } from 'lucide-react';
 export const Analytics: React.FC = () => {
   const { t } = useTranslation();
   const { profile } = useAuthStore();
@@ -243,56 +243,84 @@ export const Analytics: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* CATEGORY BREAKDOWN LIST */}
+          {/* CATEGORY BREAKDOWN PIE & LIST */}
           <Card className="hover:border-primary/20 transition-all flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <BarChart2 className="h-4.5 w-4.5 text-primary" />
+                <PieIcon className="h-4.5 w-4.5 text-primary" />
                 {t('analytics.byCategory')}
               </CardTitle>
-              <CardDescription>Categorized spending sorted by highest expense</CardDescription>
+              <CardDescription>Categorized spending allocation (solid Pie chart & ranked breakdown)</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto max-h-64 space-y-4 pt-2 pr-1 scrollbar-thin">
-              {sortedCategoryData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-xs font-semibold">
-                  No spending recorded yet.
+            <CardContent className="pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                {/* Left: Solid Pie Chart */}
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={75}
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          borderColor: isDark ? '#334155' : '#e2e8f0',
+                          borderRadius: '12px',
+                        }}
+                        itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                        formatter={(value) => [`€${Number(value).toFixed(2)}`]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ) : (
-                sortedCategoryData.map((entry) => {
-                  const percentage = totalSpending > 0 ? (entry.value / totalSpending) * 100 : 0;
-                  return (
-                    <div key={entry.name} className="space-y-1.5">
-                      <div className="flex justify-between items-center text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {/* Color Dot Indicator */}
-                          <span 
-                            className="h-2.5 w-2.5 rounded-full shrink-0" 
-                            style={{ backgroundColor: entry.color }} 
-                          />
-                          <span className="font-bold text-foreground truncate">{entry.name}</span>
-                          <span className="text-[10px] text-muted-foreground font-semibold">
-                            ({percentage.toFixed(1)}%)
-                          </span>
-                        </div>
-                        <span className="font-mono font-black text-foreground shrink-0 pl-2">
-                          €{entry.value.toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      {/* Custom Progress Bar */}
-                      <div className="w-full h-2 rounded-full bg-muted/40 overflow-hidden">
-                        <div 
-                          className="h-full rounded-full transition-all duration-500 ease-out"
-                          style={{ 
-                            width: `${percentage}%`,
-                            backgroundColor: entry.color 
-                          }}
-                        />
-                      </div>
+
+                {/* Right: Sorted Progress Bars List */}
+                <div className="overflow-y-auto max-h-48 space-y-3.5 pr-1 scrollbar-thin">
+                  {sortedCategoryData.length === 0 ? (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground text-xs font-semibold">
+                      No spending recorded yet.
                     </div>
-                  );
-                })
-              )}
+                  ) : (
+                    sortedCategoryData.map((entry) => {
+                      const percentage = totalSpending > 0 ? (entry.value / totalSpending) * 100 : 0;
+                      return (
+                        <div key={entry.name} className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span 
+                                className="h-2 w-2 rounded-full shrink-0" 
+                                style={{ backgroundColor: entry.color }} 
+                              />
+                              <span className="font-bold text-foreground truncate">{entry.name}</span>
+                              <span className="text-muted-foreground/80">({percentage.toFixed(0)}%)</span>
+                            </div>
+                            <span className="font-mono font-bold text-foreground">
+                              €{entry.value.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{ 
+                                width: `${percentage}%`,
+                                backgroundColor: entry.color 
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
