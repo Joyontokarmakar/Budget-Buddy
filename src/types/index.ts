@@ -61,6 +61,7 @@ export interface Store {
 }
 
 export interface ExpenseItem {
+  id?: string;
   name: string;
   amount: number;
   category_id?: string | null;

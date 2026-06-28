@@ -29,7 +29,7 @@ export const Expenses: React.FC = () => {
   const [discount, setDiscount] = useState('0'); // Discount state
 
   // Itemized breakdown state
-  const [items, setItems] = useState<{ name: string; amount: number; category_id?: string | null }[]>([]);
+  const [items, setItems] = useState<{ id: string; name: string; amount: number; category_id?: string | null }[]>([]);
   const [itemName, setItemName] = useState('');
   const [itemAmount, setItemAmount] = useState('');
   const [itemCategoryId, setItemCategoryId] = useState('');
@@ -257,8 +257,9 @@ export const Expenses: React.FC = () => {
           }
         }
         return {
+          id: crypto.randomUUID(),
           name: it.name,
-          amount: it.amount,
+          amount: Number(it.amount) || 0,
           category_id: cat ? cat.id : null,
         };
       });
@@ -360,6 +361,7 @@ export const Expenses: React.FC = () => {
     if (isNaN(val) || val <= 0) return;
 
     const newItem = {
+      id: crypto.randomUUID(),
       name: nameToUse.trim(),
       amount: val,
       category_id: itemCategoryId,
@@ -372,8 +374,8 @@ export const Expenses: React.FC = () => {
     setOtherPurpose('');
   };
 
-  const handleRemoveItem = (index: number) => {
-    const newItems = items.filter((_, idx) => idx !== index);
+  const handleRemoveItem = (itemId: string) => {
+    const newItems = items.filter((item) => item.id !== itemId);
     setItems(newItems);
     if (newItems.length === 0) {
       setAmount('');
@@ -423,6 +425,7 @@ export const Expenses: React.FC = () => {
       const val = parseFloat(itemAmount);
       if (!isNaN(val) && val > 0) {
         const newItem = {
+          id: crypto.randomUUID(),
           name: currentItemNameToUse.trim(),
           amount: val,
           category_id: itemCategoryId,
@@ -441,6 +444,7 @@ export const Expenses: React.FC = () => {
     if (discVal > 0 && activeItems.length > 0) {
       const discountCat = categories.find(c => c.name.toLowerCase() === 'discount');
       activeItems.push({
+        id: crypto.randomUUID(),
         name: 'Discount',
         amount: -discVal,
         category_id: discountCat ? discountCat.id : null,
@@ -722,10 +726,10 @@ export const Expenses: React.FC = () => {
                   {/* List of current items */}
                   {items.length > 0 && (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {items.map((item, idx) => {
+                      {items.map((item) => {
                         const cat = categories.find(c => c.id === item.category_id);
                         return (
-                          <div key={idx} className="flex items-center justify-between bg-card border border-border/40 p-2 rounded-lg text-xs font-semibold">
+                          <div key={item.id} className="flex items-center justify-between bg-card border border-border/40 p-2 rounded-lg text-xs font-semibold">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span
                                 className="px-1.5 py-0.5 text-[9px] font-extrabold rounded-md shrink-0 text-white"
@@ -736,10 +740,10 @@ export const Expenses: React.FC = () => {
                               <span className="truncate text-foreground/90">{item.name}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span>€{item.amount.toFixed(2)}</span>
+                              <span>€{Number(item.amount).toFixed(2)}</span>
                               <button
                                 type="button"
-                                onClick={() => handleRemoveItem(idx)}
+                                onClick={() => handleRemoveItem(item.id)}
                                 className="text-muted-foreground hover:text-rose-500 transition-colors p-0.5"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
