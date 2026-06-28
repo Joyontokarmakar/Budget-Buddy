@@ -56,7 +56,7 @@ export const Navigation: React.FC = () => {
           {/* Active Tab Indicator (Regular Inset Sized Pill) */}
           {activeIndex !== -1 && (
             <div
-              className="absolute top-1 bottom-1 rounded-full bg-secondary/80 dark:bg-secondary/40 border border-black/5 dark:border-white/5 transition-all duration-300 ease-out pointer-events-none z-0"
+              className="absolute top-1 bottom-1 rounded-full bg-secondary/85 dark:bg-muted/80 border border-black/5 dark:border-white/5 transition-all duration-300 ease-out pointer-events-none z-0 shadow-xs"
               style={{
                 width: 'calc(20% - 4px)',
                 left: `calc(${activeIndex} * 20% + 2px)`,
@@ -67,12 +67,12 @@ export const Navigation: React.FC = () => {
           {/* Hover Tab Indicator (Larger Bulging Liquid Sized Pill) */}
           <div
             className={cn(
-              "absolute -top-2.5 -bottom-2.5 rounded-full bg-secondary dark:bg-background border-2 border-primary/20 dark:border-white/20 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-lg shadow-black/10",
-              hoveredIndex !== null ? "opacity-100 scale-100" : "opacity-0 scale-95"
+              "absolute top-1 bottom-1 rounded-full bg-secondary/40 dark:bg-secondary/20 border-2 border-primary/25 dark:border-white/25 backdrop-blur-xs transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0 shadow-md",
+              hoveredIndex !== null ? "opacity-100 scale-110" : "opacity-0 scale-95"
             )}
             style={{
-              width: 'calc(20% + 6px)',
-              left: `calc(${hoveredIndex ?? 0} * 20% - 3px)`,
+              width: 'calc(20% - 4px)',
+              left: `calc(${hoveredIndex ?? 0} * 20% + 2px)`,
             }}
           />
 
