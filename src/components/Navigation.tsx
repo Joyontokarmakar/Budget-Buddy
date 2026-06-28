@@ -9,6 +9,7 @@ export const Navigation: React.FC = () => {
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hoveredDesktopIndex, setHoveredDesktopIndex] = useState<number | null>(null);
 
   const navItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
@@ -47,6 +48,19 @@ export const Navigation: React.FC = () => {
     return -1;
   };
   const activeIndex = getActiveIndex();
+
+  const getDesktopActiveIndex = () => {
+    if (location.pathname === '/') return 0;
+    if (location.pathname === '/expenses') return 1;
+    if (location.pathname === '/income') return 2;
+    if (location.pathname === '/accounts') return 3;
+    if (location.pathname === '/analytics') return 4;
+    if (location.pathname === '/reports') return 5;
+    if (location.pathname === '/assets') return 6;
+    if (location.pathname === '/settings') return 7;
+    return -1;
+  };
+  const desktopActiveIndex = getDesktopActiveIndex();
 
   return (
     <>
@@ -188,19 +202,42 @@ export const Navigation: React.FC = () => {
         </div>
 
         {/* Sidebar Nav Links */}
-        <div className="flex flex-col gap-1.5 flex-1">
-          {navItems.map((item) => {
+        <div className="flex flex-col gap-1.5 flex-1 relative">
+          {/* Desktop Sliding Active Indicator */}
+          {desktopActiveIndex !== -1 && (
+            <div
+              className="absolute left-0 right-0 h-11 rounded-xl bg-primary shadow-md shadow-primary/10 transition-all duration-450 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0"
+              style={{
+                top: `${desktopActiveIndex * 50}px`,
+              }}
+            />
+          )}
+
+          {/* Desktop Sliding Hover Indicator */}
+          <div
+            className={cn(
+              "absolute left-0 right-0 h-11 rounded-xl bg-secondary dark:bg-muted transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none z-0",
+              hoveredDesktopIndex !== null ? "opacity-100 scale-102" : "opacity-0 scale-95"
+            )}
+            style={{
+              top: `${(hoveredDesktopIndex ?? 0) * 50}px`,
+            }}
+          />
+
+          {navItems.map((item, idx) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
+                onMouseEnter={() => setHoveredDesktopIndex(idx)}
+                onMouseLeave={() => setHoveredDesktopIndex(null)}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3.5 px-4 h-11 rounded-xl text-sm font-semibold transition-all duration-200',
+                    'flex items-center gap-3.5 px-4 h-11 rounded-xl text-sm font-semibold transition-all duration-200 relative cursor-pointer z-10',
                     isActive
-                      ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      ? 'text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
                   )
                 }
               >
