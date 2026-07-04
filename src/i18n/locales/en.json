@@ -8,6 +8,7 @@
     "settings": "Settings",
     "reports": "Reports",
     "assets": "Permanent Assets",
+    "depositsLoans": "Deposits & Loans",
     "developer": "Developer Info"
   },
   "auth": {
@@ -170,5 +171,39 @@
     "assetAt": "Asset: {{name}} - {{price}} at {{store}} on {{date}}",
     "clickToVisit": "Click to visit page",
     "searchHelp": "Use ↑↓ to navigate, Enter to select, Esc to close"
+  },
+  "depositsLoans": {
+    "title": "Deposits & Loans",
+    "deposits": "Deposits",
+    "loans": "Loans",
+    "addDeposit": "Add Deposit",
+    "addLoan": "Add Loan",
+    "depositTo": "Deposit To",
+    "depositFrom": "Deposit From / Source",
+    "amount": "Amount (€)",
+    "date": "Date",
+    "time": "Time",
+    "note": "Note (Optional)",
+    "saveDeposit": "Log Deposit",
+    "loanType": "Loan Type",
+    "loanTaken": "Loan Taken (Borrowed)",
+    "loanProvided": "Loan Provided (Lent)",
+    "person": "Person (From/To Whom)",
+    "associatedAccount": "Associated Account",
+    "reason": "Reason / Why (Optional)",
+    "dueDate": "Due Date (Optional)",
+    "saveLoan": "Log Loan",
+    "repayments": "Repayments",
+    "logRepayment": "Log Repayment",
+    "outstanding": "Outstanding",
+    "settled": "Settled",
+    "active": "Active",
+    "netBalance": "Net Balance",
+    "repaid": "Repaid",
+    "remaining": "Remaining",
+    "noDeposits": "No deposits recorded yet.",
+    "noLoans": "No loans recorded yet.",
+    "deleteConfirmDeposit": "Are you sure you want to delete this deposit? This will revert the account balance change.",
+    "deleteConfirmLoan": "Are you sure you want to delete this loan? This will revert the initial balance change and all associated repayments."
   }
 }

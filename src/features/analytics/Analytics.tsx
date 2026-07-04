@@ -46,6 +46,23 @@ export const Analytics: React.FC = () => {
   const gridColor = isDark ? '#1e293b' : '#e2e8f0';
 
   // 1. Spending by Category
+  const UNIQUE_COLORS = [
+    '#3b82f6', // blue
+    '#10b981', // emerald
+    '#f59e0b', // amber
+    '#f43f5e', // rose
+    '#8b5cf6', // violet
+    '#0ea5e9', // sky
+    '#6366f1', // indigo
+    '#14b8a6', // teal
+    '#f97316', // orange
+    '#a855f7', // purple
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#a1a1aa'  // gray
+  ];
+
   const categoryDataMap: { [key: string]: { name: string; value: number; color: string } } = {};
   expenses.forEach(e => {
     const catName = e.category?.name || 'Other';
@@ -62,7 +79,10 @@ export const Analytics: React.FC = () => {
       };
     }
   });
-  const categoryData = Object.values(categoryDataMap);
+  const categoryData = Object.values(categoryDataMap).map((item, idx) => ({
+    ...item,
+    color: UNIQUE_COLORS[idx % UNIQUE_COLORS.length]
+  }));
 
   // 2. Weekly Spending Trend (last 4 weeks)
   const getWeekNumber = (d: Date) => {

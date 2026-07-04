@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Trash2, UserPlus, LogOut, ChevronUp, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Trash2, UserPlus, LogOut, ChevronUp, ChevronDown, Coins } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useAuthStore } from '../stores/authStore';
 
@@ -25,6 +25,7 @@ export const Navigation: React.FC = () => {
     { to: '/expenses', label: t('nav.expenses'), icon: TrendingDown },
     { to: '/income', label: t('nav.income'), icon: TrendingUp },
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
+    { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: Coins },
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
     { to: '/reports', label: t('nav.reports'), icon: FileText },
     { to: '/assets', label: t('nav.assets'), icon: Gem },
@@ -41,6 +42,7 @@ export const Navigation: React.FC = () => {
 
   const secondaryItems = [
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
+    { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: Coins },
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
     { to: '/assets', label: t('nav.assets'), icon: Gem },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
@@ -63,10 +65,11 @@ export const Navigation: React.FC = () => {
     if (location.pathname === '/expenses') return 1;
     if (location.pathname === '/income') return 2;
     if (location.pathname === '/accounts') return 3;
-    if (location.pathname === '/analytics') return 4;
-    if (location.pathname === '/reports') return 5;
-    if (location.pathname === '/assets') return 6;
-    if (location.pathname === '/settings') return 7;
+    if (location.pathname === '/deposits-loans') return 4;
+    if (location.pathname === '/analytics') return 5;
+    if (location.pathname === '/reports') return 6;
+    if (location.pathname === '/assets') return 7;
+    if (location.pathname === '/settings') return 8;
     return -1;
   };
   const desktopActiveIndex = getDesktopActiveIndex();

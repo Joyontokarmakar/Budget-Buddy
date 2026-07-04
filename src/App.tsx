@@ -15,6 +15,7 @@ import { Reports } from './features/reports/Reports';
 import { Assets } from './features/assets/Assets';
 import { Settings } from './features/settings/Settings';
 import { Developer } from './features/developer/Developer';
+import { DepositsLoans } from './features/deposits-loans/DepositsLoans';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ function App() {
               <Route path="expenses" element={<Expenses />} />
               <Route path="income" element={<Income />} />
               <Route path="accounts" element={<Accounts />} />
+              <Route path="deposits-loans" element={<DepositsLoans />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="reports" element={<Reports />} />
               <Route path="assets" element={<Assets />} />

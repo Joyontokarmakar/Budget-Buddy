@@ -8,6 +8,7 @@
     "settings": "Einstellungen",
     "reports": "Berichte",
     "assets": "Anlagevermögen",
+    "depositsLoans": "Einlagen & Kredite",
     "developer": "Entwicklerinfo"
   },
   "auth": {
@@ -170,5 +171,39 @@
     "assetAt": "Anlagegut: {{name}} - {{price}} bei {{store}} am {{date}}",
     "clickToVisit": "Klicken, um die Seite zu besuchen",
     "searchHelp": "Nutzen Sie ↑↓ zum Navigieren, Enter zum Auswählen, Esc zum Schließen"
+  },
+  "depositsLoans": {
+    "title": "Einlagen & Kredite",
+    "deposits": "Einlagen",
+    "loans": "Kredite",
+    "addDeposit": "Einlage hinzufügen",
+    "addLoan": "Kredit hinzufügen",
+    "depositTo": "Einzahlen auf",
+    "depositFrom": "Herkunft / Quelle",
+    "amount": "Betrag (€)",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "note": "Notiz (Optional)",
+    "saveDeposit": "Einlage buchen",
+    "loanType": "Kreditart",
+    "loanTaken": "Kredit aufgenommen (Geliehen von)",
+    "loanProvided": "Kredit vergeben (Verliehen an)",
+    "person": "Person (Von/An wen)",
+    "associatedAccount": "Zugehöriges Konto",
+    "reason": "Grund / Warum (Optional)",
+    "dueDate": "Fälligkeitsdatum (Optional)",
+    "saveLoan": "Kredit buchen",
+    "repayments": "Rückzahlungen",
+    "logRepayment": "Rückzahlung buchen",
+    "outstanding": "Ausstehend",
+    "settled": "Abbezahlt",
+    "active": "Aktiv",
+    "netBalance": "Netto-Saldo",
+    "repaid": "Zurückgezahlt",
+    "remaining": "Verbleibend",
+    "noDeposits": "Noch keine Einlagen erfasst.",
+    "noLoans": "Noch keine Kredite erfasst.",
+    "deleteConfirmDeposit": "Sind Sie sicher, dass Sie diese Einlage löschen möchten? Dadurch wird die Kontostandsänderung rückgängig gemacht.",
+    "deleteConfirmLoan": "Sind Sie sicher, dass Sie diesen Kredit löschen möchten? Dadurch werden die ursprüngliche Kontostandsänderung und alle zugehörigen Rückzahlungen rückgängig gemacht."
   }
 }

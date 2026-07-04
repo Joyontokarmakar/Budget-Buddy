@@ -2,20 +2,22 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { ExpenseWithDetails, Category } from '../../types';
+import type { ExpenseWithDetails, Category, DepositWithDetails, LoanWithDetails } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag } from 'lucide-react';
+import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t } = useTranslation();
   const { profile } = useAuthStore();
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [deposits, setDeposits] = useState<DepositWithDetails[]>([]);
+  const [loans, setLoans] = useState<LoanWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -41,12 +43,16 @@ export const Reports: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [expData, catData] = await Promise.all([
+      const [expData, catData, depData, loanData] = await Promise.all([
         db.getExpenses(profile.id),
         db.getCategories(profile.id),
+        db.getDeposits(profile.id),
+        db.getLoans(profile.id),
       ]);
       setExpenses(expData);
       setCategories(catData);
+      setDeposits(depData);
+      setLoans(loanData);
     } catch (e) {
       console.error(e);
     } finally {
@@ -75,6 +81,36 @@ export const Reports: React.FC = () => {
       return monthKey === selectedMonth;
     });
   }, [expenses, selectedMonth]);
+
+  // Filter deposits and loans for current month
+  const currentMonthDeposits = useMemo(() => {
+    return deposits.filter(d => d.date && d.date.substring(0, 7) === selectedMonth);
+  }, [deposits, selectedMonth]);
+
+  const currentMonthLoans = useMemo(() => {
+    return loans.filter(l => l.date && l.date.substring(0, 7) === selectedMonth);
+  }, [loans, selectedMonth]);
+
+  // Aggregate deposits and loans details
+  const depositsMonthTotal = useMemo(() => {
+    return currentMonthDeposits.reduce((sum, d) => sum + d.amount, 0);
+  }, [currentMonthDeposits]);
+
+  const loansTakenMonthTotal = useMemo(() => {
+    return currentMonthLoans.filter(l => l.type === 'taken').reduce((sum, l) => sum + l.amount, 0);
+  }, [currentMonthLoans]);
+
+  const loansProvidedMonthTotal = useMemo(() => {
+    return currentMonthLoans.filter(l => l.type === 'provided').reduce((sum, l) => sum + l.amount, 0);
+  }, [currentMonthLoans]);
+
+  const activeLoansTakenOutstanding = useMemo(() => {
+    return loans.filter(l => l.type === 'taken' && l.status === 'active').reduce((sum, l) => sum + l.remaining_amount, 0);
+  }, [loans]);
+
+  const activeLoansProvidedOutstanding = useMemo(() => {
+    return loans.filter(l => l.type === 'provided' && l.status === 'active').reduce((sum, l) => sum + l.remaining_amount, 0);
+  }, [loans]);
 
   // Distinguish Fixed Bills vs Daily Shopping
   const fixedBillCategories = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'];
@@ -1218,6 +1254,54 @@ export const Reports: React.FC = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Deposits & Loans Overview Card */}
+          <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md">
+            <CardHeader className="bg-muted/20 border-b border-border/50 py-3 px-4 flex flex-row items-center gap-2">
+              <Coins className="h-4 w-4 text-emerald-500" />
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Deposits & Loans Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 text-xs font-semibold">
+              <table className="w-full border-collapse">
+                <tbody className="divide-y divide-border/30">
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex items-center justify-between">
+                      <span>Deposits (This Month)</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      +€{depositsMonthTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1"><ArrowDownLeft className="h-3.5 w-3.5 text-blue-500" /> Loans Taken (Outstanding)</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{activeLoansTakenOutstanding.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1"><ArrowUpRight className="h-3.5 w-3.5 text-violet-500" /> Loans Provided (Outstanding)</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{activeLoansProvidedOutstanding.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  <tr className="bg-muted/10 hover:bg-muted/20">
+                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                      <span>New Loans Added (This Month)</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground/80">
+                      €{(loansTakenMonthTotal + loansProvidedMonthTotal).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </CardContent>
           </Card>
 

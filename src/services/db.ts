@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession } from '../types';
+import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails } from '../types';
 
 // =========================================================================
 // MOCK DATA SEED INITIALIZATION (FOR LOCAL OFFLINE / NO-SUPABASE MODE)
@@ -402,6 +402,12 @@ function initLocalStorage(userId: string) {
         updated_at: new Date().toISOString(),
       }
     ]));
+  }
+  if (!localStorage.getItem('bb-deposits')) {
+    localStorage.setItem('bb-deposits', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('bb-loans')) {
+    localStorage.setItem('bb-loans', JSON.stringify([]));
   }
 }
 
@@ -1192,6 +1198,403 @@ interface ReceiptAnalysis {
       .eq('user_id', userId)
       .eq('session_key', sessionKey);
     if (error) throw error;
+  },
+
+  // DEPOSITS
+  getDeposits: async (userId: string): Promise<DepositWithDetails[]> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const deposits = getLocalItems<Deposit>('bb-deposits');
+      const accounts = getLocalItems<Account>('bb-accounts');
+      return deposits
+        .filter(d => d.user_id === userId)
+        .map(d => ({
+          ...d,
+          account: accounts.find(a => a.id === d.to_account_id) || null,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    const { data, error } = await supabase
+      .from('deposits')
+      .select('*, account:to_account_id(*)')
+      .order('date', { ascending: false });
+    if (error) throw error;
+    return (data as unknown as DepositWithDetails[]) || [];
+  },
+
+  createDeposit: async (userId: string, deposit: Omit<Deposit, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Deposit> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const deposits = getLocalItems<Deposit>('bb-deposits');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const newDep: Deposit = {
+        ...deposit,
+        id: crypto.randomUUID(),
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      deposits.push(newDep);
+      setLocalItems('bb-deposits', deposits);
+
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === deposit.to_account_id) {
+          return { ...a, balance: a.balance + deposit.amount, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+      return newDep;
+    }
+    const { data, error } = await supabase
+      .from('deposits')
+      .insert({ ...deposit, user_id: userId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  updateDeposit: async (userId: string, depositId: string, updates: Partial<Omit<Deposit, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<Deposit> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const deposits = getLocalItems<Deposit>('bb-deposits');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const depIdx = deposits.findIndex(d => d.id === depositId && d.user_id === userId);
+      if (depIdx === -1) throw new Error('Deposit not found');
+
+      const oldDep = deposits[depIdx];
+      const newDep = { ...oldDep, ...updates, updated_at: new Date().toISOString() };
+      deposits[depIdx] = newDep;
+      setLocalItems('bb-deposits', deposits);
+
+      let updatedAccounts = [...accounts];
+      if (updates.amount !== undefined || updates.to_account_id !== undefined) {
+        const targetAccountId = updates.to_account_id || oldDep.to_account_id;
+        const targetAmount = updates.amount !== undefined ? updates.amount : oldDep.amount;
+
+        if (oldDep.to_account_id === targetAccountId) {
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance - oldDep.amount + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        } else {
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === oldDep.to_account_id) {
+              return { ...a, balance: a.balance - oldDep.amount, updated_at: new Date().toISOString() };
+            }
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        }
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
+      return newDep;
+    }
+    const { data, error } = await supabase
+      .from('deposits')
+      .update(updates)
+      .eq('id', depositId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  deleteDeposit: async (userId: string, depositId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const deposits = getLocalItems<Deposit>('bb-deposits');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const dep = deposits.find(d => d.id === depositId && d.user_id === userId);
+      if (!dep) return;
+
+      setLocalItems('bb-deposits', deposits.filter(d => d.id !== depositId));
+
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === dep.to_account_id) {
+          return { ...a, balance: a.balance - dep.amount, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+      return;
+    }
+    const { error } = await supabase
+      .from('deposits')
+      .delete()
+      .eq('id', depositId);
+    if (error) throw error;
+  },
+
+  // LOANS
+  getLoans: async (userId: string): Promise<LoanWithDetails[]> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const loans = getLocalItems<Loan>('bb-loans');
+      const accounts = getLocalItems<Account>('bb-accounts');
+      return loans
+        .filter(l => l.user_id === userId)
+        .map(l => ({
+          ...l,
+          account: accounts.find(a => a.id === l.account_id) || null,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    const { data, error } = await supabase
+      .from('loans')
+      .select('*, account:account_id(*)')
+      .order('date', { ascending: false });
+    if (error) throw error;
+    return (data as unknown as LoanWithDetails[]) || [];
+  },
+
+  createLoan: async (userId: string, loan: Omit<Loan, 'id' | 'user_id' | 'remaining_amount' | 'status' | 'payments' | 'created_at' | 'updated_at'>): Promise<Loan> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const loans = getLocalItems<Loan>('bb-loans');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const newLoan: Loan = {
+        ...loan,
+        id: crypto.randomUUID(),
+        user_id: userId,
+        remaining_amount: loan.amount,
+        status: 'active',
+        payments: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      loans.push(newLoan);
+      setLocalItems('bb-loans', loans);
+
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === loan.account_id) {
+          const change = loan.type === 'taken' ? loan.amount : -loan.amount;
+          return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+      return newLoan;
+    }
+    const { data, error } = await supabase
+      .from('loans')
+      .insert({ 
+        ...loan, 
+        user_id: userId, 
+        remaining_amount: loan.amount, 
+        status: 'active', 
+        payments: [] 
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  updateLoan: async (userId: string, loanId: string, updates: Partial<Omit<Loan, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<Loan> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const loans = getLocalItems<Loan>('bb-loans');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const idx = loans.findIndex(l => l.id === loanId && l.user_id === userId);
+      if (idx === -1) throw new Error('Loan not found');
+
+      const oldLoan = loans[idx];
+      const newLoan = { ...oldLoan, ...updates, updated_at: new Date().toISOString() };
+      
+      if (updates.amount !== undefined) {
+        const totalPaid = (oldLoan.payments || []).reduce((sum, p) => sum + p.amount, 0);
+        newLoan.remaining_amount = Math.max(updates.amount - totalPaid, 0);
+        newLoan.status = newLoan.remaining_amount <= 0 ? 'settled' : 'active';
+      }
+
+      loans[idx] = newLoan;
+      setLocalItems('bb-loans', loans);
+
+      let updatedAccounts = [...accounts];
+      if (updates.amount !== undefined || updates.account_id !== undefined || updates.type !== undefined) {
+        const targetAccountId = updates.account_id || oldLoan.account_id;
+        const targetType = updates.type || oldLoan.type;
+        const targetAmount = updates.amount !== undefined ? updates.amount : oldLoan.amount;
+
+        const oldFactor = oldLoan.type === 'taken' ? 1 : -1;
+        const newFactor = targetType === 'taken' ? 1 : -1;
+
+        if (oldLoan.account_id === targetAccountId) {
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === targetAccountId) {
+              return { 
+                ...a, 
+                balance: a.balance - (oldLoan.amount * oldFactor) + (targetAmount * newFactor), 
+                updated_at: new Date().toISOString() 
+              };
+            }
+            return a;
+          });
+        } else {
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === oldLoan.account_id) {
+              return { ...a, balance: a.balance - (oldLoan.amount * oldFactor), updated_at: new Date().toISOString() };
+            }
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance + (targetAmount * newFactor), updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        }
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
+      return newLoan;
+    }
+
+    const { data, error } = await supabase
+      .from('loans')
+      .update(updates)
+      .eq('id', loanId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  deleteLoan: async (userId: string, loanId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const loans = getLocalItems<Loan>('bb-loans');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const loan = loans.find(l => l.id === loanId && l.user_id === userId);
+      if (!loan) return;
+
+      setLocalItems('bb-loans', loans.filter(l => l.id !== loanId));
+
+      let updatedAccounts = [...accounts];
+      const factor = loan.type === 'taken' ? 1 : -1;
+
+      updatedAccounts = updatedAccounts.map(a => {
+        if (a.id === loan.account_id) {
+          return { ...a, balance: a.balance - (loan.amount * factor), updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+
+      if (loan.payments && loan.payments.length > 0) {
+        loan.payments.forEach(p => {
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === p.account_id) {
+              const change = loan.type === 'taken' ? p.amount : -p.amount;
+              return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        });
+      }
+
+      setLocalItems('bb-accounts', updatedAccounts);
+      return;
+    }
+    const { error } = await supabase
+      .from('loans')
+      .delete()
+      .eq('id', loanId);
+    if (error) throw error;
+  },
+
+  createLoanPayment: async (userId: string, loanId: string, payment: Omit<LoanPayment, 'id'>): Promise<Loan> => {
+    const newPayment: LoanPayment = {
+      ...payment,
+      id: crypto.randomUUID(),
+    };
+
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const loans = getLocalItems<Loan>('bb-loans');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const idx = loans.findIndex(l => l.id === loanId && l.user_id === userId);
+      if (idx === -1) throw new Error('Loan not found');
+
+      const loan = loans[idx];
+      const payments = loan.payments || [];
+      payments.push(newPayment);
+
+      const remainingAmount = Math.max(loan.remaining_amount - payment.amount, 0);
+      const status = remainingAmount <= 0 ? 'settled' : 'active';
+
+      const updatedLoan = {
+        ...loan,
+        payments,
+        remaining_amount: remainingAmount,
+        status,
+        updated_at: new Date().toISOString(),
+      };
+      loans[idx] = updatedLoan;
+      setLocalItems('bb-loans', loans);
+
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === payment.account_id) {
+          const change = loan.type === 'taken' ? -payment.amount : payment.amount;
+          return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+      return updatedLoan;
+    }
+
+    const { data: loan, error: getError } = await supabase
+      .from('loans')
+      .select('*')
+      .eq('id', loanId)
+      .single();
+    if (getError) throw getError;
+
+    const payments = loan.payments || [];
+    payments.push(newPayment);
+
+    const remainingAmount = Math.max(loan.remaining_amount - payment.amount, 0);
+    const status = remainingAmount <= 0 ? 'settled' : 'active';
+
+    const { data: updatedLoan, error: updateError } = await supabase
+      .from('loans')
+      .update({
+        payments,
+        remaining_amount: remainingAmount,
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', loanId)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    const change = loan.type === 'taken' ? -payment.amount : payment.amount;
+    const { data: account, error: accGetError } = await supabase
+      .from('accounts')
+      .select('balance')
+      .eq('id', payment.account_id)
+      .single();
+    if (accGetError) throw accGetError;
+
+    const { error: accUpdateError } = await supabase
+      .from('accounts')
+      .update({ balance: (account.balance || 0) + change })
+      .eq('id', payment.account_id);
+    if (accUpdateError) throw accUpdateError;
+
+    return updatedLoan;
   },
 };
 

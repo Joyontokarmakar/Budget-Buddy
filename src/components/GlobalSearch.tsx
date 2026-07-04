@@ -20,7 +20,8 @@ import {
   FileText, 
   LayoutDashboard, 
   ArrowRight,
-  Terminal
+  Terminal,
+  Coins
 } from 'lucide-react';
 import { Badge } from './ui';
 
@@ -168,6 +169,7 @@ export const GlobalSearch: React.FC = () => {
       { to: '/expenses', label: t('nav.expenses'), icon: <TrendingDown className="h-4.5 w-4.5 text-rose-500" /> },
       { to: '/income', label: t('nav.income'), icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-500" /> },
       { to: '/accounts', label: t('nav.accounts'), icon: <Wallet className="h-4.5 w-4.5 text-sky-500" /> },
+      { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: <Coins className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" /> },
       { to: '/analytics', label: t('nav.analytics'), icon: <PieChart className="h-4.5 w-4.5 text-violet-500" /> },
       { to: '/reports', label: t('nav.reports'), icon: <FileText className="h-4.5 w-4.5 text-indigo-500" /> },
       { to: '/assets', label: t('nav.assets'), icon: <Gem className="h-4.5 w-4.5 text-amber-500" /> },

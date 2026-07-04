@@ -146,3 +146,49 @@ export interface PermanentAsset {
   created_at: string;
   updated_at: string;
 }
+
+export interface Deposit {
+  id: string;
+  user_id: string;
+  amount: number;
+  date: string;
+  time: string;
+  to_account_id: string;
+  source: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepositWithDetails extends Deposit {
+  account?: Account | null;
+}
+
+export interface LoanPayment {
+  id: string;
+  date: string;
+  amount: number;
+  account_id: string;
+  notes: string | null;
+}
+
+export interface Loan {
+  id: string;
+  user_id: string;
+  type: 'taken' | 'provided';
+  person: string;
+  amount: number;
+  remaining_amount: number;
+  date: string;
+  notes: string | null;
+  account_id: string;
+  status: 'active' | 'settled';
+  payments: LoanPayment[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoanWithDetails extends Loan {
+  account?: Account | null;
+}
+
