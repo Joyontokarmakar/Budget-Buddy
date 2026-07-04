@@ -6,7 +6,7 @@ import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
-import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -56,6 +56,8 @@ export const Settings: React.FC = () => {
   const [disabledCategories, setDisabledCategories] = useState<string[]>(profile?.disabled_categories || []);
 
   const [suggestedFoodBudget, setSuggestedFoodBudget] = useState<number | null>(null);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   // Accounts state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -97,11 +99,14 @@ export const Settings: React.FC = () => {
     const loadFinancialData = async () => {
       if (profile) {
         try {
-          const [accs, exps] = await Promise.all([
+          const [accs, exps, cats] = await Promise.all([
             db.getAccounts(profile.id),
-            db.getExpenses(profile.id)
+            db.getExpenses(profile.id),
+            db.getCategories(profile.id)
           ]);
           setAccounts(accs);
+          setExpenses(exps);
+          setCategories(cats);
 
           // Calculate current month's food spending for suggestions
           const now = new Date();
@@ -109,8 +114,7 @@ export const Settings: React.FC = () => {
           
           const foodExpenses = exps.filter(e => {
             if (!e.date || !e.category) return false;
-            const d = new Date(e.date);
-            const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const eMonthKey = e.date.substring(0, 7);
             return eMonthKey === currentMonthKey && e.category.name.toLowerCase() === 'food';
           });
           
@@ -222,6 +226,84 @@ export const Settings: React.FC = () => {
     } else {
       setDisabledCategories([...disabledCategories, categoryKey]);
     }
+  };
+
+  const handleFetchPreviousMonth = () => {
+    if (!profile) return;
+    
+    // Determine previous month (1 month back)
+    const now = new Date();
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Filter expenses for previous month
+    const prevMonthExpenses = expenses.filter(e => {
+      if (!e.date) return false;
+      return e.date.substring(0, 7) === prevMonthKey;
+    });
+    
+    const fixedBillCategories = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'];
+    
+    let rentSum = 0;
+    let healthSum = 0;
+    let radioSum = 0;
+    let mobileSum = 0;
+    let semesterSum = 0;
+    let foodSum = 0;
+    let otherSum = 0;
+
+    prevMonthExpenses.forEach(e => {
+      const catName = e.category?.name || '';
+      if (catName === 'House rent') {
+        rentSum += Number(e.amount) || 0;
+        return;
+      }
+      if (catName === 'Health Insurance') {
+        healthSum += Number(e.amount) || 0;
+        return;
+      }
+      if (catName === 'Radio Bill') {
+        radioSum += Number(e.amount) || 0;
+        return;
+      }
+      if (catName === 'Mobile bill') {
+        mobileSum += Number(e.amount) || 0;
+        return;
+      }
+      
+      const safeItems = e.items ? (Array.isArray(e.items) ? e.items : []) : [];
+      if (safeItems.length > 0) {
+        safeItems.forEach((it: any) => {
+          const itemCat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
+          const itemCatName = itemCat?.name || catName || 'Other';
+          const itemAmt = Number(it.amount) || 0;
+          
+          if (itemCatName === 'Food') {
+            foodSum += itemAmt;
+          } else if (fixedBillCategories.includes(itemCatName)) {
+            // Skip if somehow itemized as a bill
+          } else {
+            otherSum += itemAmt;
+          }
+        });
+      } else {
+        const parentCatName = catName || 'Other';
+        if (parentCatName === 'Food') {
+          foodSum += Number(e.amount) || 0;
+        } else {
+          otherSum += Number(e.amount) || 0;
+        }
+      }
+    });
+
+    // Update inputs: if sum > 0, use it. Otherwise, fallback to user's profile defaults (or system defaults)
+    setRent(rentSum > 0 ? rentSum.toFixed(2) : (profile?.house_rent?.toString() || '264.50'));
+    setHealthInsurance(healthSum > 0 ? healthSum.toFixed(2) : (profile?.health_insurance?.toString() || '151.42'));
+    setRadioBill(radioSum > 0 ? radioSum.toFixed(2) : (profile?.radio_bill?.toString() || '18.36'));
+    setMobileBill(mobileSum > 0 ? mobileSum.toFixed(2) : (profile?.mobile_bill?.toString() || '10.00'));
+    setSemesterFee(semesterSum > 0 ? semesterSum.toFixed(2) : (profile?.semester_fee?.toString() || '350.00'));
+    setFoodBudget(foodSum > 0 ? foodSum.toFixed(2) : (profile?.food_budget?.toString() || '200.00'));
+    setOtherBudget(otherSum > 0 ? otherSum.toFixed(2) : (profile?.other_budget?.toString() || '100.00'));
   };
 
 
@@ -736,6 +818,18 @@ export const Settings: React.FC = () => {
         description="Compose your next month's spending plan by toggling categories. The sum will be saved as your target budget."
       >
         <div className="space-y-4">
+          <div className="flex justify-between items-center no-print gap-2">
+            <p className="text-[10px] text-muted-foreground font-semibold">Adjust amounts or toggle items to plan next month's budget.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFetchPreviousMonth}
+              className="h-8 text-[10px] gap-1.5 px-3 rounded-xl border border-border hover:bg-muted font-bold whitespace-nowrap"
+            >
+              <RefreshCw className="h-3 w-3 text-primary animate-hover" />
+              <span>Fetch Previous Month</span>
+            </Button>
+          </div>
           <div className="overflow-x-auto rounded-2xl border border-border/50 bg-muted/10 max-h-96 overflow-y-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -939,15 +1033,34 @@ export const Settings: React.FC = () => {
               Cancel
             </Button>
             <Button 
-              onClick={() => {
+              onClick={async () => {
                 const total = calculateTotalPlannedBudget();
-                setBudget(total.toFixed(0));
+                setBudget(total.toFixed(2));
+                setBudgetSuccess(false);
+                
+                const { error } = await updateProfile({
+                  monthly_budget: total,
+                  house_rent: parseFloat(rent) || 0,
+                  health_insurance: parseFloat(healthInsurance) || 0,
+                  radio_bill: parseFloat(radioBill) || 0,
+                  mobile_bill: parseFloat(mobileBill) || 0,
+                  show_semester_fee: showSemesterFee,
+                  semester_fee: parseFloat(semesterFee) || 0,
+                  food_budget: parseFloat(foodBudget) || 0,
+                  other_budget: parseFloat(otherBudget) || 0,
+                  disabled_categories: disabledCategories
+                });
+                
+                if (!error) {
+                  setBudgetSuccess(true);
+                  setTimeout(() => setBudgetSuccess(false), 3000);
+                }
                 setIsPlannerOpen(false);
               }}
               className="gap-2"
             >
               <Check className="h-4 w-4" />
-              Apply to Budget Limit
+              Save & Apply Plan
             </Button>
           </div>
         </div>

@@ -70,9 +70,8 @@ export const Reports: React.FC = () => {
   const currentMonthExpenses = useMemo(() => {
     return expenses.filter(e => {
       if (!e.date) return false;
-      const d = new Date(e.date);
-      if (isNaN(d.getTime())) return false;
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      // Extract year-month string safely without timezone offsets (e.g. "2026-06-03" -> "2026-06")
+      const monthKey = e.date.substring(0, 7);
       return monthKey === selectedMonth;
     });
   }, [expenses, selectedMonth]);
@@ -91,7 +90,7 @@ export const Reports: React.FC = () => {
     return currentMonthExpenses.filter(e => {
       const catName = e.category?.name || '';
       return !fixedBillCategories.includes(catName);
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }).sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMonthExpenses]);
 
   // Construct Google Sheet grid items structure
@@ -125,11 +124,8 @@ export const Reports: React.FC = () => {
 
     sortedDates.forEach(dateStr => {
       const dayExpenses = dateGroups[dateStr];
-      const formattedDate = new Date(dateStr).toLocaleDateString('de-DE', {
-        day: 'numeric',
-        month: 'numeric',
-        year: '2-digit'
-      });
+      const [y, m, d] = dateStr.split('-');
+      const formattedDate = `${parseInt(d)}.${parseInt(m)}.${y.substring(2)}`;
 
       // Count total items on this date for rowSpan
       let totalDateItems = 0;
@@ -322,8 +318,9 @@ export const Reports: React.FC = () => {
   const topProducts = useMemo(() => {
     const productMap: { [key: string]: { name: string; amount: number } } = {};
     shoppingExpenses.forEach(e => {
-      if (e.items && e.items.length > 0) {
-        e.items.forEach(item => {
+      const safeItems = getSafeItems(e.items);
+      if (safeItems.length > 0) {
+        safeItems.forEach(item => {
           const name = item.name.trim();
           if (!name || name.toLowerCase() === 'discount') return;
           if (productMap[name.toLowerCase()]) {
@@ -332,6 +329,16 @@ export const Reports: React.FC = () => {
             productMap[name.toLowerCase()] = { name, amount: item.amount };
           }
         });
+      } else {
+        // Fallback for single item purchases (using notes, category or fallback)
+        const name = (e.notes || e.category?.name || 'Purchase').trim();
+        if (name && name.toLowerCase() !== 'discount') {
+          if (productMap[name.toLowerCase()]) {
+            productMap[name.toLowerCase()].amount += e.amount;
+          } else {
+            productMap[name.toLowerCase()] = { name, amount: e.amount };
+          }
+        }
       }
     });
 
@@ -348,20 +355,23 @@ export const Reports: React.FC = () => {
       const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
       
       expenses.forEach(e => {
-        const d = new Date(e.date);
-        if (!isNaN(d.getTime())) {
-          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-          if (!monthlySums[monthKey]) {
-            monthlySums[monthKey] = {
-              timestamp: new Date(d.getFullYear(), d.getMonth(), 1).getTime(),
-              monthLabel: d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-              date: 'Full Month',
-              amount: 0,
-              notes: 'Combined monthly total'
-            };
-          }
-          monthlySums[monthKey].amount += e.amount;
+        if (!e.date) return;
+        const [yearStr, monthStr] = e.date.split('-');
+        const monthKey = `${yearStr}-${monthStr}`;
+        const year = parseInt(yearStr);
+        const month = parseInt(monthStr);
+        
+        if (!monthlySums[monthKey]) {
+          const localDate = new Date(year, month - 1, 1);
+          monthlySums[monthKey] = {
+            timestamp: localDate.getTime(),
+            monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+            date: 'Full Month',
+            amount: 0,
+            notes: 'Combined monthly total'
+          };
         }
+        monthlySums[monthKey].amount += e.amount;
       });
       
       return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
@@ -370,16 +380,20 @@ export const Reports: React.FC = () => {
     const history: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null }[] = [];
     expenses.forEach(e => {
       if (e.category?.name === selectedBillCategory) {
-        const d = new Date(e.date);
-        if (!isNaN(d.getTime())) {
-          history.push({
-            timestamp: d.getTime(),
-            monthLabel: d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-            date: d.toLocaleDateString('de-DE'),
-            amount: e.amount,
-            notes: e.notes
-          });
-        }
+        if (!e.date) return;
+        const [yearStr, monthStr, dayStr] = e.date.split('-');
+        const year = parseInt(yearStr);
+        const month = parseInt(monthStr);
+        const day = parseInt(dayStr);
+        const localDate = new Date(year, month - 1, day);
+        
+        history.push({
+          timestamp: localDate.getTime(),
+          monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+          date: localDate.toLocaleDateString('de-DE'),
+          amount: e.amount,
+          notes: e.notes
+        });
       }
     });
 
@@ -1155,90 +1169,6 @@ export const Reports: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Total Balance Sheet Card */}
-          <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md">
-            <CardHeader className="bg-muted/20 border-b border-border/50 py-3.5 px-4">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Common Bills & Total Expenses
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 text-xs font-semibold">
-              <table className="w-full border-collapse">
-                <tbody className="divide-y divide-border/30">
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>House Rent</span>
-                      {rentBill && <span className="text-[10px] text-muted-foreground/60">{new Date(rentBill.date).toLocaleDateString('de-DE')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{rentAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Health Insurance</span>
-                      {insuranceBill && <span className="text-[10px] text-muted-foreground/60">{new Date(insuranceBill.date).toLocaleDateString('de-DE')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{insuranceAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Radio Bill</span>
-                      {radioBill && <span className="text-[10px] text-muted-foreground/60">{new Date(radioBill.date).toLocaleDateString('de-DE')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{radioAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Mobile bill</span>
-                      {mobileBill && <span className="text-[10px] text-muted-foreground/60">{new Date(mobileBill.date).toLocaleDateString('de-DE')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{mobileAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  
-                  <tr className="bg-muted/30 font-bold">
-                    <td className="py-2.5 px-4 text-foreground/80">Total Common Bill</td>
-                    <td className="py-2.5 px-4 text-right font-mono text-foreground/95">
-                      €{totalCommonBill.toFixed(2)}
-                    </td>
-                  </tr>
-
-                  <tr className="bg-rose-600/10 dark:bg-rose-500/10 font-black border-t border-rose-500/20 text-rose-600 dark:text-rose-400">
-                    <td className="py-2.5 px-4">Total Expenses</td>
-                    <td className="py-2.5 px-4 text-right font-mono">
-                      €{totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
-                    </td>
-                  </tr>
-
-                  <tr className="bg-primary/10 border-t border-primary/20 text-primary font-black">
-                    <td className="py-2.5 px-4">Monthly Budget Limit</td>
-                    <td className="py-2.5 px-4 text-right font-mono">
-                      €{monthlyBudget.toFixed(2)}
-                    </td>
-                  </tr>
-
-                  <tr className={cn(
-                    "font-black border-t text-sm py-3 px-4",
-                    remainingBudgetRest >= 0 
-                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
-                      : "bg-destructive/10 border-destructive/20 text-destructive"
-                  )}>
-                    <td className="py-3 px-4">Remaining Rest</td>
-                    <td className="py-3 px-4 text-right font-mono">
-                      €{remainingBudgetRest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
           {/* Store Analytics for Selected Month */}
           <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md no-print">
             <CardHeader className="bg-muted/20 border-b border-border/50 py-3 px-4 flex flex-row items-center gap-2">
@@ -1288,6 +1218,90 @@ export const Reports: React.FC = () => {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Total Balance Sheet Card */}
+          <Card className="shadow-md overflow-hidden bg-card/65 backdrop-blur-md">
+            <CardHeader className="bg-muted/20 border-b border-border/50 py-3.5 px-4">
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Common Bills & Total Expenses
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 text-xs font-semibold">
+              <table className="w-full border-collapse">
+                <tbody className="divide-y divide-border/30">
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                      <span>House Rent</span>
+                      {rentBill && <span className="text-[10px] text-muted-foreground/60">{rentBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{rentAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                      <span>Health Insurance</span>
+                      {insuranceBill && <span className="text-[10px] text-muted-foreground/60">{insuranceBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{insuranceAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                      <span>Radio Bill</span>
+                      {radioBill && <span className="text-[10px] text-muted-foreground/60">{radioBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{radioAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                      <span>Mobile bill</span>
+                      {mobileBill && <span className="text-[10px] text-muted-foreground/60">{mobileBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                      €{mobileAmount.toFixed(2)}
+                    </td>
+                  </tr>
+                  
+                  <tr className="bg-muted/30 font-bold">
+                    <td className="py-2.5 px-4 text-foreground/80">Total Common Bill</td>
+                    <td className="py-2.5 px-4 text-right font-mono text-foreground/95">
+                      €{totalCommonBill.toFixed(2)}
+                    </td>
+                  </tr>
+
+                  <tr className="bg-rose-600/10 dark:bg-rose-500/10 font-black border-t border-rose-500/20 text-rose-600 dark:text-rose-400">
+                    <td className="py-2.5 px-4">Total Expenses</td>
+                    <td className="py-2.5 px-4 text-right font-mono">
+                      €{totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                    </td>
+                  </tr>
+
+                  <tr className="bg-primary/10 border-t border-primary/20 text-primary font-black">
+                    <td className="py-2.5 px-4">Monthly Budget Limit</td>
+                    <td className="py-2.5 px-4 text-right font-mono">
+                      €{monthlyBudget.toFixed(2)}
+                    </td>
+                  </tr>
+
+                  <tr className={cn(
+                    "font-black border-t text-sm py-3 px-4",
+                    remainingBudgetRest >= 0 
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                      : "bg-destructive/10 border-destructive/20 text-destructive"
+                  )}>
+                    <td className="py-3 px-4">Remaining Rest</td>
+                    <td className="py-3 px-4 text-right font-mono">
+                      €{remainingBudgetRest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </CardContent>
           </Card>
         </div>
