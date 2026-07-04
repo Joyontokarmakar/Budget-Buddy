@@ -1531,7 +1531,7 @@ interface ReceiptAnalysis {
       payments.push(newPayment);
 
       const remainingAmount = Math.max(loan.remaining_amount - payment.amount, 0);
-      const status = remainingAmount <= 0 ? 'settled' : 'active';
+      const status: 'active' | 'settled' = remainingAmount <= 0 ? 'settled' : 'active';
 
       const updatedLoan = {
         ...loan,
@@ -1565,7 +1565,7 @@ interface ReceiptAnalysis {
     payments.push(newPayment);
 
     const remainingAmount = Math.max(loan.remaining_amount - payment.amount, 0);
-    const status = remainingAmount <= 0 ? 'settled' : 'active';
+    const status: 'active' | 'settled' = remainingAmount <= 0 ? 'settled' : 'active';
 
     const { data: updatedLoan, error: updateError } = await supabase
       .from('loans')

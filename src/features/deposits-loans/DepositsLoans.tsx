@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, DepositWithDetails, LoanWithDetails, LoanPayment } from '../../types';
-import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
-import { Coins, Plus, Trash2, Calendar, Clock, Landmark, User, FileText, CheckCircle, AlertCircle, ChevronDown, ChevronUp, History, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import type { Account, DepositWithDetails, LoanWithDetails } from '../../types';
+import { Button, Input, Select, Card, CardContent, Dialog, Spinner } from '../../components/ui';
+import { Coins, Plus, Trash2, Calendar, Landmark, FileText, CheckCircle, History, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 export const DepositsLoans: React.FC = () => {
   const { t } = useTranslation();
