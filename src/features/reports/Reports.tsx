@@ -535,6 +535,54 @@ export const Reports: React.FC = () => {
       topProductsHtml = '<tr><td colspan="2" style="text-align: center; color: #888;">No item logs.</td></tr>';
     }
 
+    const totalShopping = foodTotal + kitchenTotal + restaurantTotal + shoppingTotalCategory + othersTotal;
+    let conicGradientStyle = '#cbd5e1 0% 100%';
+    let dynamicChartHtml = '';
+
+    if (totalShopping > 0) {
+      let currentAccumulator = 0;
+      const segments: string[] = [];
+      
+      const addSegment = (amount: number, color: string) => {
+        if (amount <= 0) return;
+        const pct = (amount / totalShopping) * 100;
+        const start = currentAccumulator;
+        const end = currentAccumulator + pct;
+        segments.push(`${color} ${start.toFixed(1)}% ${end.toFixed(1)}%`);
+        currentAccumulator = end;
+      };
+      
+      addSegment(foodTotal, '#10b981'); // Emerald
+      addSegment(kitchenTotal, '#3b82f6'); // Blue
+      addSegment(restaurantTotal, '#f59e0b'); // Amber
+      addSegment(shoppingTotalCategory, '#ec4899'); // Pink
+      addSegment(othersTotal, '#64748b'); // Slate
+      
+      if (segments.length > 0) {
+        conicGradientStyle = segments.join(', ');
+      }
+
+      dynamicChartHtml = `
+        <div class="chart-container">
+          <div class="chart-donut" style="background: conic-gradient(${conicGradientStyle});">
+            <div class="chart-center">
+              <span>Expenses</span>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-title">Shopping Category Share</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              ${foodTotal > 0 ? `<div class="legend-item"><div class="dot" style="background-color: #10b981;"></div><span><strong>Food:</strong> ${(foodTotal/totalShopping*100).toFixed(0)}% (€${foodTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span></div>` : ''}
+              ${kitchenTotal > 0 ? `<div class="legend-item"><div class="dot" style="background-color: #3b82f6;"></div><span><strong>Kitchen:</strong> ${(kitchenTotal/totalShopping*100).toFixed(0)}% (€${kitchenTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span></div>` : ''}
+              ${restaurantTotal > 0 ? `<div class="legend-item"><div class="dot" style="background-color: #f59e0b;"></div><span><strong>Restaurant:</strong> ${(restaurantTotal/totalShopping*100).toFixed(0)}% (€${restaurantTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span></div>` : ''}
+              ${shoppingTotalCategory > 0 ? `<div class="legend-item"><div class="dot" style="background-color: #ec4899;"></div><span><strong>Shopping:</strong> ${(shoppingTotalCategory/totalShopping*100).toFixed(0)}% (€${shoppingTotalCategory.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span></div>` : ''}
+              ${othersTotal > 0 ? `<div class="legend-item"><div class="dot" style="background-color: #64748b;"></div><span><strong>Others:</strong> ${(othersTotal/totalShopping*100).toFixed(0)}% (€${othersTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span></div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -623,6 +671,93 @@ export const Reports: React.FC = () => {
             text-transform: uppercase;
             margin-top: 2px;
           }
+          
+          /* Visual Budget Progress Bar */
+          .budget-progress-container {
+            margin-top: 6px;
+            background: #cbd5e1;
+            border-radius: 4px;
+            height: 6px;
+            width: 100%;
+            overflow: hidden;
+            display: inline-block;
+          }
+          .budget-progress-bar {
+            height: 100%;
+            border-radius: 4px;
+          }
+
+          /* Visual Conic Gradient Donut Chart styling */
+          .chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 25px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            page-break-inside: avoid;
+          }
+          .chart-donut {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+          }
+          .chart-center {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            background: #f8fafc;
+            border-radius: 50%;
+            top: 18px;
+            left: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.06);
+          }
+          .chart-center span {
+            font-size: 9px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .chart-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+          }
+          .chart-legend-title {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #475569;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 2px;
+          }
+          .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 9px;
+            color: #334155;
+          }
+          .legend-item .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+
           .section-title {
             font-size: 11px;
             font-weight: 800;
@@ -678,7 +813,7 @@ export const Reports: React.FC = () => {
             body {
               margin: 15px;
             }
-            .grid-2, .summary-banner {
+            .grid-2, .summary-banner, .chart-container {
               page-break-inside: avoid;
             }
           }
@@ -704,12 +839,17 @@ export const Reports: React.FC = () => {
           <div class="summary-card danger">
             <div class="summary-val">€${totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div class="summary-label">Total Expenses</div>
+            <div class="budget-progress-container">
+              <div class="budget-progress-bar" style="background-color: ${remainingBudgetRest >= 0 ? '#10b981' : '#ef4444'}; width: ${Math.min(100, Math.max(0, (totalExpenses / monthlyBudget) * 100))}%;"></div>
+            </div>
           </div>
           <div class="summary-card ${remainingBudgetRest >= 0 ? 'accent' : 'danger'}">
             <div class="summary-val">€${remainingBudgetRest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div class="summary-label">Remaining Rest</div>
           </div>
         </div>
+
+        ${dynamicChartHtml}
 
         <div class="grid-2">
           <div>

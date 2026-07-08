@@ -22,6 +22,8 @@ export const Dashboard: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
 
   const loadDashboardData = async () => {
     if (!profile) return;
@@ -41,6 +43,76 @@ export const Dashboard: React.FC = () => {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickLog = async (type: 'groceries' | 'cosmetics' | 'restaurant') => {
+    if (!profile) return;
+    
+    // Check accounts
+    if (accounts.length === 0) {
+      setQuickLogMsg('Please create an asset account (e.g. Bank Account) first!');
+      setTimeout(() => setQuickLogMsg(null), 4000);
+      return;
+    }
+    
+    // Select first account as default
+    const defaultAccount = accounts[0];
+    
+    // Resolve category
+    let targetCategory = categories.find(c => c.name.toLowerCase() === type);
+    
+    // Fallbacks
+    if (!targetCategory) {
+      if (type === 'groceries') {
+        targetCategory = categories.find(c => c.name.toLowerCase().includes('food') || c.name.toLowerCase().includes('grocery'));
+      } else if (type === 'cosmetics') {
+        targetCategory = categories.find(c => c.name.toLowerCase().includes('shop') || c.name.toLowerCase().includes('others') || c.name.toLowerCase().includes('cosm'));
+      } else if (type === 'restaurant') {
+        targetCategory = categories.find(c => c.name.toLowerCase().includes('rest') || c.name.toLowerCase().includes('food'));
+      }
+    }
+    
+    if (!targetCategory) {
+      targetCategory = categories.find(c => c.name.toLowerCase() === 'other') || categories[0];
+    }
+    
+    // Log expense
+    let amount = 15.00;
+    let label = 'Groceries';
+    let notes = 'Quick Groceries';
+    
+    if (type === 'cosmetics') {
+      amount = 8.50;
+      label = 'Cosmetics';
+      notes = 'Cosmetics Log';
+    } else if (type === 'restaurant') {
+      amount = 25.00;
+      label = 'Restaurant';
+      notes = 'Restaurant Dinner';
+    }
+    
+    try {
+      await db.createExpense(profile.id, {
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        category_id: targetCategory?.id || null,
+        store_id: null,
+        payment_account_id: defaultAccount.id,
+        notes,
+        receipt_url: null,
+        items: null
+      });
+      
+      setQuickLogMsg(`Logged €${amount.toFixed(2)} for ${label} successfully!`);
+      setTimeout(() => setQuickLogMsg(null), 3000);
+      setIsFabOpen(false);
+      
+      // Reload Dashboard data
+      await loadDashboardData();
+    } catch (e: any) {
+      setQuickLogMsg('Failed to log quick purchase: ' + e.message);
+      setTimeout(() => setQuickLogMsg(null), 4000);
     }
   };
 
@@ -620,6 +692,61 @@ export const Dashboard: React.FC = () => {
             </Card>
           ))
         )}
+      </div>
+
+      {/* Floating Quick Log Actions Menu */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3.5">
+        {/* Success / Error notification toast banner */}
+        {quickLogMsg && (
+          <div className="mr-2 py-2.5 px-4 bg-slate-900/90 dark:bg-card/95 text-white dark:text-foreground text-xs font-bold rounded-2xl shadow-xl backdrop-blur-md border border-white/10 dark:border-border/80 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <span className="h-2 w-2 rounded-full bg-primary shrink-0 animate-ping"></span>
+            {quickLogMsg}
+          </div>
+        )}
+
+        {/* Action Menu Items (slide out when open) */}
+        {isFabOpen && (
+          <div className="flex flex-col gap-2.5 items-end animate-in fade-in zoom-in-95 duration-200 origin-bottom-right">
+            {/* Restaurant shortcut */}
+            <button
+              onClick={() => handleQuickLog('restaurant')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-card border border-border/80 text-foreground text-xs font-bold shadow-lg hover:bg-slate-50 dark:hover:bg-accent/40 active:scale-[0.97] transition-all group shrink-0"
+            >
+              <span className="text-sm">🍽️</span>
+              Restaurant <span className="text-muted-foreground/80 font-medium">(€25.00)</span>
+            </button>
+
+            {/* Cosmetics shortcut */}
+            <button
+              onClick={() => handleQuickLog('cosmetics')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-card border border-border/80 text-foreground text-xs font-bold shadow-lg hover:bg-slate-50 dark:hover:bg-accent/40 active:scale-[0.97] transition-all group shrink-0"
+            >
+              <span className="text-sm">🧴</span>
+              Cosmetics <span className="text-muted-foreground/80 font-medium">(€8.50)</span>
+            </button>
+
+            {/* Groceries shortcut */}
+            <button
+              onClick={() => handleQuickLog('groceries')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-card border border-border/80 text-foreground text-xs font-bold shadow-lg hover:bg-slate-50 dark:hover:bg-accent/40 active:scale-[0.97] transition-all group shrink-0"
+            >
+              <span className="text-sm">🛒</span>
+              Groceries <span className="text-muted-foreground/80 font-medium">(€15.00)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Main Circular Floating button */}
+        <button
+          onClick={() => setIsFabOpen(!isFabOpen)}
+          className={cn(
+            "h-12 w-12 rounded-full text-white bg-primary hover:bg-primary/95 flex items-center justify-center shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-[0.95] transition-all transform duration-300 relative z-50 focus:outline-none",
+            isFabOpen ? "rotate-45 bg-slate-800 hover:bg-slate-900" : ""
+          )}
+          title="Quick Log Purchases"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
       </div>
     </div>
   );

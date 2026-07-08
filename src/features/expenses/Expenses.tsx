@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
-import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar, Sparkles } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -226,6 +226,29 @@ export const Expenses: React.FC = () => {
       }
     } catch (err: any) {
       setError('Failed to extract OCR receipt data: ' + err.message);
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
+  const handleOcrDemo = async () => {
+    if (!profile) return;
+    try {
+      setUploadingReceipt(true);
+      setError(null);
+      const receiptData = await db.getOcrDemoReceipt(profile.id);
+      if (receiptData.extracted_store_name && receiptData.extracted_amount) {
+        setOcrConfirmationData({
+          storeName: receiptData.extracted_store_name,
+          date: receiptData.extracted_date || new Date().toISOString().split('T')[0],
+          amount: receiptData.extracted_amount,
+          fileUrl: receiptData.file_url || '',
+          items: receiptData.extracted_items || [],
+          discount: receiptData.extracted_discount || 0,
+        });
+      }
+    } catch (err: any) {
+      setError('Failed to load OCR demo data: ' + err.message);
     } finally {
       setUploadingReceipt(false);
     }
@@ -736,23 +759,35 @@ export const Expenses: React.FC = () => {
             </CardTitle>
             
             {/* Quick Upload Button */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleReceiptUpload}
-              accept="image/*,application/pdf"
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs gap-1.5"
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploadingReceipt}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Scan
-            </Button>
+            <div className="flex gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleReceiptUpload}
+                accept="image/*,application/pdf"
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => fileInputRef.current?.click()}
+                loading={uploadingReceipt}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Scan
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20"
+                onClick={handleOcrDemo}
+                loading={uploadingReceipt}
+              >
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                Try Demo
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {accounts.length === 0 ? (

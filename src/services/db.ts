@@ -1596,6 +1596,97 @@ interface ReceiptAnalysis {
 
     return updatedLoan;
   },
+
+  getOcrDemoReceipt: async (userId: string): Promise<Partial<Receipt> & { extracted_items?: any[]; extracted_discount?: number }> => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const mockReceiptOptions = [
+      {
+        store: 'REWE',
+        items: [
+          { name: 'Apfel Bio 1kg', amount: 2.99 },
+          { name: 'Frische Vollmilch 1L', amount: 1.15 },
+          { name: 'Vollkornbrot 500g', amount: 1.89 },
+          { name: 'Pasta Spaghetti 500g', amount: 0.99 },
+          { name: 'Tomaten gehackt', amount: 0.85 },
+          { name: 'Studentenfutter 200g', amount: 2.49 }
+        ],
+        discount: 0.50
+      },
+      {
+        store: 'Lidl',
+        items: [
+          { name: 'Bananen 1kg', amount: 1.69 },
+          { name: 'Haferflocken 500g', amount: 0.79 },
+          { name: 'Frischkäse 200g', amount: 1.49 },
+          { name: 'Eier Freiland 10 Stk', amount: 2.29 },
+          { name: 'Tiefkühl-Erdbeeren', amount: 2.99 }
+        ],
+        discount: 0.00
+      },
+      {
+        store: 'Aldi Süd',
+        items: [
+          { name: 'Müsli Erdbeer 500g', amount: 3.29 },
+          { name: 'H-Milch 1.5% 1L', amount: 1.09 },
+          { name: 'Kartoffeln 2.5kg', amount: 2.49 },
+          { name: 'Karotten 1kg', amount: 1.29 },
+          { name: 'Käse Aufschnitt 250g', amount: 1.99 }
+        ],
+        discount: 0.25
+      }
+    ];
+
+    const option = mockReceiptOptions[Math.floor(Math.random() * mockReceiptOptions.length)];
+    const rawSum = option.items.reduce((sum, item) => sum + item.amount, 0);
+    const amount = parseFloat((rawSum - option.discount).toFixed(2));
+    
+    const previewUrl = '/mock-receipt.png';
+    const date = new Date().toISOString().split('T')[0];
+
+    if (!isSupabaseConfigured) {
+      const receipts = getLocalItems<any>('bb-receipts');
+      const newRec = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        file_url: previewUrl,
+        extracted_store_name: option.store,
+        extracted_date: date,
+        extracted_amount: amount,
+        status: 'processed' as const,
+        created_at: new Date().toISOString(),
+      };
+      receipts.push(newRec);
+      setLocalItems('bb-receipts', receipts);
+      return { ...newRec, extracted_items: option.items, extracted_discount: option.discount };
+    }
+
+    try {
+      const { data: receipt, error: dbError } = await supabase
+        .from('receipts')
+        .insert({
+          user_id: userId,
+          file_url: previewUrl,
+          extracted_store_name: option.store,
+          extracted_date: date,
+          extracted_amount: amount,
+          status: 'processed',
+        })
+        .select()
+        .single();
+      if (dbError) throw dbError;
+      return { ...receipt, extracted_items: option.items, extracted_discount: option.discount };
+    } catch (e) {
+      return {
+        extracted_store_name: option.store,
+        extracted_date: date,
+        extracted_amount: amount,
+        extracted_items: option.items,
+        extracted_discount: option.discount,
+        file_url: previewUrl
+      };
+    }
+  },
 };
 
 
