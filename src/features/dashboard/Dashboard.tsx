@@ -274,18 +274,8 @@ export const Dashboard: React.FC = () => {
   }, 0);
 
   let groceriesDiffPercent = 0;
-  let groceriesComparisonText = '';
   if (groceriesLastMonthSum > 0) {
     groceriesDiffPercent = ((groceriesThisMonthSum - groceriesLastMonthSum) / groceriesLastMonthSum) * 100;
-    if (groceriesDiffPercent > 0) {
-      groceriesComparisonText = `You spent ${groceriesDiffPercent.toFixed(0)}% more on groceries this month compared to last month.`;
-    } else if (groceriesDiffPercent < 0) {
-      groceriesComparisonText = `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% less on groceries this month compared to last month.`;
-    } else {
-      groceriesComparisonText = `Your groceries spending matches last month's exactly.`;
-    }
-  } else {
-    groceriesComparisonText = `Groceries spending is €${groceriesThisMonthSum.toFixed(2)} this month (no previous month comparison available).`;
   }
 
   // Store Analytics: Top 5 stores this month with amount (excluding common bills)
@@ -530,38 +520,63 @@ export const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           {/* Grocery comparison insight */}
-          <div className="flex gap-3 items-start bg-card/65 p-3 rounded-xl border border-border/40">
-            <div className={cn(
-              "h-8 w-8 rounded-lg shrink-0 flex items-center justify-center text-white",
-              groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-primary"
-            )}>
-              {groceriesDiffPercent > 0 ? (
-                <TrendingUp className="h-4 w-4" />
-              ) : (
-                <TrendingDown className="h-4 w-4" />
-              )}
+          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Groceries Trajectory</span>
+              <div className={cn(
+                "h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white",
+                groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-slate-500"
+              )}>
+                {groceriesDiffPercent > 0 ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : (
+                  <Coins className="h-4 w-4" />
+                )}
+              </div>
             </div>
-            <div>
-              <h5 className="text-[11px] font-bold text-foreground">Groceries Trajectory</h5>
-              <p className="text-[10px] font-medium text-muted-foreground mt-0.5 leading-relaxed">
-                {groceriesComparisonText}
-              </p>
+            
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className={cn(
+                "text-3xl font-extrabold tracking-tight",
+                groceriesDiffPercent > 0 ? "text-rose-600 dark:text-rose-400" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+              )}>
+                {groceriesLastMonthSum > 0 
+                  ? `${groceriesDiffPercent > 0 ? '+' : ''}${groceriesDiffPercent.toFixed(0)}%`
+                  : `€${groceriesThisMonthSum.toFixed(2)}`
+                }
+              </span>
+              <span className="text-[10px] font-semibold text-muted-foreground">this month</span>
             </div>
+
+            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
+              {groceriesLastMonthSum > 0 
+                ? `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'} compared to last month (€${groceriesLastMonthSum.toFixed(0)}).`
+                : 'No previous month grocery records available for trend analysis.'
+              }
+            </p>
           </div>
 
           {/* Daily average insight */}
-          <div className="flex gap-3 items-start bg-card/65 p-3 rounded-xl border border-border/40">
-            <div className={cn(
-              "h-8 w-8 rounded-lg shrink-0 flex items-center justify-center text-white bg-primary"
-            )}>
-              <Coins className="h-4 w-4" />
+          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Daily Avg Spending</span>
+              <div className="h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white bg-primary">
+                <Coins className="h-4 w-4" />
+              </div>
             </div>
-            <div>
-              <h5 className="text-[11px] font-bold text-foreground">Daily Avg Spending</h5>
-              <p className="text-[10px] font-medium text-muted-foreground mt-0.5 leading-relaxed">
-                Your daily avg spending is <strong className="text-foreground">€{dailyAverage.toFixed(2)}</strong>. To stay within budget, keep daily average under €{targetDailyLimit.toFixed(2)}.
-              </p>
+            
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold tracking-tight text-foreground">
+                €{dailyAverage.toFixed(2)}
+              </span>
+              <span className="text-[10px] font-semibold text-muted-foreground">/ day</span>
             </div>
+
+            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
+              To stay within your budget limit, keep your daily average spending under <strong className="text-foreground font-semibold">€{targetDailyLimit.toFixed(2)}</strong>.
+            </p>
           </div>
         </CardContent>
       </Card>
