@@ -460,7 +460,7 @@ export const Reports: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `budget_buddy_report_${selectedMonth}.csv`);
+    link.setAttribute("download", `budgetbuddy_report_${selectedMonth}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -691,7 +691,7 @@ export const Reports: React.FC = () => {
             <div class="subtitle">Month: <strong>${monthLabel}</strong> &bull; Generated for: <strong>${userName}</strong></div>
           </div>
           <div class="branding">
-            <div class="branding-logo">BudgetBuddy</div>
+            <div class="branding-logo">Budgetbuddy</div>
             <div class="branding-sub">Premium PWA Tracker</div>
           </div>
         </div>

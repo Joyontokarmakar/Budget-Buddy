@@ -296,7 +296,7 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">Install BudgetBuddy</h4>
+                <h4 className="text-xs font-bold text-white">Install Budgetbuddy</h4>
                 <p className="text-[10px] text-white/80">Add to your home screen for quick offline access!</p>
               </div>
             </div>
@@ -310,7 +310,7 @@ export const Dashboard: React.FC = () => {
       {/* Welcome Banner */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">BudgetBuddy</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Budgetbuddy</h1>
           <p className="text-xs text-muted-foreground">Premium student dashboard overview</p>
         </div>
         <div className="flex gap-2">

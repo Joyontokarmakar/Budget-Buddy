@@ -283,7 +283,7 @@ export const Navigation: React.FC = () => {
 
         {/* Mobile Drawer Footer Credit */}
         <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center">
-          <div>BudgetBuddy Student v1.0.0</div>
+          <div>Budgetbuddy Student v1.0.0</div>
           <div>© {new Date().getFullYear()} <NavLink to="/developer" onClick={() => setIsMoreOpen(false)} className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
         </div>
       </div>
@@ -292,9 +292,9 @@ export const Navigation: React.FC = () => {
       <aside className="fixed top-0 bottom-0 left-0 z-40 hidden w-64 border-r border-border bg-card/50 backdrop-blur-md p-6 md:flex flex-col">
         {/* App Branding */}
         <div className="flex items-center gap-3 mb-8 px-2">
-          <img src="/budget-buddy.svg" className="h-9 w-9 rounded-xl shadow-md shrink-0" alt="BudgetBuddy Logo" />
+          <img src="/budget-buddy.svg" className="h-9 w-9 rounded-xl shadow-md shrink-0" alt="Budgetbuddy Logo" />
           <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight">BudgetBuddy</span>
+            <span className="font-bold text-sm tracking-tight">Budgetbuddy</span>
             <span className="text-[10px] font-semibold text-primary/80 uppercase tracking-widest leading-none">Student</span>
           </div>
         </div>
@@ -431,7 +431,7 @@ export const Navigation: React.FC = () => {
 
         {/* Footer Credit */}
         <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center space-y-1">
-          <div>BudgetBuddy Student v1.0.0</div>
+          <div>Budgetbuddy Student v1.0.0</div>
           <div>© {new Date().getFullYear()} <NavLink to="/developer" className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
         </div>
       </aside>
