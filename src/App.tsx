@@ -27,10 +27,41 @@ const queryClient = new QueryClient({
   },
 });
 
-// SEO and Page Title Dynamic Router Sync
+declare global {
+  interface Window {
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
+  }
+}
+
+// SEO, Page Title & Google Analytics Tracker Router Sync
 function SEOTracker() {
   const location = useLocation();
+  const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
+  // Initialize GA once when gaId changes
+  useEffect(() => {
+    if (!gaId) return;
+
+    // Inject Google Tag script dynamically to keep index.html clean and modular
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`;
+    document.head.appendChild(script);
+
+    // Set up gtag analytics functions
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function gtag() {
+      window.dataLayer.push(arguments);
+    };
+
+    window.gtag('js', new Date());
+    window.gtag('config', gaId, {
+      send_page_view: false // Prevent duplicate page views on startup
+    });
+  }, [gaId]);
+
+  // Track page views and update page titles on route changes
   useEffect(() => {
     const path = location.pathname;
     let pageTitle = 'BudgetBuddy Student - Free Student Budget Calculator & Expense Tracker PWA';
@@ -66,7 +97,16 @@ function SEOTracker() {
     }
 
     document.title = pageTitle;
-  }, [location]);
+
+    // Send pageview track call to GA
+    if (gaId && window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_title: pageTitle,
+        page_location: window.location.href,
+        page_path: path
+      });
+    }
+  }, [location, gaId]);
 
   return null;
 }
