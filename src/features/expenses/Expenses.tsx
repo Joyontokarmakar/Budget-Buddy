@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
-import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar, Sparkles, Pencil } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -57,6 +57,26 @@ export const Expenses: React.FC = () => {
     items?: any[];
     discount?: number;
   } | null>(null);
+
+  // Edit Mode State
+  const [editingExpense, setEditingExpense] = useState<ExpenseWithDetails | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editPaymentAccountId, setEditPaymentAccountId] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editDiscount, setEditDiscount] = useState('0');
+  const [editItems, setEditItems] = useState<{ id: string; name: string; amount: number; category_id?: string | null }[]>([]);
+  const [editItemName, setEditItemName] = useState('');
+  const [editItemAmount, setEditItemAmount] = useState('');
+  const [editItemCategoryId, setEditItemCategoryId] = useState('');
+  const [editOtherPurpose, setEditOtherPurpose] = useState('');
+  const [editStoreQuery, setEditStoreQuery] = useState('');
+  const [editSelectedStore, setEditSelectedStore] = useState<Store | null>(null);
+  const [editShowStoreDropdown, setEditShowStoreDropdown] = useState(false);
+  const editStoreDropdownRef = useRef<HTMLDivElement>(null);
+  const [editCategoryId, setEditCategoryId] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,10 +147,13 @@ export const Expenses: React.FC = () => {
         const foodCat = allowedCats.find(cat => cat.name.toLowerCase() === 'food' || cat.name.toLowerCase() === 'groceries');
         if (foodCat) {
           setItemCategoryId(foodCat.id);
+          setEditItemCategoryId(foodCat.id);
         } else if (allowedCats.length > 0) {
           setItemCategoryId(allowedCats[0].id);
+          setEditItemCategoryId(allowedCats[0].id);
         } else {
           setItemCategoryId(catData[0].id);
+          setEditItemCategoryId(catData[0].id);
         }
       }
     } catch (e) {
@@ -161,6 +184,34 @@ export const Expenses: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const filteredEditStores = editStoreQuery.trim() === ''
+    ? stores
+    : stores.filter(store => store.name.toLowerCase().includes(editStoreQuery.toLowerCase()));
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (editStoreDropdownRef.current && !editStoreDropdownRef.current.contains(event.target as Node)) {
+        setEditShowStoreDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Recalculate editAmount dynamically when editing items or discount changes
+  useEffect(() => {
+    if (editingExpense) {
+      const discVal = parseFloat(editDiscount) || 0;
+      if (editItems.length > 0) {
+        const itemsSum = editItems.reduce((sum, item) => sum + Number(item.amount), 0);
+        const finalTotal = Math.max(itemsSum - discVal, 0);
+        setEditAmount(finalTotal.toFixed(2));
+      }
+    }
+  }, [editItems, editDiscount, editingExpense]);
 
   const handleStoreSelect = (store: Store) => {
     setSelectedStore(store);
@@ -720,6 +771,163 @@ export const Expenses: React.FC = () => {
     });
   };
 
+  const handleCloseEdit = () => {
+    setEditingExpense(null);
+    setEditAmount('');
+    setEditDate('');
+    setEditStoreQuery('');
+    setEditSelectedStore(null);
+    setEditItems([]);
+    setEditItemName('');
+    setEditItemAmount('');
+    setEditOtherPurpose('');
+    setEditDiscount('0');
+    setEditCategoryId('');
+    setEditNotes('');
+    setEditError(null);
+  };
+
+  const handleStartEdit = (exp: ExpenseWithDetails) => {
+    setEditingExpense(exp);
+    setEditDate(exp.date);
+    setEditStoreQuery(exp.store?.name || '');
+    setEditSelectedStore(exp.store || null);
+    
+    // Parse items to ignore the discount item which is added on submit
+    const safeItems = getSafeItems(exp.items);
+    const discountItem = safeItems.find(it => it.name.toLowerCase() === 'discount');
+    const displayItems = safeItems.filter(it => it.name.toLowerCase() !== 'discount');
+    
+    setEditItems(displayItems);
+    setEditDiscount(discountItem ? Math.abs(discountItem.amount).toString() : '0');
+    setEditAmount(exp.amount.toString());
+    setEditCategoryId(exp.category_id || '');
+    setEditPaymentAccountId(exp.payment_account_id);
+    setEditNotes(exp.notes || '');
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !editingExpense) return;
+    setEditError(null);
+
+    let activeItems = [...editItems];
+    let activeAmount = editAmount;
+
+    // Auto-add current un-added item in edit inputs if present
+    const selectedCat = categories.find(c => c.id === editItemCategoryId);
+    const isOther = selectedCat?.name.toLowerCase() === 'other';
+    const currentItemNameToUse = isOther ? editOtherPurpose : editItemName;
+
+    if (currentItemNameToUse.trim() && editItemAmount.trim()) {
+      const val = parseFloat(editItemAmount);
+      if (!isNaN(val) && val > 0) {
+        const newItem = {
+          id: crypto.randomUUID(),
+          name: currentItemNameToUse.trim(),
+          amount: val,
+          category_id: editItemCategoryId,
+        };
+        activeItems.push(newItem);
+        
+        // Reset item input states
+        setEditItemName('');
+        setEditItemAmount('');
+        setEditOtherPurpose('');
+      }
+    }
+
+    // Append discount as a negative item if present
+    const discVal = parseFloat(editDiscount) || 0;
+    if (discVal > 0 && activeItems.length > 0) {
+      const discountCat = categories.find(c => c.name.toLowerCase() === 'discount');
+      activeItems.push({
+        id: crypto.randomUUID(),
+        name: 'Discount',
+        amount: -discVal,
+        category_id: discountCat ? discountCat.id : null,
+      });
+    }
+
+    // Recalculate amount if there are items to ensure discount is correctly applied
+    if (activeItems.length > 0) {
+      const itemsSum = activeItems.reduce((sum, item) => sum + item.amount, 0);
+      activeAmount = Math.max(itemsSum, 0).toFixed(2);
+    }
+
+    if (!activeAmount.trim() || !editDate || !editPaymentAccountId) {
+      setEditError('Please fill in all required fields');
+      return;
+    }
+
+    const numericAmount = parseFloat(activeAmount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      setEditError('Amount must be greater than €0.00');
+      return;
+    }
+
+    try {
+      setEditSaving(true);
+
+      // Finalize store in edit mode
+      let storeId: string | null = null;
+      if (editSelectedStore) {
+        storeId = editSelectedStore.id;
+      } else if (editStoreQuery.trim()) {
+        const queryText = editStoreQuery.trim().toLowerCase();
+        const exactMatch = stores.find(s => s.name.toLowerCase() === queryText);
+        if (exactMatch) {
+          storeId = exactMatch.id;
+        } else {
+          const prefixMatch = stores.find(s => s.name.toLowerCase().startsWith(queryText));
+          if (prefixMatch) {
+            storeId = prefixMatch.id;
+          } else {
+            const store = await db.createStore(profile.id, editStoreQuery.trim());
+            storeId = store.id;
+          }
+        }
+      }
+
+      // Determine dominant category from items
+      let finalCategoryId: string | null = null;
+      if (activeItems.length > 0) {
+        const categorySums: { [key: string]: number } = {};
+        activeItems.forEach(it => {
+          const catId = it.category_id || 'other';
+          categorySums[catId] = (categorySums[catId] || 0) + it.amount;
+        });
+        const dominantCatEntry = Object.entries(categorySums).sort((a, b) => b[1] - a[1])[0];
+        finalCategoryId = dominantCatEntry && dominantCatEntry[0] !== 'other' ? dominantCatEntry[0] : null;
+      } else {
+        finalCategoryId = editCategoryId;
+      }
+
+      if (!finalCategoryId) {
+        const otherCat = categories.find(c => c.name.toLowerCase() === 'other');
+        finalCategoryId = otherCat ? otherCat.id : null;
+      }
+
+      await db.updateExpense(profile.id, editingExpense.id, {
+        amount: numericAmount,
+        date: editDate,
+        category_id: finalCategoryId,
+        store_id: storeId,
+        payment_account_id: editPaymentAccountId,
+        notes: editNotes.trim() || null,
+        items: activeItems.length > 0 ? activeItems : null,
+      });
+
+      handleCloseEdit();
+      await loadData();
+    } catch (err: any) {
+      setEditError(err.message || 'Error updating expense');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   // Filter stores for autocomplete
   const filteredStores = stores
     .filter(s => s.name.toLowerCase().includes(storeQuery.trim().toLowerCase()))
@@ -1269,6 +1477,13 @@ export const Expenses: React.FC = () => {
                       -€{exp.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <button
+                      onClick={() => handleStartEdit(exp)}
+                      className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Edit transaction"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteExpense(exp.id)}
                       className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete transaction"
@@ -1351,6 +1566,13 @@ export const Expenses: React.FC = () => {
                                     €{Number(exp.amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
+                                <button
+                                  onClick={() => handleStartEdit(exp)}
+                                  className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                                  title="Edit transaction"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
                                 <button
                                   onClick={() => handleDeleteExpense(exp.id)}
                                   className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
@@ -1540,6 +1762,17 @@ export const Expenses: React.FC = () => {
                                                     type="button"
                                                     onClick={(e) => {
                                                       e.stopPropagation();
+                                                      handleStartEdit(exp);
+                                                    }}
+                                                    className="p-1 hover:text-primary text-muted-foreground/60 transition-colors"
+                                                    title="Edit Expense"
+                                                  >
+                                                    <Pencil className="h-3.5 w-3.5" />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
                                                       handleDeleteExpense(exp.id);
                                                     }}
                                                     className="p-1 hover:text-destructive text-muted-foreground/60 transition-colors"
@@ -1718,6 +1951,301 @@ export const Expenses: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Dialog>
+
+      {/* EDIT EXPENSE DIALOG */}
+      <Dialog
+        isOpen={!!editingExpense}
+        onClose={handleCloseEdit}
+        title="Edit Expense"
+        description="Update transaction details, items breakdown, or payment method."
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-4">
+          {editError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {editError}
+            </div>
+          )}
+
+          {/* Date Input */}
+          <Input
+            type="date"
+            label="Transaction Date"
+            value={editDate}
+            onChange={(e) => setEditDate(e.target.value)}
+            icon={<Calculator className="h-4 w-4 text-muted-foreground" />}
+            required
+          />
+
+          {/* Store Autocomplete Search */}
+          <div ref={editStoreDropdownRef} className="relative flex flex-col gap-1.5 w-full">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">Store / Merchant</label>
+            <div className="relative flex items-center">
+              <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={editStoreQuery}
+                onChange={(e) => {
+                  setEditStoreQuery(e.target.value);
+                  setEditSelectedStore(null);
+                  setEditShowStoreDropdown(true);
+                }}
+                onFocus={() => setEditShowStoreDropdown(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setEditShowStoreDropdown(false);
+                  } else if (e.key === 'Enter') {
+                    if (editShowStoreDropdown && filteredEditStores.length > 0) {
+                      e.preventDefault();
+                      setEditSelectedStore(filteredEditStores[0]);
+                      setEditStoreQuery(filteredEditStores[0].name);
+                    } else {
+                      const exactMatch = stores.find(s => s.name.toLowerCase() === editStoreQuery.toLowerCase());
+                      if (exactMatch) {
+                        setEditSelectedStore(exactMatch);
+                        setEditStoreQuery(exactMatch.name);
+                      }
+                    }
+                    setEditShowStoreDropdown(false);
+                  }
+                }}
+                placeholder="Search store (e.g., Lidl, REWE)..."
+                autoComplete="off"
+                className="flex h-11 w-full rounded-xl border border-border bg-card pl-10 pr-4 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground font-semibold"
+              />
+            </div>
+
+            {editShowStoreDropdown && (
+              <div className="absolute top-[68px] left-0 right-0 z-50 bg-card border border-border rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                {filteredEditStores.length > 0 ? (
+                  filteredEditStores.map(store => (
+                    <div
+                      key={store.id}
+                      onClick={() => {
+                        setEditSelectedStore(store);
+                        setEditStoreQuery(store.name);
+                        setEditShowStoreDropdown(false);
+                      }}
+                      className="px-4 py-2.5 hover:bg-muted text-sm cursor-pointer font-medium transition-colors"
+                    >
+                      {store.name}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">
+                    No matching stores found.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Items Breakdown list builder */}
+          <div className="border border-border/60 rounded-xl p-3 bg-muted/10 space-y-3">
+            <div className="flex justify-between items-center px-0.5">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Items Breakdown ({editItems.length})
+              </span>
+              {editItems.length > 0 && (
+                <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
+                  Sum: €{editItems.reduce((s, i) => s + i.amount, 0).toFixed(2)}
+                </span>
+              )}
+            </div>
+
+            {/* List of current items */}
+            {editItems.length > 0 && (
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {editItems.map((item) => {
+                  const cat = categories.find(c => c.id === item.category_id);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between bg-card border border-border/40 p-2 rounded-lg text-xs font-semibold">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="px-1.5 py-0.5 text-[9px] font-extrabold rounded-md shrink-0 text-white"
+                          style={{ backgroundColor: getCategoryColor(cat?.color) }}
+                        >
+                          {cat ? t(`categories.${cat.name}`, cat.name) : 'Other'}
+                        </span>
+                        <span className="truncate text-foreground/90">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span>€{Number(item.amount).toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditItems(editItems.filter(i => i.id !== item.id))}
+                          className="text-muted-foreground hover:text-rose-500 transition-colors p-0.5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add New Item Inputs */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {categories.find(c => c.id === editItemCategoryId)?.name.toLowerCase() === 'other' ? (
+                  <input
+                    type="text"
+                    placeholder="Specify Purpose (e.g. Taxi fare)"
+                    value={editOtherPurpose}
+                    onChange={(e) => setEditOtherPurpose(e.target.value)}
+                    className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Item Name (e.g. Bread)"
+                    value={editItemName}
+                    onChange={(e) => setEditItemName(e.target.value)}
+                    className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                  />
+                )}
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Price (e.g. 1.20)"
+                  value={editItemAmount}
+                  onChange={(e) => setEditItemAmount(e.target.value)}
+                  className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                />
+              </div>
+
+              <div className="flex gap-2 items-center justify-between w-full">
+                <div className="flex-1">
+                  <select
+                    value={editItemCategoryId}
+                    onChange={(e) => setEditItemCategoryId(e.target.value)}
+                    className="flex h-9 w-full rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80"
+                  >
+                    {categories
+                      .filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()))
+                      .map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {t(`categories.${cat.name}`, cat.name)}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const selectedCat = categories.find(c => c.id === editItemCategoryId);
+                    const isOther = selectedCat?.name.toLowerCase() === 'other';
+                    const nameToUse = isOther ? editOtherPurpose : editItemName;
+                    if (!nameToUse.trim() || !editItemAmount.trim()) return;
+                    const val = parseFloat(editItemAmount);
+                    if (isNaN(val) || val <= 0) return;
+
+                    setEditItems([...editItems, {
+                      id: crypto.randomUUID(),
+                      name: nameToUse.trim(),
+                      amount: val,
+                      category_id: editItemCategoryId
+                    }]);
+                    setEditItemName('');
+                    setEditItemAmount('');
+                    setEditOtherPurpose('');
+                  }}
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 text-[10px] font-extrabold px-3.5 py-1 gap-1 shrink-0"
+                  disabled={
+                    editItemAmount.trim() === '' ||
+                    (categories.find(c => c.id === editItemCategoryId)?.name.toLowerCase() === 'other'
+                      ? editOtherPurpose.trim() === ''
+                      : editItemName.trim() === '')
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Conditional Category Select (only if no items breakdown exists) */}
+          {editItems.length === 0 ? (
+            <Select
+              label="Expense Category"
+              value={editCategoryId}
+              onChange={(e) => setEditCategoryId(e.target.value)}
+              options={categories
+                .filter(cat => !['discount'].includes(cat.name.toLowerCase()))
+                .map((cat) => ({
+                  value: cat.id,
+                  label: t(`categories.${cat.name}`, cat.name),
+                }))}
+            />
+          ) : (
+            <div className="p-3 bg-primary/5 border border-primary/20 text-primary rounded-xl text-xs font-semibold leading-normal">
+              Category will be dynamically determined based on the items breakdown.
+            </div>
+          )}
+
+          {/* Discount Input */}
+          <Input
+            type="number"
+            step="0.01"
+            label="Discount on this Purchase (€)"
+            placeholder="0.00"
+            value={editDiscount}
+            onChange={(e) => setEditDiscount(e.target.value)}
+            icon={<Coins className="h-4 w-4 text-muted-foreground" />}
+          />
+
+          {/* Total Amount Input */}
+          <Input
+            type="number"
+            step="0.01"
+            label="Total Amount (€)"
+            placeholder="0.00"
+            value={editAmount}
+            onChange={(e) => setEditAmount(e.target.value)}
+            icon={<Coins className="h-4 w-4 text-muted-foreground" />}
+          />
+
+          {/* Payment Account */}
+          <Select
+            label="Payment Account"
+            value={editPaymentAccountId}
+            onChange={(e) => setEditPaymentAccountId(e.target.value)}
+            options={accounts.map(acc => ({
+              value: acc.id,
+              label: `${acc.name} (€${acc.balance.toFixed(2)})`,
+            }))}
+          />
+
+          {/* Notes Input */}
+          <Input
+            label={t('expenses.notes')}
+            placeholder="e.g., Weekly food shopping"
+            value={editNotes}
+            onChange={(e) => setEditNotes(e.target.value)}
+          />
+
+          {/* Dialog Footer Actions */}
+          <div className="flex items-center justify-end gap-3 mt-6 border-t border-border/50 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseEdit}
+              disabled={editSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={editSaving}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
       </Dialog>
 
       {/* CONFIRMATION DIALOG */}
