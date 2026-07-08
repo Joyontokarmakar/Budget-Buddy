@@ -89,7 +89,11 @@
     "dropReceipt": "Dateien hier ablegen oder zum Hochladen klicken",
     "monthlyBillsTitle": "Monatliche Rechnungen",
     "monthlyBillsSubtitle": "Trage deine regelmäßigen monatlichen Rechnungen mit einem Klick ein:",
-    "monthlyBillsNote": "Hinweis: Zahlungen werden sofort verbucht. Nach dem Buchen bleibt die Schaltfläche für den aktuellen Monat deaktiviert."
+    "monthlyBillsNote": "Hinweis: Zahlungen werden sofort verbucht. Nach dem Buchen bleibt die Schaltfläche für den aktuellen Monat deaktiviert.",
+    "unpaidBillsTitle": "Ausstehende Rechnungen",
+    "unpaidBillsSubtitle": "Diese Rechnungen wurden in den Vormonaten nicht verbucht. Bezahle sie heute, um deine Daten zu aktualisieren:",
+    "pending": "Ausstehend",
+    "payNow": "Jetzt bezahlen"
   },
   "analytics": {
     "title": "Analysen & Trends",

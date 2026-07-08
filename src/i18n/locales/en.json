@@ -89,7 +89,11 @@
     "dropReceipt": "Drop files here or click to upload",
     "monthlyBillsTitle": "Monthly Bills Checklist",
     "monthlyBillsSubtitle": "Log standard monthly bills and utilities in a single click:",
-    "monthlyBillsNote": "Note: Payments are processed immediately. Once logged, the button stays disabled for the active month."
+    "monthlyBillsNote": "Note: Payments are processed immediately. Once logged, the button stays disabled for the active month.",
+    "unpaidBillsTitle": "Unpaid Past Bills",
+    "unpaidBillsSubtitle": "You missed logging these bills in past months. Pay them today to update your records:",
+    "pending": "Pending",
+    "payNow": "Pay Now"
   },
   "analytics": {
     "title": "Analytics & Trends",
