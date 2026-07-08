@@ -950,7 +950,7 @@ export const Reports: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 printable-report-area">
+    <div key={selectedMonth} className="space-y-6 printable-report-area">
       <style>{`
         @media print {
           /* 1. Hide unwanted UI components */
