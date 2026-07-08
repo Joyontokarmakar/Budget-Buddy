@@ -9,10 +9,10 @@ import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useAuthStore();
   const { isInstallable, installApp } = usePWA();
@@ -112,6 +112,134 @@ export const Dashboard: React.FC = () => {
       await loadDashboardData();
     } catch (e: any) {
       setQuickLogMsg('Failed to log quick purchase: ' + e.message);
+      setTimeout(() => setQuickLogMsg(null), 4000);
+    }
+  };
+  const formatMonthKey = (monthKey: string) => {
+    const [year, month] = monthKey.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleDateString(i18n.language || 'en', { month: 'long', year: 'numeric' });
+  };
+
+  const isBillLogged = (catName: string, monthKey: string) => {
+    return expenses.some(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      const isSameCategory = e.category?.name.toLowerCase() === catName.toLowerCase();
+      const isInTargetMonth = eMonthKey === monthKey;
+      const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
+      
+      return isSameCategory && (isInTargetMonth || isExplicitPeriod);
+    });
+  };
+
+  const getUnpaidPastBills = () => {
+    if (!profile || !profile.created_at) return [];
+    
+    let startD = new Date(profile.created_at);
+    let earliestTime = startD.getTime();
+    
+    expenses.forEach(e => {
+      if (e.date) {
+        const d = new Date(e.date);
+        if (!isNaN(d.getTime()) && d.getTime() < earliestTime) {
+          earliestTime = d.getTime();
+        }
+      }
+    });
+    
+    startD = new Date(earliestTime);
+    const startYear = startD.getFullYear();
+    const startMonth = startD.getMonth();
+    
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    const unpaidList: {
+      name: string;
+      cat: string;
+      amount: number;
+      month: string;
+      preferredAccountId?: string | null;
+    }[] = [];
+    
+    let iterYear = startYear;
+    let iterMonth = startMonth;
+    
+    while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
+      const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
+      
+      const billsToCheck = [
+        { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
+        { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
+        { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
+        { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
+        ...(profile?.show_semester_fee
+          ? [{
+              name: 'Semester Fee',
+              cat: 'Education',
+              amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
+              preferredAccountId: profile?.semester_fee_account_id,
+              disabled: profile?.disabled_categories?.includes('semester_fee')
+            }]
+          : [])
+      ].filter(bill => !bill.disabled);
+      
+      for (const bill of billsToCheck) {
+        if (!isBillLogged(bill.cat, monthKey)) {
+          unpaidList.push({
+            name: bill.name,
+            cat: bill.cat,
+            amount: bill.amount,
+            month: monthKey,
+            preferredAccountId: bill.preferredAccountId
+          });
+        }
+      }
+      
+      iterMonth++;
+      if (iterMonth > 11) {
+        iterMonth = 0;
+        iterYear++;
+      }
+    }
+    
+    return unpaidList;
+  };
+
+  const handlePayMissedBillDirect = async (bill: { name: string; cat: string; amount: number; month: string; preferredAccountId?: string | null }) => {
+    if (!profile) return;
+    if (accounts.length === 0) {
+      setQuickLogMsg('Please create an asset account (e.g. Bank Account) first!');
+      setTimeout(() => setQuickLogMsg(null), 4000);
+      return;
+    }
+    
+    const accountIdToUse = bill.preferredAccountId || accounts[0].id;
+    const billCat = categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase());
+    const categoryId = billCat ? billCat.id : null;
+    
+    try {
+      await db.createExpense(profile.id, {
+        amount: bill.amount,
+        date: new Date().toISOString().split('T')[0],
+        category_id: categoryId,
+        store_id: null,
+        payment_account_id: accountIdToUse,
+        notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+        receipt_url: null,
+        items: null
+      });
+      
+      setQuickLogMsg(`${bill.name} for ${formatMonthKey(bill.month)} paid and logged successfully!`);
+      setTimeout(() => setQuickLogMsg(null), 3000);
+      
+      await loadDashboardData();
+    } catch (e: any) {
+      setQuickLogMsg('Failed to pay missed bill: ' + e.message);
       setTimeout(() => setQuickLogMsg(null), 4000);
     }
   };
@@ -381,6 +509,51 @@ export const Dashboard: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Unpaid Past Bills Card */}
+      {getUnpaidPastBills().length > 0 && (
+        <Card className="bg-destructive/5 border-destructive/20 border shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4.5 w-4.5 animate-pulse shrink-0" />
+              {t('expenses.unpaidBillsTitle')}
+            </CardTitle>
+            <span className="text-[9px] font-extrabold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20 tracking-wide uppercase">
+              {getUnpaidPastBills().length} {t('expenses.pending')}
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              {t('expenses.unpaidBillsSubtitle')} Click "Pay Now" to quickly record them using your default account.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {getUnpaidPastBills().map((bill) => (
+                <div key={`${bill.cat}-${bill.month}`} className="flex items-center justify-between p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-extrabold text-foreground truncate">{bill.name}</span>
+                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
+                      {formatMonthKey(bill.month)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-xs font-black text-foreground">
+                      €{bill.amount.toFixed(2)}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handlePayMissedBillDirect(bill)}
+                      className="h-6 text-[9px] font-extrabold px-2.5 bg-destructive hover:bg-destructive/90 text-white cursor-pointer shadow-xs rounded-xl border border-destructive/30 shrink-0"
+                    >
+                      {t('expenses.payNow')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main KPI Grid - Revolut Style */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">

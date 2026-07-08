@@ -15,6 +15,8 @@ export const Analytics: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
+  const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
+  const [categoryMonth, setCategoryMonth] = useState<string>('all');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,8 +65,39 @@ export const Analytics: React.FC = () => {
     '#a1a1aa'  // gray
   ];
 
+  const currentYearVal = new Date().getFullYear();
+  const years = Array.from(new Set([
+    currentYearVal,
+    ...expenses.map(e => e.date ? new Date(e.date).getFullYear() : currentYearVal),
+    ...incomes.map(i => i.date ? new Date(i.date).getFullYear() : currentYearVal)
+  ])).sort((a, b) => b - a);
+
+  const months = [
+    { value: 'all', label: 'All Months' },
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' },
+  ];
+
+  const categoryFilteredExpenses = expenses.filter(e => {
+    if (!e.date) return false;
+    const d = new Date(e.date);
+    const yMatches = d.getFullYear() === categoryYear;
+    const mMatches = categoryMonth === 'all' || d.getMonth() === parseInt(categoryMonth, 10);
+    return yMatches && mMatches;
+  });
+
   const categoryDataMap: { [key: string]: { name: string; value: number; color: string } } = {};
-  expenses.forEach(e => {
+  categoryFilteredExpenses.forEach(e => {
     const catName = e.category?.name || 'Other';
     const catColor = e.category?.color || '#6b7280';
     const transName = t(`categories.${catName}`, catName);
@@ -265,44 +298,72 @@ export const Analytics: React.FC = () => {
           {/* CATEGORY BREAKDOWN PIE */}
           <Card className="hover:border-primary/20 transition-all flex flex-col">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <PieIcon className="h-4.5 w-4.5 text-primary" />
-                {t('analytics.byCategory')}
-              </CardTitle>
-              <CardDescription>All-time categorized spending allocation</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                    nameKey="name"
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <PieIcon className="h-4.5 w-4.5 text-primary" />
+                  {t('analytics.byCategory')}
+                </CardTitle>
+                <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                  <select
+                    value={categoryMonth}
+                    onChange={(e) => setCategoryMonth(e.target.value)}
+                    className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
                   >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {months.map(m => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
                     ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderColor: isDark ? '#334155' : '#e2e8f0',
-                      borderRadius: '12px',
-                    }}
-                    itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                    formatter={(value) => [`€${Number(value).toFixed(2)}`]}
-                  />
-                  <Legend 
-                    iconSize={8} 
-                    iconType="circle" 
-                    wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                    formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                  </select>
+                  <select
+                    value={categoryYear}
+                    onChange={(e) => setCategoryYear(parseInt(e.target.value, 10))}
+                    className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
+                  >
+                    {years.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <CardDescription>Categorized spending allocation</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 pt-2 flex flex-col justify-center">
+              {categoryData.length === 0 ? (
+                <div className="text-center text-xs text-muted-foreground font-semibold py-12">
+                  No categorized expenses logged for the selected period.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      nameKey="name"
+                    >
+                      {categoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderRadius: '12px',
+                      }}
+                      itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`]}
+                    />
+                    <Legend 
+                      iconSize={8} 
+                      iconType="circle" 
+                      wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                      formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
