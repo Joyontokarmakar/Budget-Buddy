@@ -1,6 +1,6 @@
 # 💳 BudgetBuddy Student
 
-Developed by **[Joyonto Karmakar](https://github.com/Joyontokarmakar)**.
+Developed by **[Joyonto Karmakar](https://joyontokarmakar.netlify.app)**.
 
 > A premium, responsive student-focused financial management Progressive Web App (PWA) designed to simplify student life.
 
