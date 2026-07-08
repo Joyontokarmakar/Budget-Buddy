@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /developer
+
+Sitemap: https://budgetbuddy-student.netlify.app/sitemap.xml
