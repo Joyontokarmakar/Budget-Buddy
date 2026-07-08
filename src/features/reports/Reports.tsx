@@ -691,7 +691,7 @@ export const Reports: React.FC = () => {
             <div class="subtitle">Month: <strong>${monthLabel}</strong> &bull; Generated for: <strong>${userName}</strong></div>
           </div>
           <div class="branding">
-            <div class="branding-logo">Budgetbuddy</div>
+            <div class="branding-logo">Budget buddy</div>
             <div class="branding-sub">Premium PWA Tracker</div>
           </div>
         </div>

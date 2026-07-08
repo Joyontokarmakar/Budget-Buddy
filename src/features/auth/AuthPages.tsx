@@ -50,8 +50,8 @@ export const SignInPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budgetbuddy Logo" />
-          <CardTitle className="text-2xl font-bold tracking-tight">Budgetbuddy Student</CardTitle>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budget buddy Logo" />
+          <CardTitle className="text-2xl font-bold tracking-tight">Budget buddy Student</CardTitle>
           <CardDescription>{t('auth.signIn')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -59,7 +59,7 @@ export const SignInPage: React.FC = () => {
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs flex gap-2.5 items-start">
               <CheckCircle className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
               <div>
-                <span className="font-bold">Local Sync Active:</span> Budgetbuddy is running using secure local database. You can sign in or register with any credentials to start tracking immediately.
+                <span className="font-bold">Local Sync Active:</span> Budget buddy is running using secure local database. You can sign in or register with any credentials to start tracking immediately.
               </div>
             </div>
           )}
@@ -189,8 +189,8 @@ export const SignUpPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budgetbuddy Logo" />
-          <CardTitle className="text-2xl font-bold tracking-tight">Budgetbuddy Student</CardTitle>
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budget buddy Logo" />
+          <CardTitle className="text-2xl font-bold tracking-tight">Budget buddy Student</CardTitle>
           <CardDescription>{t('auth.signUp')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -292,7 +292,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budgetbuddy Logo" />
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budget buddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
           <CardDescription>We'll send you an email instructions link</CardDescription>
         </CardHeader>
@@ -387,7 +387,7 @@ export const ResetPasswordPage: React.FC = () => {
 
       <Card className="w-full max-w-md shadow-xl border-border bg-card/60 backdrop-blur-md relative z-10">
         <CardHeader className="space-y-2 text-center pb-4">
-          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budgetbuddy Logo" />
+          <img src="/budget-buddy.svg" className="mx-auto h-12 w-12 rounded-2xl shadow-lg shrink-0" alt="Budget buddy Logo" />
           <CardTitle className="text-2xl font-bold tracking-tight">Set New Password</CardTitle>
           <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>

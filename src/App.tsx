@@ -64,36 +64,36 @@ function SEOTracker() {
   // Track page views and update page titles on route changes
   useEffect(() => {
     const path = location.pathname;
-    let pageTitle = 'Budgetbuddy Student - Free Student Budget Calculator & Expense Tracker PWA';
+    let pageTitle = 'Budget buddy Student - Free Student Budget Calculator & Expense Tracker PWA';
     
     if (path === '/') {
-      pageTitle = 'Dashboard | Budgetbuddy Student - Free Student Budget Calculator';
+      pageTitle = 'Dashboard | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/expenses')) {
-      pageTitle = 'Track Expenses & Monthly Bills Checklist | Budgetbuddy Student';
+      pageTitle = 'Track Expenses & Monthly Bills Checklist | Budget buddy Student';
     } else if (path.startsWith('/income')) {
-      pageTitle = 'Log Income & Werkstudent Salaries | Budgetbuddy Student';
+      pageTitle = 'Log Income & Werkstudent Salaries | Budget buddy Student';
     } else if (path.startsWith('/accounts')) {
-      pageTitle = 'Manage Bank Accounts & Asset Balances | Budgetbuddy Student';
+      pageTitle = 'Manage Bank Accounts & Asset Balances | Budget buddy Student';
     } else if (path.startsWith('/deposits-loans')) {
-      pageTitle = 'Student Debt Tracker - Loans & Repayments | Budgetbuddy Student';
+      pageTitle = 'Student Debt Tracker - Loans & Repayments | Budget buddy Student';
     } else if (path.startsWith('/analytics')) {
-      pageTitle = 'Student Spending Analytics & Financial Charts | Budgetbuddy Student';
+      pageTitle = 'Student Spending Analytics & Financial Charts | Budget buddy Student';
     } else if (path.startsWith('/reports')) {
-      pageTitle = 'Download Financial Statements & Reports | Budgetbuddy Student';
+      pageTitle = 'Download Financial Statements & Reports | Budget buddy Student';
     } else if (path.startsWith('/assets')) {
-      pageTitle = 'Permanent Assets & Hardware Purchases Tracker | Budgetbuddy Student';
+      pageTitle = 'Permanent Assets & Hardware Purchases Tracker | Budget buddy Student';
     } else if (path.startsWith('/settings')) {
-      pageTitle = 'Student Budget Limit & Profile Settings | Budgetbuddy Student';
+      pageTitle = 'Student Budget Limit & Profile Settings | Budget buddy Student';
     } else if (path.startsWith('/developer')) {
-      pageTitle = 'Developer Console & Mock DB Console | Budgetbuddy Student';
+      pageTitle = 'Developer Console & Mock DB Console | Budget buddy Student';
     } else if (path.startsWith('/login')) {
-      pageTitle = 'Sign In | Budgetbuddy Student - Free Student Budget Calculator';
+      pageTitle = 'Sign In | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/register')) {
-      pageTitle = 'Sign Up & Create Account | Budgetbuddy Student - Free Student Budget Calculator';
+      pageTitle = 'Sign Up & Create Account | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/forgot-password')) {
-      pageTitle = 'Forgot Password | Budgetbuddy Student - Free Student Budget Calculator';
+      pageTitle = 'Forgot Password | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/reset-password')) {
-      pageTitle = 'Reset Password | Budgetbuddy Student - Free Student Budget Calculator';
+      pageTitle = 'Reset Password | Budget buddy Student - Free Student Budget Calculator';
     }
 
     document.title = pageTitle;

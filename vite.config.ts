@@ -17,8 +17,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: 'Budgetbuddy Student',
-        short_name: 'Budgetbuddy',
+        name: 'Budget buddy Student',
+        short_name: 'Budget buddy',
         description: 'Production-ready mobile-first budget tracker for students in Germany',
         theme_color: '#0f172a',
         background_color: '#0f172a',
