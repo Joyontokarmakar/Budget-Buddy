@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
@@ -1052,6 +1053,14 @@ export const Expenses: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleAddExpense} className="space-y-4">
+                {!profile?.gemini_api_key && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl text-[10.5px] leading-relaxed font-semibold flex items-start gap-2.5 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-amber-500" />
+                    <div>
+                      Running in <strong className="text-amber-700 dark:text-amber-300">Mock Scanner Mode</strong>. Uploading real receipts will generate randomized demo data. To parse your actual receipts accurately, add a free <Link to="/settings" className="underline font-bold text-primary hover:text-primary/80 transition-colors">Gemini API Key in Settings</Link>.
+                    </div>
+                  </div>
+                )}
                 {error && (
                   <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
                     {error}
