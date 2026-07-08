@@ -585,13 +585,45 @@ export const Expenses: React.FC = () => {
     setItemAmount('');
     setOtherPurpose('');
   };
-
   const handleRemoveItem = (itemId: string) => {
     const newItems = items.filter((item) => item.id !== itemId);
     setItems(newItems);
     if (newItems.length === 0) {
       setAmount('');
     }
+  };
+  const handleEditItem = (item: { id: string; name: string; amount: number; category_id?: string | null }) => {
+    const cat = categories.find(c => c.id === item.category_id);
+    const isOther = cat?.name.toLowerCase() === 'other';
+    
+    if (isOther) {
+      setOtherPurpose(item.name);
+      setItemName('');
+    } else {
+      setItemName(item.name);
+      setOtherPurpose('');
+    }
+    setItemAmount(item.amount.toString());
+    setItemCategoryId(item.category_id || '');
+    
+    setItems(items.filter(i => i.id !== item.id));
+  };
+
+  const handleEditItemInEditMode = (item: { id: string; name: string; amount: number; category_id?: string | null }) => {
+    const cat = categories.find(c => c.id === item.category_id);
+    const isOther = cat?.name.toLowerCase() === 'other';
+
+    if (isOther) {
+      setEditOtherPurpose(item.name);
+      setEditItemName('');
+    } else {
+      setEditItemName(item.name);
+      setEditOtherPurpose('');
+    }
+    setEditItemAmount(item.amount.toString());
+    setEditItemCategoryId(item.category_id || '');
+
+    setEditItems(editItems.filter(i => i.id !== item.id));
   };
 
   const getAvailableMonths = () => {
@@ -1140,6 +1172,14 @@ export const Expenses: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span>€{Number(item.amount).toFixed(2)}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleEditItem(item)}
+                                className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                                title="Edit item"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(item.id)}
@@ -2071,6 +2111,14 @@ export const Expenses: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span>€{Number(item.amount).toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleEditItemInEditMode(item)}
+                          className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                          title="Edit item"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => setEditItems(editItems.filter(i => i.id !== item.id))}
