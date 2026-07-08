@@ -24,19 +24,37 @@ BudgetBuddy features a modern, interactive dashboard, receipt OCR scanning, deta
 
 ### 🧾 3. Smart Expense Tracking & Receipt Scanning
 - **Manual Logging:** Record transactions with custom categories, stores, notes, dates, and account deductions.
+- **Smart Category Selection:** Automatically defaults the category selection to **Food** for quick entry, or auto-detects categories like groceries from receipt store names.
 - **Receipt OCR Scanning:** Upload receipt images or PDFs to auto-extract and prefill merchant name, total price, and date fields.
 - **Nested Itemized Logging:** Log multiple independent items within a single bill, assigning distinct categories to each item.
+- **Monthly Bills Checklist:** A handy utility checklist for rent, health insurance, mobile plans, broadcasting fees (Rundfunkbeitrag), and semester contribution fees. Each bill is tickable to quick-log instantly, showing green checkmarks when logged and a **"Done"** completion badge when all monthly bills are cleared.
 
 ### 💰 4. Income & Account Management
 - **Category Logging:** Organize student income by Werkstudent Salary, Scholarships, Family Support, Freelance, or other sources.
 - **Ledger Integrations:** Map earnings directly to checking or savings accounts to automatically update balances.
+- **Flexible Accounts:** Support checking accounts, bank accounts, savings accounts, and cash wallets.
 
 ### 📈 5. Visual Analytics & Detailed Reports
 - **Bill Analyzer:** Tracks essential recurring student expenses like House Rent, Health Insurance, Broadcasting Fees (Rundfunkbeitrag), and Mobile Plans.
 - **Data Charts:** Visual pie charts (spending by category), line charts (weekly cash flow velocity), and bar charts (cash flow ratios).
 - **Localized Sheets Grid:** A spreadsheet-style responsive grid listing all transactions for granular filters.
 
-### 🌍 6. Personalization & PWA
+### 💎 6. Permanent Assets Tracking
+- **Asset Ledger:** Log valuable inventory items purchased (e.g., laptops, phones, furniture, books) with purchase date, merchant store, and price to track total hardware asset worth.
+- **Hardware Portfolio:** View, update, and manage your permanent assets profile in a structured layout.
+
+### 🤝 7. Deposits & Loans Ledger
+- **External Deposits:** Track incoming or outgoing deposits mapping to designated checking or savings accounts.
+- **Debt Registry (Borrowed/Lent):** Track money borrowed from (loans taken) or lent to others (loans provided) with repayment timelines and due dates.
+- **Active Repayments Console:** View outstanding amounts, register repayments, and filter by settled/active loan profiles.
+
+### 🔍 8. Universal Autocomplete Search
+- **Global Search Component:** Quick keyboard shortcuts to search transactions, products, shops, and navigation shortcuts across the entire app.
+
+### 🛠️ 9. Interactive Developer Console
+- **Testing Tools:** Seed mock data for all tables, reset local database, simulate OCR receipt scans, and troubleshoot mock authentication states.
+
+### 🌍 10. Personalization & PWA
 - **Theme Modes:** Seamless toggling between sleek Light Mode, Dark Mode, and System Settings.
 - **Multi-Language (i18n):** Complete translation support for English and German.
 - **PWA Installation:** Installable on iOS, Android, and Desktop with full offline caching capabilities.

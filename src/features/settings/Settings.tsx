@@ -599,7 +599,7 @@ export const Settings: React.FC = () => {
                   <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/50 bg-muted/20">
                     <div className="space-y-0.5">
                       <span className="text-xs font-bold text-foreground">Semester Contribution Fee</span>
-                      <p className="text-[10px] text-muted-foreground">Show payment quick log on Semester starts (every 6 months)</p>
+                      <p className="text-[10px] text-muted-foreground">Show semester fee on bills checklist (every 6 months)</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input

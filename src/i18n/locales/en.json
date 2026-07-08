@@ -86,7 +86,10 @@
     "customStorePlaceholder": "Enter custom store name",
     "uploadReceipt": "Upload Receipt (Image/PDF)",
     "uploadSuccess": "Receipt uploaded successfully",
-    "dropReceipt": "Drop files here or click to upload"
+    "dropReceipt": "Drop files here or click to upload",
+    "monthlyBillsTitle": "Monthly Bills Checklist",
+    "monthlyBillsSubtitle": "Log standard monthly bills and utilities in a single click:",
+    "monthlyBillsNote": "Note: Payments are processed immediately. Once logged, the button stays disabled for the active month."
   },
   "analytics": {
     "title": "Analytics & Trends",

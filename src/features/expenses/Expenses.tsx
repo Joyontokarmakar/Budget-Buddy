@@ -121,10 +121,13 @@ export const Expenses: React.FC = () => {
       if (accData.length > 0 && !paymentAccountId) {
         setPaymentAccountId(accData[0].id);
       }
-      // Default item category
+      // Default item category (prioritizing Food/Groceries)
       if (catData.length > 0 && !itemCategoryId) {
         const allowedCats = catData.filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()));
-        if (allowedCats.length > 0) {
+        const foodCat = allowedCats.find(cat => cat.name.toLowerCase() === 'food' || cat.name.toLowerCase() === 'groceries');
+        if (foodCat) {
+          setItemCategoryId(foodCat.id);
+        } else if (allowedCats.length > 0) {
           setItemCategoryId(allowedCats[0].id);
         } else {
           setItemCategoryId(catData[0].id);
@@ -572,6 +575,24 @@ export const Expenses: React.FC = () => {
     return monthKey === selectedMonth;
   });
 
+  const activeBills = [
+    { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
+    { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
+    { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
+    { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
+    ...(profile?.show_semester_fee
+      ? [{
+          name: 'Semester Fee',
+          cat: 'Education',
+          amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
+          preferredAccountId: profile?.semester_fee_account_id,
+          disabled: profile?.disabled_categories?.includes('semester_fee')
+        }]
+      : [])
+  ].filter(bill => !bill.disabled);
+
+  const allBillsLogged = activeBills.length > 0 && activeBills.every(bill => isBillLogged(bill.cat));
+
   if (loading && expenses.length === 0) {
     return <Spinner />;
   }
@@ -873,60 +894,62 @@ export const Expenses: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Log Recurring Bills Card */}
+        {/* Monthly Bills Checklist Card */}
         <Card className="lg:sticky lg:top-20 shadow-md h-fit bg-card/75 backdrop-blur-md">
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Quick Log Recurring Bills
+            <CardTitle className="text-sm font-bold flex items-center justify-between w-full">
+              <span className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                {t('expenses.monthlyBillsTitle')}
+              </span>
+              {allBillsLogged && (
+                <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <Check className="h-3 w-3 stroke-[3]" />
+                  Done
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
-              Log common monthly student utilities in a single click with pre-filled amounts:
+              {t('expenses.monthlyBillsSubtitle')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {[
-                { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
-                { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
-                { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
-                { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
-                ...(profile?.show_semester_fee
-                  ? [{
-                      name: 'Semester Fee',
-                      cat: 'Education',
-                      amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
-                      preferredAccountId: profile?.semester_fee_account_id,
-                      disabled: profile?.disabled_categories?.includes('semester_fee')
-                    }]
-                  : [])
-              ]
-                .filter(bill => !bill.disabled)
-                .map(bill => {
-                  const logged = isBillLogged(bill.cat);
-                  return (
-                    <button
-                      key={bill.name}
-                      type="button"
-                      disabled={logged}
-                      onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount, bill.preferredAccountId)}
-                      className={cn(
-                        "p-4 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between h-24 text-left shadow-xs",
-                        logged
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
-                          : "bg-muted/30 hover:bg-muted border-border/60 text-foreground cursor-pointer hover:border-primary/20"
-                      )}
-                    >
+              {activeBills.map(bill => {
+                const logged = isBillLogged(bill.cat);
+                return (
+                  <button
+                    key={bill.name}
+                    type="button"
+                    disabled={logged}
+                    onClick={() => handleQuickLogBill(bill.name, bill.cat, bill.amount, bill.preferredAccountId)}
+                    className={cn(
+                      "p-4 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between h-24 text-left shadow-xs w-full relative overflow-hidden",
+                      logged
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
+                        : "bg-muted/30 hover:bg-muted border-border/60 text-foreground cursor-pointer hover:border-primary/20"
+                    )}
+                  >
+                    <div className="flex justify-between items-start w-full gap-2">
                       <span className="opacity-95">{bill.name}</span>
-                      <span className="font-mono text-[11px] font-black block mt-2 text-primary">
-                        {logged ? 'Logged' : `€${bill.amount.toFixed(2)}`}
-                      </span>
-                    </button>
-                  );
-                })}
+                      {logged && (
+                        <span className="bg-emerald-500 dark:bg-emerald-600 text-white rounded-full p-0.5 shrink-0 flex items-center justify-center">
+                          <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        </span>
+                      )}
+                    </div>
+                    <span className={cn(
+                      "font-mono text-[11px] font-black block mt-2",
+                      logged ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
+                    )}>
+                      {logged ? 'Logged' : `€${bill.amount.toFixed(2)}`}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <p className="text-[10px] text-muted-foreground/60 font-semibold leading-relaxed pt-2">
-              Note: Quick logs process immediately to Giro account after a confirmation modal. Once logged, the button stays disabled for the active month.
+              {t('expenses.monthlyBillsNote')}
             </p>
           </CardContent>
         </Card>

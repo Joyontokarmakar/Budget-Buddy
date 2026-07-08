@@ -86,7 +86,10 @@
     "customStorePlaceholder": "Name des Geschäfts eingeben",
     "uploadReceipt": "Beleg hochladen (Bild/PDF)",
     "uploadSuccess": "Beleg erfolgreich hochgeladen",
-    "dropReceipt": "Dateien hier ablegen oder zum Hochladen klicken"
+    "dropReceipt": "Dateien hier ablegen oder zum Hochladen klicken",
+    "monthlyBillsTitle": "Monatliche Rechnungen",
+    "monthlyBillsSubtitle": "Trage deine regelmäßigen monatlichen Rechnungen mit einem Klick ein:",
+    "monthlyBillsNote": "Hinweis: Zahlungen werden sofort verbucht. Nach dem Buchen bleibt die Schaltfläche für den aktuellen Monat deaktiviert."
   },
   "analytics": {
     "title": "Analysen & Trends",
