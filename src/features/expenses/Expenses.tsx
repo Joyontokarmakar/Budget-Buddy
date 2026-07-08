@@ -389,8 +389,21 @@ export const Expenses: React.FC = () => {
   const getUnpaidPastBills = () => {
     if (!profile || !profile.created_at) return [];
     
-    // Parse start month
-    const startD = new Date(profile.created_at);
+    // Parse start month from profile creation as fallback
+    let startD = new Date(profile.created_at);
+    let earliestTime = startD.getTime();
+    
+    // Check if there are earlier historical expenses logged
+    expenses.forEach(e => {
+      if (e.date) {
+        const d = new Date(e.date);
+        if (!isNaN(d.getTime()) && d.getTime() < earliestTime) {
+          earliestTime = d.getTime();
+        }
+      }
+    });
+    
+    startD = new Date(earliestTime);
     const startYear = startD.getFullYear();
     const startMonth = startD.getMonth(); // 0-indexed
     
