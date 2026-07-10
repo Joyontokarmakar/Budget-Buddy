@@ -6,9 +6,9 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner } from '../../components/ui';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
-import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag } from 'lucide-react';
+import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar } from 'lucide-react';
 export const Analytics: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
 
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
@@ -17,6 +17,10 @@ export const Analytics: React.FC = () => {
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
   const [categoryMonth, setCategoryMonth] = useState<string>('all');
+
+  // Activity Calendar selectors state
+  const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
+  const [activityMonth, setActivityMonth] = useState<number>(new Date().getMonth());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -292,60 +296,134 @@ export const Analytics: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* CATEGORY BREAKDOWN PIE & LIST */}
-          {/* CATEGORY BREAKDOWN PIE */}
-          <Card className="hover:border-primary/20 transition-all flex flex-col">
-            <CardHeader className="pb-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <PieIcon className="h-4.5 w-4.5 text-primary" />
-                  {t('analytics.byCategory')}
-                </CardTitle>
-                <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                  <select
-                    value={categoryMonth}
-                    onChange={(e) => setCategoryMonth(e.target.value)}
-                    className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
-                  >
-                    {months.map(m => (
-                      <option key={m.value} value={m.value}>{m.label}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={categoryYear}
-                    onChange={(e) => setCategoryYear(parseInt(e.target.value, 10))}
-                    className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
-                  >
-                    {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <CardDescription>Categorized spending allocation</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64 pt-2 flex flex-col justify-center">
-              {categoryData.length === 0 ? (
-                <div className="text-center text-xs text-muted-foreground font-semibold py-12">
-                  No categorized expenses logged for the selected period.
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      nameKey="name"
+        <div className="space-y-6">
+          {/* ROW 1: CATEGORY BREAKDOWN & TREND LINE */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* CATEGORY BREAKDOWN PIE */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col">
+              <CardHeader className="pb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <PieIcon className="h-4.5 w-4.5 text-primary" />
+                    {t('analytics.byCategory')}
+                  </CardTitle>
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <select
+                      value={categoryMonth}
+                      onChange={(e) => setCategoryMonth(e.target.value)}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
                     >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {months.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
                       ))}
-                    </Pie>
+                    </select>
+                    <select
+                      value={categoryYear}
+                      onChange={(e) => setCategoryYear(parseInt(e.target.value, 10))}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
+                    >
+                      {years.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <CardDescription>Categorized spending allocation</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64 pt-2 flex flex-col justify-center">
+                {categoryData.length === 0 ? (
+                  <div className="text-center text-xs text-muted-foreground font-semibold py-12">
+                    No categorized expenses logged for the selected period.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          borderColor: isDark ? '#334155' : '#e2e8f0',
+                          borderRadius: '12px',
+                        }}
+                        itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                        formatter={(value) => [`€${Number(value).toFixed(2)}`]}
+                      />
+                      <Legend 
+                        iconSize={8} 
+                        iconType="circle" 
+                        wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                        formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* WEEKLY & DAILY TREND LINE */}
+            <Card className="hover:border-primary/20 transition-all">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <LineIcon className="h-4.5 w-4.5 text-rose-500" />
+                    {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
+                  </CardTitle>
+                  <CardDescription>
+                    {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
+                  </CardDescription>
+                </div>
+                <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
+                  <button
+                    type="button"
+                    onClick={() => setTrendView('weekly')}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                      trendView === 'weekly' 
+                        ? "bg-background text-foreground shadow-xs border border-border/30" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Weekly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrendView('daily')}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                      trendView === 'daily' 
+                        ? "bg-background text-foreground shadow-xs border border-border/30" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Daily
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="h-64 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart 
+                    data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis 
+                      dataKey={trendView === 'weekly' ? 'week' : 'date'} 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                    />
+                    <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
@@ -353,231 +431,371 @@ export const Analytics: React.FC = () => {
                         borderRadius: '12px',
                       }}
                       itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke="#f43f5e"
+                      strokeWidth={3}
+                      dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ROW 2: 3 COLUMNS FOR CASHFLOW, CALENDAR, AND HISTORY */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* INCOME VS EXPENSE CASHFLOW AREA */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Coins className="h-4.5 w-4.5 text-emerald-500" />
+                  {t('analytics.cashFlow')}
+                </CardTitle>
+                <CardDescription>Monthly inflows vs outflows</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderRadius: '12px',
+                      }}
+                      itemStyle={{ fontWeight: 'bold' }}
                       formatter={(value) => [`€${Number(value).toFixed(2)}`]}
                     />
-                    <Legend 
-                      iconSize={8} 
-                      iconType="circle" 
-                      wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                      formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
-                    />
-                  </PieChart>
+                    <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <Bar dataKey="income" name={t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name={t('analytics.expenses')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* WEEKLY & DAILY TREND LINE */}
-          <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <div>
+            {/* MONTHLY ACTIVITY CALENDAR */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-1.5">
+                  <CardTitle className="text-[13px] font-bold flex items-center gap-1.5 truncate">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    Activity Calendar
+                  </CardTitle>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <select
+                      value={activityMonth}
+                      onChange={(e) => setActivityMonth(parseInt(e.target.value, 10))}
+                      className="bg-card border border-border/80 text-foreground text-[9px] font-semibold rounded-lg px-1.5 py-0.5 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
+                    >
+                      {months.filter(m => m.value !== 'all').map(m => (
+                        <option key={m.value} value={m.value}>{m.label.slice(0, 3)}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={activityYear}
+                      onChange={(e) => setActivityYear(parseInt(e.target.value, 10))}
+                      className="bg-card border border-border/80 text-foreground text-[9px] font-semibold rounded-lg px-1.5 py-0.5 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none"
+                    >
+                      {years.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <CardDescription className="text-[10px] leading-tight mt-0.5">Daily spending view. Hover cells for details.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-1 pb-3 flex-1 flex flex-col justify-center">
+                {/* Calendar Grid Container */}
+                <div className="border border-border/60 rounded-xl overflow-hidden bg-muted/10">
+                  {/* Weekdays Header */}
+                  <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-center py-1.5 font-bold text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-wider">
+                    <div>M</div>
+                    <div>T</div>
+                    <div>W</div>
+                    <div>T</div>
+                    <div>F</div>
+                    <div className="text-indigo-500/85">S</div>
+                    <div className="text-rose-500/85">S</div>
+                  </div>
+
+                  {/* Days Grid */}
+                  <div className="grid grid-cols-7 gap-0.5 p-1">
+                    {/* Previous month padding cells */}
+                    {(() => {
+                      const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+                      const getFirstDayIndex = (y: number, m: number) => {
+                        const day = new Date(y, m, 1).getDay();
+                        return day === 0 ? 6 : day - 1;
+                      };
+                      const startPadding = getFirstDayIndex(activityYear, activityMonth);
+                      const prevMonthDate = new Date(activityYear, activityMonth - 1, 1);
+                      const prevMonthYear = prevMonthDate.getFullYear();
+                      const prevMonthMonth = prevMonthDate.getMonth();
+                      const prevMonthDaysCount = getDaysInMonth(prevMonthYear, prevMonthMonth);
+                      
+                      const pad = [];
+                      for (let i = startPadding - 1; i >= 0; i--) {
+                        const dayNum = prevMonthDaysCount - i;
+                        pad.push(
+                          <div 
+                            key={`prev-${dayNum}`} 
+                            className="aspect-square flex items-center justify-center text-[9px] text-muted-foreground/30 font-bold border border-border/5 rounded-lg bg-muted/5 select-none"
+                          >
+                            {dayNum}
+                          </div>
+                        );
+                      }
+                      return pad;
+                    })()}
+
+                    {/* Active month day cells */}
+                    {(() => {
+                      const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+                      const daysInMonth = getDaysInMonth(activityYear, activityMonth);
+                      
+                      const monthlyActivityExpenses = expenses.filter(e => {
+                        if (!e.date) return false;
+                        const dStr = e.date;
+                        const d = new Date(dStr);
+                        return d.getFullYear() === activityYear && d.getMonth() === activityMonth;
+                      });
+
+                      return Array.from({ length: daysInMonth }).map((_, idx) => {
+                        const d = idx + 1;
+                        const dateStr = `${activityYear}-${String(activityMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        const dayExpenses = monthlyActivityExpenses.filter(e => e.date === dateStr);
+
+                        // Group expenses by category
+                        const catSums: { [catId: string]: { category: any; amount: number } } = {};
+                        dayExpenses.forEach(exp => {
+                          const cat = exp.category;
+                          if (!cat) return;
+                          if (!catSums[cat.id]) {
+                            catSums[cat.id] = { category: cat, amount: 0 };
+                          }
+                          catSums[cat.id].amount += exp.amount;
+                        });
+
+                        const sortedCats = Object.values(catSums).sort((a, b) => b.amount - a.amount);
+                        const primaryCatColor = sortedCats.length > 0 ? sortedCats[0].category.color : null;
+                        const hasExpenses = dayExpenses.length > 0;
+
+                        return (
+                          <div
+                            key={`day-${d}`}
+                            className={cn(
+                              "group/day relative flex flex-col items-center justify-between p-0.5 sm:p-1 aspect-square border rounded-lg transition-all duration-200 cursor-pointer select-none",
+                              hasExpenses 
+                                ? "hover:scale-[1.03] hover:shadow-xs" 
+                                : "border-border/20 hover:bg-muted/20"
+                            )}
+                            style={primaryCatColor ? { 
+                              backgroundColor: primaryCatColor + '1f', 
+                              borderColor: primaryCatColor + '50' 
+                            } : {
+                              borderColor: 'transparent'
+                            }}
+                          >
+                            <span className={cn(
+                              "text-[9px] font-bold", 
+                              hasExpenses ? "text-foreground font-black" : "text-muted-foreground/75"
+                            )}>
+                              {d}
+                            </span>
+
+                            {hasExpenses && (
+                              <div className="flex flex-wrap gap-0.5 max-w-full justify-center mt-auto">
+                                {sortedCats.slice(0, 3).map(c => (
+                                  <span
+                                    key={c.category.id}
+                                    className="h-1 w-1 rounded-full shrink-0 border border-background"
+                                    style={{ backgroundColor: c.category.color }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* CSS Tooltip */}
+                            {hasExpenses && (
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 sm:w-52 p-3 rounded-xl bg-card border border-border/80 shadow-xl pointer-events-none hidden group-hover/day:block z-50 animate-in fade-in duration-200">
+                                <p className="text-[10px] font-extrabold text-muted-foreground border-b border-border/50 pb-1.5 mb-1.5">
+                                  {new Date(activityYear, activityMonth, d).toLocaleDateString(i18n.language || undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </p>
+                                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
+                                  {dayExpenses.map(exp => (
+                                    <div key={exp.id} className="flex justify-between items-center text-[9px] sm:text-[10px] font-bold">
+                                      <div className="flex items-center gap-1.5 truncate max-w-[110px]">
+                                        <span 
+                                          className="h-1.5 w-1.5 rounded-full shrink-0" 
+                                          style={{ backgroundColor: exp.category?.color || '#6b7280' }}
+                                        />
+                                        <span className="truncate text-foreground/90">
+                                          {exp.store?.name || exp.notes || exp.category?.name || 'Expense'}
+                                        </span>
+                                      </div>
+                                      <span className="font-mono text-rose-500 font-extrabold shrink-0">
+                                        -€{exp.amount.toFixed(2)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="text-[10px] font-black text-foreground border-t border-border/50 pt-1.5 mt-1.5 flex justify-between">
+                                  <span>Daily Total:</span>
+                                  <span className="font-mono">€{dayExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+
+                    {/* Next month padding cells */}
+                    {(() => {
+                      const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+                      const getFirstDayIndex = (y: number, m: number) => {
+                        const day = new Date(y, m, 1).getDay();
+                        return day === 0 ? 6 : day - 1;
+                      };
+                      const startPadding = getFirstDayIndex(activityYear, activityMonth);
+                      const daysInMonth = getDaysInMonth(activityYear, activityMonth);
+                      const totalCells = startPadding + daysInMonth;
+                      const remainingCells = (7 - (totalCells % 7)) % 7;
+                      const pad = [];
+                      for (let i = 1; i <= remainingCells; i++) {
+                        pad.push(
+                          <div 
+                            key={`next-${i}`} 
+                            className="aspect-square flex items-center justify-center text-[9px] text-muted-foreground/30 font-bold border border-border/5 rounded-lg bg-muted/5 select-none"
+                          >
+                            {i}
+                          </div>
+                        );
+                      }
+                      return pad;
+                    })()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* MONTHLY COMPARISON TREND */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <LineIcon className="h-4.5 w-4.5 text-rose-500" />
-                  {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
+                  <BarChart2 className="h-4.5 w-4.5 text-primary" />
+                  Spending Comparison
                 </CardTitle>
-                <CardDescription>
-                  {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
-                </CardDescription>
-              </div>
-              <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
-                <button
-                  type="button"
-                  onClick={() => setTrendView('weekly')}
-                  className={cn(
-                    "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                    trendView === 'weekly' 
-                      ? "bg-background text-foreground shadow-xs border border-border/30" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Weekly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTrendView('daily')}
-                  className={cn(
-                    "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                    trendView === 'daily' 
-                      ? "bg-background text-foreground shadow-xs border border-border/30" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  Daily
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="h-64 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
-                  data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                  <XAxis 
-                    dataKey={trendView === 'weekly' ? 'week' : 'date'} 
-                    stroke={textColor} 
-                    style={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                  />
-                  <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderColor: isDark ? '#334155' : '#e2e8f0',
-                      borderRadius: '12px',
-                    }}
-                    itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                    formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="#f43f5e"
-                    strokeWidth={3}
-                    dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+                <CardDescription>Expense historical tracking totals</CardDescription>
+              </CardHeader>
+              <CardContent className="h-64 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderRadius: '12px',
+                      }}
+                      itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="expenses"
+                      stroke="#f43f5e"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorExp)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* INCOME VS EXPENSE CASHFLOW AREA */}
-          <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Coins className="h-4.5 w-4.5 text-emerald-500" />
-                {t('analytics.cashFlow')}
-              </CardTitle>
-              <CardDescription>Monthly inflows vs outflows comparison</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                  <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderColor: isDark ? '#334155' : '#e2e8f0',
-                      borderRadius: '12px',
-                    }}
-                    itemStyle={{ fontWeight: 'bold' }}
-                    formatter={(value) => [`€${Number(value).toFixed(2)}`]}
-                  />
-                  <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <Bar dataKey="income" name={t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expenses" name={t('analytics.expenses')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* MONTHLY COMPARISON TREND */}
-          <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <BarChart2 className="h-4.5 w-4.5 text-primary" />
-                Monthly Spending Comparison
-              </CardTitle>
-              <CardDescription>Expense historical tracking totals</CardDescription>
-            </CardHeader>
-            <CardContent className="h-64 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                  <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderColor: isDark ? '#334155' : '#e2e8f0',
-                      borderRadius: '12px',
-                    }}
-                    itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                    formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="expenses"
-                    stroke="#f43f5e"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorExp)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* TOP STORES THIS MONTH */}
-          <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Store className="h-4.5 w-4.5 text-indigo-500" />
-                Top Stores (This Month)
-              </CardTitle>
-              <CardDescription>Top 5 stores you spent the most at this month</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {topStores.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged this month.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {topStores.map((store, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px]">
-                          {index + 1}
+          {/* ROW 3: TOP STORES & PRODUCTS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* TOP STORES THIS MONTH */}
+            <Card className="hover:border-primary/20 transition-all">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Store className="h-4.5 w-4.5 text-indigo-500" />
+                  Top Stores (This Month)
+                </CardTitle>
+                <CardDescription>Top 5 stores you spent the most at this month</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {topStores.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged this month.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topStores.map((store, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px]">
+                            {index + 1}
+                          </span>
+                          <span className="text-foreground/90">{store.name}</span>
+                        </div>
+                        <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                          €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
-                        <span className="text-foreground/90">{store.name}</span>
                       </div>
-                      <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                        €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* TOP BOUGHT PRODUCTS */}
-          <Card className="hover:border-primary/20 transition-all">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <ShoppingBag className="h-4.5 w-4.5 text-violet-500" />
-                Product Purchases Analysis
-              </CardTitle>
-              <CardDescription>Top products bought by item breakdown</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2">
-              {topProducts.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center font-medium">No itemized products logged yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {topProducts.map((prod, index) => (
-                    <div key={index} className="flex items-center justify-between p-2.5 rounded-xl border border-border/30 bg-muted/10 font-semibold text-xs">
-                      <div>
-                        <p className="text-foreground/90 font-bold">{prod.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
+            {/* TOP BOUGHT PRODUCTS */}
+            <Card className="hover:border-primary/20 transition-all">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <ShoppingBag className="h-4.5 w-4.5 text-violet-500" />
+                  Product Purchases Analysis
+                </CardTitle>
+                <CardDescription>Top products bought by item breakdown</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {topProducts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No itemized products logged yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {topProducts.map((prod, index) => (
+                      <div key={index} className="flex items-center justify-between p-2.5 rounded-xl border border-border/30 bg-muted/10 font-semibold text-xs">
+                        <div>
+                          <p className="text-foreground/90 font-bold">{prod.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
+                        </div>
+                        <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                          €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       </div>
-                      <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                        €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>

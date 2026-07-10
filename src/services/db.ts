@@ -421,6 +421,12 @@ function setLocalItems<T>(key: string, items: T[]) {
   localStorage.setItem(key, JSON.stringify(items));
 }
 
+const notifyDataChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('budget-buddy-data-change'));
+  }
+};
+
 // =========================================================================
 // DATA ACCESS LAYER EXPORTS
 // =========================================================================
@@ -453,14 +459,16 @@ export const db = {
       };
       accounts.push(newAcc);
       setLocalItems('bb-accounts', accounts);
+      notifyDataChange();
       return newAcc;
     }
     const { data, error } = await supabase
       .from('accounts')
-      .insert({ ...account, user_id: userId })
+      .insert({ user_id: userId, ...account })
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -493,6 +501,7 @@ export const db = {
       };
       categories.push(newCat);
       setLocalItems('bb-categories', categories);
+      notifyDataChange();
       return newCat;
     }
     const { data, error } = await supabase
@@ -501,6 +510,7 @@ export const db = {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -545,6 +555,7 @@ export const db = {
       };
       stores.push(newStore);
       setLocalItems('bb-stores', stores);
+      notifyDataChange();
       return newStore;
     }
     // Try to find first or insert
@@ -564,6 +575,7 @@ export const db = {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -622,6 +634,7 @@ export const db = {
       });
       setLocalItems('bb-accounts', updatedAccounts);
 
+      notifyDataChange();
       return newExp;
     }
 
@@ -631,6 +644,7 @@ export const db = {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -678,6 +692,7 @@ export const db = {
         setLocalItems('bb-accounts', updatedAccounts);
       }
 
+      notifyDataChange();
       return newExp;
     }
 
@@ -688,6 +703,7 @@ export const db = {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -710,6 +726,7 @@ export const db = {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return;
     }
 
@@ -718,6 +735,7 @@ export const db = {
       .delete()
       .eq('id', expenseId);
     if (error) throw error;
+    notifyDataChange();
   },
 
   // INCOME
@@ -771,6 +789,7 @@ export const db = {
       });
       setLocalItems('bb-accounts', updatedAccounts);
 
+      notifyDataChange();
       return newInc;
     }
 
@@ -780,6 +799,7 @@ export const db = {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -802,6 +822,7 @@ export const db = {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return;
     }
 
@@ -810,6 +831,7 @@ export const db = {
       .delete()
       .eq('id', incomeId);
     if (error) throw error;
+    notifyDataChange();
   },
 
   // RECEIPTS & OCR PREFILL MOCKUP
@@ -1080,6 +1102,7 @@ interface ReceiptAnalysis {
       };
       assets.push(newAsset);
       setLocalItems('bb-permanent-assets', assets);
+      notifyDataChange();
       return newAsset;
     }
     const { data, error } = await supabase
@@ -1088,6 +1111,7 @@ interface ReceiptAnalysis {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -1097,6 +1121,7 @@ interface ReceiptAnalysis {
       const assets = getLocalItems<PermanentAsset>('bb-permanent-assets');
       const filtered = assets.filter(a => a.id !== id);
       setLocalItems('bb-permanent-assets', filtered);
+      notifyDataChange();
       return;
     }
     const { error } = await supabase
@@ -1104,6 +1129,7 @@ interface ReceiptAnalysis {
       .delete()
       .eq('id', id);
     if (error) throw error;
+    notifyDataChange();
   },
 
   // USER SESSIONS / DEVICES
@@ -1246,6 +1272,7 @@ interface ReceiptAnalysis {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return newDep;
     }
     const { data, error } = await supabase
@@ -1254,6 +1281,7 @@ interface ReceiptAnalysis {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -1296,6 +1324,7 @@ interface ReceiptAnalysis {
         }
         setLocalItems('bb-accounts', updatedAccounts);
       }
+      notifyDataChange();
       return newDep;
     }
     const { data, error } = await supabase
@@ -1305,6 +1334,7 @@ interface ReceiptAnalysis {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -1326,6 +1356,7 @@ interface ReceiptAnalysis {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return;
     }
     const { error } = await supabase
@@ -1333,6 +1364,7 @@ interface ReceiptAnalysis {
       .delete()
       .eq('id', depositId);
     if (error) throw error;
+    notifyDataChange();
   },
 
   // LOANS
@@ -1385,6 +1417,7 @@ interface ReceiptAnalysis {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return newLoan;
     }
     const { data, error } = await supabase
@@ -1399,6 +1432,7 @@ interface ReceiptAnalysis {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -1456,6 +1490,7 @@ interface ReceiptAnalysis {
         }
         setLocalItems('bb-accounts', updatedAccounts);
       }
+      notifyDataChange();
       return newLoan;
     }
 
@@ -1466,6 +1501,7 @@ interface ReceiptAnalysis {
       .select()
       .single();
     if (error) throw error;
+    notifyDataChange();
     return data;
   },
 
@@ -1503,6 +1539,7 @@ interface ReceiptAnalysis {
       }
 
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return;
     }
     const { error } = await supabase
@@ -1510,6 +1547,7 @@ interface ReceiptAnalysis {
       .delete()
       .eq('id', loanId);
     if (error) throw error;
+    notifyDataChange();
   },
 
   createLoanPayment: async (userId: string, loanId: string, payment: Omit<LoanPayment, 'id'>): Promise<Loan> => {
@@ -1551,6 +1589,7 @@ interface ReceiptAnalysis {
         return a;
       });
       setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
       return updatedLoan;
     }
 
@@ -1594,6 +1633,7 @@ interface ReceiptAnalysis {
       .eq('id', payment.account_id);
     if (accUpdateError) throw accUpdateError;
 
+    notifyDataChange();
     return updatedLoan;
   },
 
