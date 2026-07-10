@@ -48,7 +48,7 @@ export const Layout: React.FC = () => {
       <div className="md:pl-64 min-h-screen flex flex-col transition-all duration-200">
         
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
+        <header className="sticky top-0 z-30 h-[calc(4rem+env(safe-area-inset-top))] safe-pt border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
           <div className="relative">
             <button 
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
