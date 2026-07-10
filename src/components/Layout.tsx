@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User, Settings as SettingsIcon } from 'lucide-react';
+import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User } from 'lucide-react';
 import { Button } from './ui';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -93,16 +93,6 @@ export const Layout: React.FC = () => {
                   >
                     <User className="h-4 w-4 text-muted-foreground" />
                     Profile Settings
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsProfileDropdownOpen(false);
-                      navigate('/developer');
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors cursor-pointer border-none text-left"
-                  >
-                    <SettingsIcon className="h-4 w-4 text-muted-foreground" />
-                    Developer Console
                   </button>
                   <div className="h-px bg-border/60 my-1" />
                   <button

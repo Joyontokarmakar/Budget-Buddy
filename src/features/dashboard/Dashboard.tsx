@@ -9,7 +9,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -22,6 +22,7 @@ export const Dashboard: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
+  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
@@ -560,17 +561,76 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Unpaid Past Bills Card */}
-      {getUnpaidPastBills().length > 0 && (
-        <Card className="bg-destructive/5 border-destructive/20 border shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+      {/* Pending Actions Overview Grid */}
+      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          
+          {/* Unpaid Bills Box */}
+          {getUnpaidPastBills().length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'bills' ? null : 'bills')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'bills' 
+                  ? "bg-destructive/10 border-destructive/40 ring-2 ring-destructive/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shadow-inner">
+                  <AlertCircle className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Unpaid Past Bills
+                  </span>
+                  <span className="text-sm font-extrabold text-destructive mt-0.5 block">
+                    {getUnpaidPastBills().length} {t('expenses.pending')}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'bills' ? 'rotate-180 text-destructive' : '')} />
+            </div>
+          )}
+
+          {/* Unsettled Loans Box */}
+          {activeTakenLoans.length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'loans' ? null : 'loans')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'loans' 
+                  ? "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
+                  <AlertTriangle className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Outstanding Loans
+                  </span>
+                  <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400 mt-0.5 block">
+                    {activeTakenLoans.length} Unsettled
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'loans' ? 'rotate-180 text-amber-500' : '')} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Expanded Bills Details Panel */}
+      {expandedSection === 'bills' && getUnpaidPastBills().length > 0 && (
+        <Card className="bg-destructive/5 border-destructive/20 border shadow-xs animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4.5 w-4.5 animate-pulse shrink-0" />
+              <AlertCircle className="h-4.5 w-4.5 shrink-0" />
               {t('expenses.unpaidBillsTitle')}
             </CardTitle>
-            <span className="text-[9px] font-extrabold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20 tracking-wide uppercase">
-              {getUnpaidPastBills().length} {t('expenses.pending')}
-            </span>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
@@ -605,17 +665,14 @@ export const Dashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Outstanding Taken Loans Card */}
-      {activeTakenLoans.length > 0 && (
-        <Card className="bg-amber-500/5 border-amber-500/20 border shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+      {/* Expanded Loans Details Panel */}
+      {expandedSection === 'loans' && activeTakenLoans.length > 0 && (
+        <Card className="bg-amber-500/5 border-amber-500/20 border shadow-xs animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-4.5 w-4.5 animate-pulse shrink-0 text-amber-500" />
+              <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-500" />
               Outstanding Borrowed Loans
             </CardTitle>
-            <span className="text-[9px] font-extrabold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 tracking-wide uppercase">
-              {activeTakenLoans.length} Unsettled
-            </span>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
