@@ -1571,14 +1571,14 @@ export const Expenses: React.FC = () => {
                     </span>
                     <button
                       onClick={() => handleStartEdit(exp)}
-                      className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                       title="Edit transaction"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteExpense(exp.id)}
-                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                       title="Delete transaction"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1661,14 +1661,14 @@ export const Expenses: React.FC = () => {
                                 </div>
                                 <button
                                   onClick={() => handleStartEdit(exp)}
-                                  className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                                  className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
                                   title="Edit transaction"
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteExpense(exp.id)}
-                                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                                  className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200"
                                   title="Delete transaction"
                                 >
                                   <Trash2 className="h-4 w-4" />
