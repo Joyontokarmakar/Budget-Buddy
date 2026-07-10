@@ -9,11 +9,11 @@ import { cn } from '../../utils/cn';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
-import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar, Sparkles, Pencil } from 'lucide-react';
+import { ArrowUpRight, Plus, Calculator, Coins, AlertCircle, FileText, Upload, Check, Search, Trash2, ChevronDown, ChevronRight, Calendar, Sparkles, Pencil, Key } from 'lucide-react';
 
 export const Expenses: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { profile } = useAuthStore();
+  const { profile, updateProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
@@ -58,6 +58,12 @@ export const Expenses: React.FC = () => {
     items?: any[];
     discount?: number;
   } | null>(null);
+
+  // Gemini API Key Setup Dialog State
+  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [modalApiKey, setModalApiKey] = useState('');
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
   // Edit Mode State
   const [editingExpense, setEditingExpense] = useState<ExpenseWithDetails | null>(null);
@@ -281,6 +287,44 @@ export const Expenses: React.FC = () => {
     } finally {
       setUploadingReceipt(false);
     }
+  };
+
+  const handleScanClick = () => {
+    if (!profile?.gemini_api_key) {
+      setApiKeyError(null);
+      setModalApiKey('');
+      setIsApiKeyDialogOpen(true);
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!modalApiKey.trim() || !profile) return;
+    setIsSavingApiKey(true);
+    setApiKeyError(null);
+    try {
+      const { error: updateError } = await updateProfile({
+        gemini_api_key: modalApiKey.trim()
+      });
+      if (updateError) throw new Error(updateError);
+      setIsApiKeyDialogOpen(false);
+      // Wait briefly for state updates, then trigger scanning
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 200);
+    } catch (err: any) {
+      setApiKeyError(err.message || 'Failed to save API Key');
+    } finally {
+      setIsSavingApiKey(false);
+    }
+  };
+
+  const handleUseMockMode = () => {
+    setIsApiKeyDialogOpen(false);
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 200);
   };
 
   const handleOcrDemo = async () => {
@@ -1025,7 +1069,7 @@ export const Expenses: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="h-8 text-xs gap-1.5"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleScanClick}
                 loading={uploadingReceipt}
               >
                 <Upload className="h-3.5 w-3.5" />
@@ -1901,6 +1945,93 @@ export const Expenses: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* GEMINI API KEY SETUP DIALOG */}
+      <Dialog
+        isOpen={isApiKeyDialogOpen}
+        onClose={() => setIsApiKeyDialogOpen(false)}
+        title="Gemini API Key Required"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground leading-normal">
+            To scan and extract details from real receipts, you need a Gemini API Key.{' '}
+            <Link
+              to="/settings/gemini-guide"
+              className="text-primary hover:underline font-bold"
+            >
+              Don't know how to get API key?
+            </Link>
+          </p>
+
+          <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-3">
+            <div className="flex gap-2.5 items-start">
+              <Key className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-foreground">How to get a free Gemini API Key:</h4>
+                <ol className="text-[11px] text-muted-foreground list-decimal list-inside mt-2 space-y-1.5 leading-relaxed">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://aistudio.google.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-bold"
+                    >
+                      Google AI Studio <span className="inline-block text-[9px] font-normal px-1 bg-primary/10 text-primary rounded ml-0.5">External link</span>
+                    </a>.
+                  </li>
+                  <li>Sign in with your Google account.</li>
+                  <li>Click on the <strong>"Create API Key"</strong> button.</li>
+                  <li>Copy your key (starts with <code>AIzaSy...</code>) and paste it below.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          {apiKeyError && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold">
+              {apiKeyError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Input
+              type="password"
+              label="Enter Gemini API Key"
+              placeholder="Paste your key here (AIzaSy...)"
+              value={modalApiKey}
+              onChange={(e) => setModalApiKey(e.target.value)}
+              className="font-mono text-xs"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 justify-between pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleUseMockMode}
+              className="text-muted-foreground hover:text-foreground text-xs h-9 order-3 sm:order-1"
+            >
+              Try Mock Mode
+            </Button>
+            <div className="flex gap-2 order-1 sm:order-2">
+              <Button variant="outline" size="sm" onClick={() => setIsApiKeyDialogOpen(false)} className="h-9 text-xs">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveApiKey}
+                loading={isSavingApiKey}
+                disabled={!modalApiKey.trim()}
+                size="sm"
+                className="h-9 text-xs gap-1.5"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Save & Scan
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
 
       {/* OCR PREFILL CONFIRMATION DIALOG */}
       <Dialog

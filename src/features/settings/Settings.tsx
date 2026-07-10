@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession } from '../../types';
@@ -442,13 +443,26 @@ export const Settings: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
-              <Input
-                type="password"
-                label="Gemini API Key"
-                placeholder="AIzaSy..."
-                value={geminiApiKey}
-                onChange={(e) => setGeminiApiKey(e.target.value)}
-              />
+              <div className="space-y-1.5">
+                <Input
+                  type="password"
+                  label="Gemini API Key"
+                  placeholder="AIzaSy..."
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                />
+                <div className="flex flex-col gap-0.5 ml-1">
+                  <p className="text-[10.5px] text-muted-foreground leading-normal">
+                    Used for scanning receipts and automatically extracting items and details.
+                  </p>
+                  <Link
+                    to="/settings/gemini-guide"
+                    className="text-[10.5px] text-primary hover:underline font-bold self-start mt-0.5"
+                  >
+                    Don't know how to get API key?
+                  </Link>
+                </div>
+              </div>
               <Input
                 label={t('settings.email')}
                 value={email}

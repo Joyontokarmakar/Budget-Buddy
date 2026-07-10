@@ -15,6 +15,7 @@ import { Analytics } from './features/analytics/Analytics';
 import { Reports } from './features/reports/Reports';
 import { Assets } from './features/assets/Assets';
 import { Settings } from './features/settings/Settings';
+import { GeminiGuide } from './features/settings/GeminiGuide';
 import { Developer } from './features/developer/Developer';
 import { DepositsLoans } from './features/deposits-loans/DepositsLoans';
 
@@ -82,6 +83,8 @@ function SEOTracker() {
       pageTitle = 'Download Financial Statements & Reports | Budget buddy Student';
     } else if (path.startsWith('/assets')) {
       pageTitle = 'Permanent Assets & Hardware Purchases Tracker | Budget buddy Student';
+    } else if (path.startsWith('/settings/gemini-guide')) {
+      pageTitle = 'Gemini API Key Setup Guide | Budget buddy Student';
     } else if (path.startsWith('/settings')) {
       pageTitle = 'Student Budget Limit & Profile Settings | Budget buddy Student';
     } else if (path.startsWith('/developer')) {
@@ -142,6 +145,7 @@ function App() {
               <Route path="reports" element={<Reports />} />
               <Route path="assets" element={<Assets />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="settings/gemini-guide" element={<GeminiGuide />} />
               <Route path="developer" element={<Developer />} />
             </Route>
 
