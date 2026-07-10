@@ -284,13 +284,20 @@ export const DepositsLoans: React.FC = () => {
           <p className="text-xs text-muted-foreground">Manage deposits, tracking borrowed funds and loans provided to others</p>
         </div>
         <div className="flex gap-2">
-          {activeTab === 'deposits' ? (
-            <Button onClick={() => setIsDepositOpen(true)}>
+          {activeTab === 'deposits' && (
+            <Button 
+              onClick={() => setIsDepositOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/10 border-none transition-all duration-200 active:scale-[0.98]"
+            >
               <Plus className="h-4 w-4 mr-2" />
               {t('depositsLoans.addDeposit')}
             </Button>
-          ) : (
-            <Button onClick={() => setIsLoanOpen(true)}>
+          )}
+          {activeTab === 'loans' && (
+            <Button 
+              onClick={() => setIsLoanOpen(true)}
+              className="bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-500/10 border-none transition-all duration-200 active:scale-[0.98]"
+            >
               <Plus className="h-4 w-4 mr-2" />
               {t('depositsLoans.addLoan')}
             </Button>
