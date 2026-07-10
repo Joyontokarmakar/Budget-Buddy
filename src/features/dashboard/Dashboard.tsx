@@ -688,80 +688,6 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Smart Spending Insights */}
-      <Card className="bg-gradient-to-tr from-violet-500/5 to-indigo-500/5 border border-violet-500/10 shadow-sm animate-fade-in">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <BrainCircuit className="h-4.5 w-4.5 text-primary shrink-0" />
-            Smart Spending Insights
-          </CardTitle>
-          <span className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
-            <Sparkles className="h-3 w-3 animate-pulse" /> AI Engine
-          </span>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          {/* Grocery comparison insight */}
-          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Groceries Trajectory</span>
-              <div className={cn(
-                "h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white",
-                groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-slate-500"
-              )}>
-                {groceriesDiffPercent > 0 ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? (
-                  <TrendingDown className="h-4 w-4" />
-                ) : (
-                  <Coins className="h-4 w-4" />
-                )}
-              </div>
-            </div>
-            
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className={cn(
-                "text-3xl font-extrabold tracking-tight",
-                groceriesDiffPercent > 0 ? "text-rose-600 dark:text-rose-400" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-              )}>
-                {groceriesLastMonthSum > 0 
-                  ? `${groceriesDiffPercent > 0 ? '+' : ''}${groceriesDiffPercent.toFixed(0)}%`
-                  : `€${groceriesThisMonthSum.toFixed(2)}`
-                }
-              </span>
-              <span className="text-[10px] font-semibold text-muted-foreground">this month</span>
-            </div>
-
-            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
-              {groceriesLastMonthSum > 0 
-                ? `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'} compared to last month (€${groceriesLastMonthSum.toFixed(0)}).`
-                : 'No previous month grocery records available for trend analysis.'
-              }
-            </p>
-          </div>
-
-          {/* Daily average insight */}
-          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Daily Avg Spending</span>
-              <div className="h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white bg-primary">
-                <Coins className="h-4 w-4" />
-              </div>
-            </div>
-            
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-foreground">
-                €{dailyAverage.toFixed(2)}
-              </span>
-              <span className="text-[10px] font-semibold text-muted-foreground">/ day</span>
-            </div>
-
-            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
-              To stay within your budget limit, keep your daily average spending under <strong className="text-foreground font-semibold">€{targetDailyLimit.toFixed(2)}</strong>.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Pending Actions Overview Grid */}
       {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -924,6 +850,80 @@ export const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Smart Spending Insights */}
+      <Card className="bg-gradient-to-tr from-violet-500/5 to-indigo-500/5 border border-violet-500/10 shadow-sm animate-fade-in">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <BrainCircuit className="h-4.5 w-4.5 text-primary shrink-0" />
+            Smart Spending Insights
+          </CardTitle>
+          <span className="text-[9px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
+            <Sparkles className="h-3 w-3 animate-pulse" /> AI Engine
+          </span>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* Grocery comparison insight */}
+          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Groceries Trajectory</span>
+              <div className={cn(
+                "h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white",
+                groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-slate-500"
+              )}>
+                {groceriesDiffPercent > 0 ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : (
+                  <Coins className="h-4 w-4" />
+                )}
+              </div>
+            </div>
+            
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className={cn(
+                "text-3xl font-extrabold tracking-tight",
+                groceriesDiffPercent > 0 ? "text-rose-600 dark:text-rose-400" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+              )}>
+                {groceriesLastMonthSum > 0 
+                  ? `${groceriesDiffPercent > 0 ? '+' : ''}${groceriesDiffPercent.toFixed(0)}%`
+                  : `€${groceriesThisMonthSum.toFixed(2)}`
+                }
+              </span>
+              <span className="text-[10px] font-semibold text-muted-foreground">this month</span>
+            </div>
+
+            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
+              {groceriesLastMonthSum > 0 
+                ? `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'} compared to last month (€${groceriesLastMonthSum.toFixed(0)}).`
+                : 'No previous month grocery records available for trend analysis.'
+              }
+            </p>
+          </div>
+
+          {/* Daily average insight */}
+          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Daily Avg Spending</span>
+              <div className="h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white bg-primary">
+                <Coins className="h-4 w-4" />
+              </div>
+            </div>
+            
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold tracking-tight text-foreground">
+                €{dailyAverage.toFixed(2)}
+              </span>
+              <span className="text-[10px] font-semibold text-muted-foreground">/ day</span>
+            </div>
+
+            <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
+              To stay within your budget limit, keep your daily average spending under <strong className="text-foreground font-semibold">€{targetDailyLimit.toFixed(2)}</strong>.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Store & Product Analytics widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
