@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Account, ExpenseWithDetails, IncomeWithDetails, Category } from '../../types';
-import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner } from '../../components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner, Dialog, Input, Select } from '../../components/ui';
 import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
@@ -24,6 +24,32 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    confirmVariant?: 'primary' | 'destructive' | 'secondary';
+    showDatePicker?: boolean;
+    initialDate?: string;
+    showAccountPicker?: boolean;
+    initialAccountId?: string;
+    onConfirm: (selectedDate?: string, selectedAccountId?: string) => void;
+  } | null>(null);
+  const [modalDate, setModalDate] = useState('');
+  const [modalAccountId, setModalAccountId] = useState('');
+
+  useEffect(() => {
+    if (confirmState?.isOpen) {
+      if (confirmState.initialDate) {
+        setModalDate(confirmState.initialDate);
+      }
+      if (confirmState.initialAccountId) {
+        setModalAccountId(confirmState.initialAccountId);
+      }
+    }
+  }, [confirmState]);
 
   const loadDashboardData = async () => {
     if (!profile) return;
@@ -219,29 +245,47 @@ export const Dashboard: React.FC = () => {
     }
     
     const accountIdToUse = bill.preferredAccountId || accounts[0].id;
-    const billCat = categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase());
-    const categoryId = billCat ? billCat.id : null;
+    const account = accounts.find(a => a.id === accountIdToUse) || accounts[0];
+    const accountName = account ? account.name : 'selected account';
     
-    try {
-      await db.createExpense(profile.id, {
-        amount: bill.amount,
-        date: new Date().toISOString().split('T')[0],
-        category_id: categoryId,
-        store_id: null,
-        payment_account_id: accountIdToUse,
-        notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
-        receipt_url: null,
-        items: null
-      });
-      
-      setQuickLogMsg(`${bill.name} for ${formatMonthKey(bill.month)} paid and logged successfully!`);
-      setTimeout(() => setQuickLogMsg(null), 3000);
-      
-      await loadDashboardData();
-    } catch (e: any) {
-      setQuickLogMsg('Failed to pay missed bill: ' + e.message);
-      setTimeout(() => setQuickLogMsg(null), 4000);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: `Pay Missed ${bill.name}`,
+      description: `Log payment for missed ${bill.name} of €${bill.amount.toFixed(2)} using ${accountName}? It will be logged under today's date and deducted from the current month's ledger.`,
+      confirmText: 'Pay Missed Bill',
+      confirmVariant: 'primary',
+      showDatePicker: true,
+      initialDate: new Date().toISOString().split('T')[0],
+      showAccountPicker: true,
+      initialAccountId: accountIdToUse,
+      onConfirm: async (selectedDate, selectedAccountId) => {
+        const finalDate = selectedDate || new Date().toISOString().split('T')[0];
+        const finalAccountId = selectedAccountId || accountIdToUse;
+        const billCat = categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase());
+        const categoryId = billCat ? billCat.id : null;
+        
+        try {
+          await db.createExpense(profile.id, {
+            amount: bill.amount,
+            date: finalDate,
+            category_id: categoryId,
+            store_id: null,
+            payment_account_id: finalAccountId,
+            notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+            receipt_url: null,
+            items: null
+          });
+          
+          setQuickLogMsg(`${bill.name} for ${formatMonthKey(bill.month)} paid and logged successfully!`);
+          setTimeout(() => setQuickLogMsg(null), 3000);
+          
+          await loadDashboardData();
+        } catch (e: any) {
+          setQuickLogMsg('Failed to pay missed bill: ' + e.message);
+          setTimeout(() => setQuickLogMsg(null), 4000);
+        }
+      }
+    });
   };
 
   useEffect(() => {
@@ -936,6 +980,57 @@ export const Dashboard: React.FC = () => {
           <Plus className="h-6 w-6" />
         </button>
       </div>
+
+      {/* CONFIRMATION DIALOG */}
+      <Dialog
+        isOpen={!!confirmState}
+        onClose={() => setConfirmState(null)}
+        title={confirmState?.title || ''}
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => setConfirmState(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              variant={confirmState?.confirmVariant || 'primary'} 
+              onClick={() => {
+                confirmState?.onConfirm(modalDate, modalAccountId);
+                setConfirmState(null);
+              }}
+            >
+              {confirmState?.confirmText || 'Confirm'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-muted-foreground">
+            {confirmState?.description}
+          </p>
+          {confirmState?.showDatePicker && (
+            <div className="pt-2">
+              <Input
+                type="date"
+                label={t('expenses.date')}
+                value={modalDate}
+                onChange={(e) => setModalDate(e.target.value)}
+                required
+              />
+            </div>
+          )}
+          {confirmState?.showAccountPicker && (
+            <div className="pt-2">
+              <Select
+                label={t('expenses.paymentAccount')}
+                value={modalAccountId}
+                onChange={(e) => setModalAccountId(e.target.value)}
+                options={accounts.map(a => ({ value: a.id, label: a.name }))}
+                required
+              />
+            </div>
+          )}
+        </div>
+      </Dialog>
     </div>
   );
 };
