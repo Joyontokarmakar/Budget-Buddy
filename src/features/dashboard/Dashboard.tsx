@@ -561,168 +561,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Pending Actions Overview Grid */}
-      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          
-          {/* Unpaid Bills Box */}
-          {getUnpaidPastBills().length > 0 && (
-            <div
-              onClick={() => setExpandedSection(expandedSection === 'bills' ? null : 'bills')}
-              className={cn(
-                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
-                expandedSection === 'bills' 
-                  ? "bg-destructive/10 border-destructive/40 ring-2 ring-destructive/20" 
-                  : "hover:bg-muted/40 border-border/80"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shadow-inner">
-                  <AlertCircle className="h-5 w-5 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Unpaid Past Bills
-                  </span>
-                  <span className="text-sm font-extrabold text-destructive mt-0.5 block">
-                    {getUnpaidPastBills().length} {t('expenses.pending')}
-                  </span>
-                </div>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'bills' ? 'rotate-180 text-destructive' : '')} />
-            </div>
-          )}
 
-          {/* Unsettled Loans Box */}
-          {activeTakenLoans.length > 0 && (
-            <div
-              onClick={() => setExpandedSection(expandedSection === 'loans' ? null : 'loans')}
-              className={cn(
-                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
-                expandedSection === 'loans' 
-                  ? "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/20" 
-                  : "hover:bg-muted/40 border-border/80"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
-                  <AlertTriangle className="h-5 w-5 animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Outstanding Loans
-                  </span>
-                  <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400 mt-0.5 block">
-                    {activeTakenLoans.length} Unsettled
-                  </span>
-                </div>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'loans' ? 'rotate-180 text-amber-500' : '')} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Expanded Bills Details Panel */}
-      {expandedSection === 'bills' && getUnpaidPastBills().length > 0 && (
-        <Card className="bg-destructive/5 border-destructive/20 border shadow-xs animate-in fade-in slide-in-from-top-3 duration-250">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4.5 w-4.5 shrink-0" />
-              {t('expenses.unpaidBillsTitle')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
-              {t('expenses.unpaidBillsSubtitle')} Click "Pay Now" to quickly record them using your default account.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
-              {getUnpaidPastBills().map((bill) => (
-                <div key={`${bill.cat}-${bill.month}`} className="flex items-center justify-between p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs">
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-extrabold text-foreground truncate">{bill.name}</span>
-                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
-                      {formatMonthKey(bill.month)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-xs font-black text-foreground">
-                      €{bill.amount.toFixed(2)}
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => handlePayMissedBillDirect(bill)}
-                      className="h-6 text-[9px] font-extrabold px-2.5 bg-destructive hover:bg-destructive/90 text-white cursor-pointer shadow-xs rounded-xl border border-destructive/30 shrink-0"
-                    >
-                      {t('expenses.payNow')}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Expanded Loans Details Panel */}
-      {expandedSection === 'loans' && activeTakenLoans.length > 0 && (
-        <Card className="bg-amber-500/5 border-amber-500/20 border shadow-xs animate-in fade-in slide-in-from-top-3 duration-250">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-500" />
-              Outstanding Borrowed Loans
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
-              You have outstanding borrowed loans that need to be paid back. Click "Repay Loan" to manage them.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
-              {activeTakenLoans.map((loan) => {
-                const percentPaid = Math.min(((loan.amount - loan.remaining_amount) / loan.amount) * 100, 100);
-                return (
-                  <div key={loan.id} className="flex flex-col p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs justify-between gap-2.5">
-                    <div className="flex justify-between items-start min-w-0">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-extrabold text-foreground truncate">{loan.person}</span>
-                        <span className="text-[9px] text-muted-foreground font-bold mt-0.5">
-                          Borrowed: €{loan.amount.toFixed(2)}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs font-black text-rose-500 shrink-0">
-                        Owed: €{loan.remaining_amount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[8px] font-bold text-muted-foreground">
-                        <span>Repaid Progress</span>
-                        <span>{percentPaid.toFixed(0)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-amber-500 transition-all duration-300" 
-                          style={{ width: `${percentPaid}%` }} 
-                        />
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => navigate('/deposits-loans')}
-                      className="h-6 text-[9px] font-extrabold w-full bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-xs rounded-xl border border-amber-600/30 mt-1 shrink-0"
-                    >
-                      Repay Loan
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Main KPI Grid - Revolut Style */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -922,6 +761,169 @@ export const Dashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending Actions Overview Grid */}
+      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          
+          {/* Unpaid Bills Box */}
+          {getUnpaidPastBills().length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'bills' ? null : 'bills')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'bills' 
+                  ? "bg-destructive/10 border-destructive/40 ring-2 ring-destructive/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shadow-inner">
+                  <AlertCircle className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Unpaid Past Bills
+                  </span>
+                  <span className="text-sm font-extrabold text-destructive mt-0.5 block">
+                    {getUnpaidPastBills().length} {t('expenses.pending')}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'bills' ? 'rotate-180 text-destructive' : '')} />
+            </div>
+          )}
+
+          {/* Unsettled Loans Box */}
+          {activeTakenLoans.length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'loans' ? null : 'loans')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'loans' 
+                  ? "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
+                  <AlertTriangle className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Outstanding Loans
+                  </span>
+                  <span className="text-sm font-extrabold text-amber-600 dark:text-amber-400 mt-0.5 block">
+                    {activeTakenLoans.length} Unsettled
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'loans' ? 'rotate-180 text-amber-500' : '')} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Expanded Bills Details Panel */}
+      {expandedSection === 'bills' && getUnpaidPastBills().length > 0 && (
+        <Card className="bg-destructive/5 border-destructive/20 border shadow-xs mt-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+              {t('expenses.unpaidBillsTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              {t('expenses.unpaidBillsSubtitle')} Click "Pay Now" to quickly record them using your default account.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {getUnpaidPastBills().map((bill) => (
+                <div key={`${bill.cat}-${bill.month}`} className="flex items-center justify-between p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-extrabold text-foreground truncate">{bill.name}</span>
+                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
+                      {formatMonthKey(bill.month)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-xs font-black text-foreground">
+                      €{bill.amount.toFixed(2)}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handlePayMissedBillDirect(bill)}
+                      className="h-6 text-[9px] font-extrabold px-2.5 bg-destructive hover:bg-destructive/90 text-white cursor-pointer shadow-xs rounded-xl border border-destructive/30 shrink-0"
+                    >
+                      {t('expenses.payNow')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expanded Loans Details Panel */}
+      {expandedSection === 'loans' && activeTakenLoans.length > 0 && (
+        <Card className="bg-amber-500/5 border-amber-500/20 border shadow-xs mt-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-amber-500" />
+              Outstanding Borrowed Loans
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              You have outstanding borrowed loans that need to be paid back. Click "Repay Loan" to manage them.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {activeTakenLoans.map((loan) => {
+                const percentPaid = Math.min(((loan.amount - loan.remaining_amount) / loan.amount) * 100, 100);
+                return (
+                  <div key={loan.id} className="flex flex-col p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs justify-between gap-2.5">
+                    <div className="flex justify-between items-start min-w-0">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-extrabold text-foreground truncate">{loan.person}</span>
+                        <span className="text-[9px] text-muted-foreground font-bold mt-0.5">
+                          Borrowed: €{loan.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-black text-rose-500 shrink-0">
+                        Owed: €{loan.remaining_amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[8px] font-bold text-muted-foreground">
+                        <span>Repaid Progress</span>
+                        <span>{percentPaid.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-amber-500 transition-all duration-300" 
+                          style={{ width: `${percentPaid}%` }} 
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => navigate('/deposits-loans')}
+                      className="h-6 text-[9px] font-extrabold w-full bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-xs rounded-xl border border-amber-600/30 mt-1 shrink-0"
+                    >
+                      Repay Loan
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Store & Product Analytics widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
