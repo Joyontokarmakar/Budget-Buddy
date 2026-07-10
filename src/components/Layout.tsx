@@ -1,8 +1,9 @@
+import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, LogOut, Laptop, Globe, Search } from 'lucide-react';
+import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from './ui';
 import { GlobalSearch } from './GlobalSearch';
 
@@ -10,6 +11,7 @@ export const Layout: React.FC = () => {
   const { profile, signOut } = useAuthStore();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const currentTheme = profile?.theme_preference || 'system';
   const currentLang = profile?.preferred_language || i18n.language || 'de';
@@ -47,24 +49,75 @@ export const Layout: React.FC = () => {
         
         {/* Top Header Bar */}
         <header className="sticky top-0 z-30 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="Avatar"
-                className="h-8.5 w-8.5 rounded-full object-cover border border-border/80 shadow-xs"
-              />
-            ) : (
-              <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-tr from-primary/20 to-violet-500/20 border border-border/60 flex items-center justify-center text-primary font-black text-xs uppercase">
-                {(profile?.name || 'S').charAt(0)}
+          <div className="relative">
+            <button 
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center gap-2.5 hover:bg-muted/50 p-1.5 rounded-xl transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/10 border-none"
+            >
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Avatar"
+                  className="h-8.5 w-8.5 rounded-full object-cover border border-border/80 shadow-xs"
+                />
+              ) : (
+                <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-tr from-primary/20 to-violet-500/20 border border-border/60 flex items-center justify-center text-primary font-black text-xs uppercase">
+                  {(profile?.name || 'S').charAt(0)}
+                </div>
+              )}
+              <div className="flex flex-col min-w-0 pr-0.5">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-none mb-0.5">Welcome</span>
+                <span className="text-xs font-extrabold truncate max-w-[100px] sm:max-w-[150px] leading-tight">
+                  {profile?.name || 'Student'}
+                </span>
               </div>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/80 shrink-0" />
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {isProfileDropdownOpen && (
+              <>
+                {/* Backdrop overlay */}
+                <div 
+                  className="fixed inset-0 z-40 bg-transparent" 
+                  onClick={() => setIsProfileDropdownOpen(false)} 
+                />
+                
+                <div className="absolute left-0 mt-2 w-48 rounded-xl border border-border/80 bg-card p-1.5 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      navigate('/settings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors cursor-pointer border-none text-left"
+                  >
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    Profile Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      navigate('/developer');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors cursor-pointer border-none text-left"
+                  >
+                    <SettingsIcon className="h-4 w-4 text-muted-foreground" />
+                    Developer Console
+                  </button>
+                  <div className="h-px bg-border/60 my-1" />
+                  <button
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-none text-left"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </>
             )}
-            <div className="flex flex-col">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-none mb-0.5">Welcome</span>
-              <span className="text-xs font-extrabold truncate max-w-[120px] sm:max-w-[200px] leading-tight">
-                {profile?.name || 'Student'}
-              </span>
-            </div>
           </div>
 
           {/* Desktop Search trigger */}

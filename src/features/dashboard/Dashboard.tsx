@@ -21,6 +21,7 @@ export const Dashboard: React.FC = () => {
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
@@ -55,16 +56,18 @@ export const Dashboard: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, exps, incs, cats] = await Promise.all([
+      const [accs, exps, incs, cats, lns] = await Promise.all([
         db.getAccounts(profile.id),
         db.getExpenses(profile.id),
         db.getIncome(profile.id),
         db.getCategories(profile.id),
+        db.getLoans(profile.id),
       ]);
       setAccounts(accs);
       setExpenses(exps);
       setIncomes(incs);
       setCategories(cats);
+      setLoans(lns);
     } catch (e) {
       console.error(e);
     } finally {
@@ -325,6 +328,9 @@ export const Dashboard: React.FC = () => {
 
   // Percentage calculations
   const budgetUsedPercent = monthlyBudget > 0 ? (monthlySpending / monthlyBudget) * 100 : 0;
+
+  // Active taken loans
+  const activeTakenLoans = loans.filter(l => l.status === 'active' && l.type === 'taken');
 
   // Recent transactions (merged and sorted)
   const recentTransactions: {
@@ -594,6 +600,68 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Outstanding Taken Loans Card */}
+      {activeTakenLoans.length > 0 && (
+        <Card className="bg-amber-500/5 border-amber-500/20 border shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-4.5 w-4.5 animate-pulse shrink-0 text-amber-500" />
+              Outstanding Borrowed Loans
+            </CardTitle>
+            <span className="text-[9px] font-extrabold bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 tracking-wide uppercase">
+              {activeTakenLoans.length} Unsettled
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              You have outstanding borrowed loans that need to be paid back. Click "Repay Loan" to manage them.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {activeTakenLoans.map((loan) => {
+                const percentPaid = Math.min(((loan.amount - loan.remaining_amount) / loan.amount) * 100, 100);
+                return (
+                  <div key={loan.id} className="flex flex-col p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs justify-between gap-2.5">
+                    <div className="flex justify-between items-start min-w-0">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-extrabold text-foreground truncate">{loan.person}</span>
+                        <span className="text-[9px] text-muted-foreground font-bold mt-0.5">
+                          Borrowed: €{loan.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-black text-rose-500 shrink-0">
+                        Owed: €{loan.remaining_amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[8px] font-bold text-muted-foreground">
+                        <span>Repaid Progress</span>
+                        <span>{percentPaid.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-amber-500 transition-all duration-300" 
+                          style={{ width: `${percentPaid}%` }} 
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => navigate('/deposits-loans')}
+                      className="h-6 text-[9px] font-extrabold w-full bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-xs rounded-xl border border-amber-600/30 mt-1 shrink-0"
+                    >
+                      Repay Loan
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

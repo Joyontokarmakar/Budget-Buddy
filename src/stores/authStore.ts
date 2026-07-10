@@ -180,9 +180,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .single();
 
         if (profile) {
-          set({ profile });
-          applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
-          await checkAndRegisterSession(profile, session.user);
+          let updatedProfile = profile;
+          const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+          if (!profile.avatar_url && googleAvatar) {
+            try {
+              const { data: newProf } = await supabase
+                .from('profiles')
+                .update({ avatar_url: googleAvatar })
+                .eq('id', profile.id)
+                .select()
+                .single();
+              if (newProf) {
+                updatedProfile = newProf;
+              }
+            } catch (err) {
+              console.error('Error syncing Google avatar:', err);
+            }
+          }
+          set({ profile: updatedProfile });
+          applyLanguageAndTheme(updatedProfile.preferred_language, updatedProfile.theme_preference);
+          await checkAndRegisterSession(updatedProfile, session.user);
         } else if (error) {
           console.error('Error fetching profile:', error);
         }
@@ -199,9 +216,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .single();
 
           if (profile) {
-            set({ profile });
-            applyLanguageAndTheme(profile.preferred_language, profile.theme_preference);
-            await checkAndRegisterSession(profile, session.user);
+            let updatedProfile = profile;
+            const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+            if (!profile.avatar_url && googleAvatar) {
+              try {
+                const { data: newProf } = await supabase
+                  .from('profiles')
+                  .update({ avatar_url: googleAvatar })
+                  .eq('id', profile.id)
+                  .select()
+                  .single();
+                if (newProf) {
+                  updatedProfile = newProf;
+                }
+              } catch (err) {
+                console.error('Error syncing Google avatar:', err);
+              }
+            }
+            set({ profile: updatedProfile });
+            applyLanguageAndTheme(updatedProfile.preferred_language, updatedProfile.theme_preference);
+            await checkAndRegisterSession(updatedProfile, session.user);
           }
         } else {
           set({ user: null, profile: null });
