@@ -1054,7 +1054,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Floating Quick Log Actions Menu */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3.5">
+      <div className="fixed bottom-6 right-6 z-50 hidden md:flex flex-col items-end gap-3.5">
         {/* Success / Error notification toast banner */}
         {quickLogMsg && (
           <div className="mr-2 py-2.5 px-4 bg-slate-900/90 dark:bg-card/95 text-white dark:text-foreground text-xs font-bold rounded-2xl shadow-xl backdrop-blur-md border border-white/10 dark:border-border/80 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
