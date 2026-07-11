@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
+import { getCategoryColor } from '../../utils/color';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner } from '../../components/ui';
@@ -483,7 +484,7 @@ export const Analytics: React.FC = () => {
             </Card>
 
             {/* MONTHLY ACTIVITY CALENDAR */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between overflow-visible">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-1.5">
                   <CardTitle className="text-[13px] font-bold flex items-center gap-1.5 truncate">
@@ -515,9 +516,9 @@ export const Analytics: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-1 pb-3 flex-1 flex flex-col justify-center">
                 {/* Calendar Grid Container */}
-                <div className="border border-border/60 rounded-xl overflow-hidden bg-muted/10">
+                <div className="border border-border/60 rounded-xl bg-muted/10 overflow-visible">
                   {/* Weekdays Header */}
-                  <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-center py-1.5 font-bold text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-wider">
+                  <div className="grid grid-cols-7 border-b border-border/60 bg-muted/30 text-center py-1.5 font-bold text-[8px] sm:text-[9px] text-muted-foreground uppercase tracking-wider rounded-t-xl">
                     <div>M</div>
                     <div>T</div>
                     <div>W</div>
@@ -561,6 +562,11 @@ export const Analytics: React.FC = () => {
                     {(() => {
                       const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
                       const daysInMonth = getDaysInMonth(activityYear, activityMonth);
+                      const getFirstDayIndex = (y: number, m: number) => {
+                        const day = new Date(y, m, 1).getDay();
+                        return day === 0 ? 6 : day - 1;
+                      };
+                      const startPadding = getFirstDayIndex(activityYear, activityMonth);
                       
                       const monthlyActivityExpenses = expenses.filter(e => {
                         if (!e.date) return false;
@@ -586,48 +592,93 @@ export const Analytics: React.FC = () => {
                         });
 
                         const sortedCats = Object.values(catSums).sort((a, b) => b.amount - a.amount);
-                        const primaryCatColor = sortedCats.length > 0 ? sortedCats[0].category.color : null;
                         const hasExpenses = dayExpenses.length > 0;
+
+                        let cellStyle: React.CSSProperties = {};
+                        if (hasExpenses) {
+                          if (sortedCats.length === 0) {
+                            const defaultCol = '#6b7280';
+                            cellStyle = {
+                              backgroundColor: defaultCol,
+                              color: '#ffffff',
+                              borderColor: defaultCol,
+                            };
+                          } else if (sortedCats.length === 1) {
+                            const catCol = getCategoryColor(sortedCats[0].category?.color);
+                            cellStyle = {
+                              backgroundColor: catCol,
+                              color: '#ffffff',
+                              borderColor: catCol,
+                            };
+                          } else {
+                            const colors = sortedCats.map(c => getCategoryColor(c.category?.color));
+                            cellStyle = {
+                              background: `linear-gradient(135deg, ${colors.join(', ')})`,
+                              color: '#ffffff',
+                              borderColor: 'transparent',
+                            };
+                          }
+                        } else {
+                          cellStyle = {
+                            borderColor: 'transparent',
+                          };
+                        }
+
+                        const gridIndex = startPadding + d - 1;
+                        const colIndex = gridIndex % 7;
+                        const rowIndex = Math.floor(gridIndex / 7);
+
+                        // Position tooltip based on grid coordinates to avoid clipping
+                        let tooltipPositionClass = "bottom-full left-1/2 -translate-x-1/2 mb-2";
+                        if (colIndex <= 1) {
+                          tooltipPositionClass = "bottom-full left-0 mb-2";
+                        } else if (colIndex >= 5) {
+                          tooltipPositionClass = "bottom-full right-0 mb-2";
+                        }
+                        
+                        if (rowIndex <= 1) {
+                          if (colIndex <= 1) {
+                            tooltipPositionClass = "top-full left-0 mt-2";
+                          } else if (colIndex >= 5) {
+                            tooltipPositionClass = "top-full right-0 mt-2";
+                          } else {
+                            tooltipPositionClass = "top-full left-1/2 -translate-x-1/2 mt-2";
+                          }
+                        }
 
                         return (
                           <div
                             key={`day-${d}`}
                             className={cn(
-                              "group/day relative flex flex-col items-center justify-between p-0.5 sm:p-1 aspect-square border rounded-lg transition-all duration-200 cursor-pointer select-none",
+                              "group relative flex items-center justify-center aspect-square border transition-all duration-200 cursor-pointer select-none rounded-full overflow-visible hover:z-30",
                               hasExpenses 
-                                ? "hover:scale-[1.03] hover:shadow-xs" 
+                                ? "hover:scale-105 hover:shadow-md" 
                                 : "border-border/20 hover:bg-muted/20"
                             )}
-                            style={primaryCatColor ? { 
-                              backgroundColor: primaryCatColor + '1f', 
-                              borderColor: primaryCatColor + '50' 
-                            } : {
-                              borderColor: 'transparent'
-                            }}
+                            style={cellStyle}
                           >
                             <span className={cn(
-                              "text-[9px] font-bold", 
-                              hasExpenses ? "text-foreground font-black" : "text-muted-foreground/75"
+                              "text-[10px] font-bold text-center leading-none", 
+                              hasExpenses ? "text-white font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-muted-foreground/75"
                             )}>
                               {d}
                             </span>
 
-                            {hasExpenses && (
-                              <div className="flex flex-wrap gap-0.5 max-w-full justify-center mt-auto">
-                                {sortedCats.slice(0, 3).map(c => (
-                                  <span
-                                    key={c.category.id}
-                                    className="h-1 w-1 rounded-full shrink-0 border border-background"
-                                    style={{ backgroundColor: c.category.color }}
-                                  />
-                                ))}
-                              </div>
-                            )}
-
                             {/* CSS Tooltip */}
                             {hasExpenses && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 sm:w-52 p-3 rounded-xl bg-card border border-border/80 shadow-xl pointer-events-none hidden group-hover/day:block z-50 animate-in fade-in duration-200">
-                                <p className="text-[10px] font-extrabold text-muted-foreground border-b border-border/50 pb-1.5 mb-1.5">
+                              <div className={cn(
+                                "absolute w-48 sm:w-52 p-3 rounded-xl border shadow-xl pointer-events-none hidden group-hover:block z-50 animate-in fade-in duration-200",
+                                isDark 
+                                  ? "bg-slate-800 border-slate-700 text-slate-100" 
+                                  : "bg-white border-slate-200 text-slate-900",
+                                tooltipPositionClass
+                              )}>
+                                <p className={cn(
+                                  "text-[10px] font-extrabold pb-1.5 mb-1.5",
+                                  isDark 
+                                    ? "text-slate-400 border-b border-slate-700/60" 
+                                    : "text-slate-500 border-b border-slate-200/60"
+                                )}>
                                   {new Date(activityYear, activityMonth, d).toLocaleDateString(i18n.language || undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
                                 </p>
                                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-0.5">
@@ -636,9 +687,12 @@ export const Analytics: React.FC = () => {
                                       <div className="flex items-center gap-1.5 truncate max-w-[110px]">
                                         <span 
                                           className="h-1.5 w-1.5 rounded-full shrink-0" 
-                                          style={{ backgroundColor: exp.category?.color || '#6b7280' }}
+                                          style={{ backgroundColor: getCategoryColor(exp.category?.color) }}
                                         />
-                                        <span className="truncate text-foreground/90">
+                                        <span className={cn(
+                                          "truncate font-semibold",
+                                          isDark ? "text-slate-200" : "text-slate-800"
+                                        )}>
                                           {exp.store?.name || exp.notes || exp.category?.name || 'Expense'}
                                         </span>
                                       </div>
@@ -648,7 +702,12 @@ export const Analytics: React.FC = () => {
                                     </div>
                                   ))}
                                 </div>
-                                <div className="text-[10px] font-black text-foreground border-t border-border/50 pt-1.5 mt-1.5 flex justify-between">
+                                <div className={cn(
+                                  "text-[10px] font-black pt-1.5 mt-1.5 flex justify-between font-bold",
+                                  isDark 
+                                    ? "text-slate-50 border-t border-slate-700/60" 
+                                    : "text-slate-900 border-t border-slate-200/60"
+                                )}>
                                   <span>Daily Total:</span>
                                   <span className="font-mono">€{dayExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</span>
                                 </div>

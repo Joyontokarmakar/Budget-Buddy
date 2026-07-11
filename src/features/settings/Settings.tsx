@@ -7,6 +7,7 @@ import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
+import { StatusDots } from '../../components/StatusDots';
 import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -65,6 +66,9 @@ export const Settings: React.FC = () => {
 
   // Gemini API Key State
   const [geminiApiKey, setGeminiApiKey] = useState(profile?.gemini_api_key || '');
+
+  // Status Dots settings state
+  const [showStatusDots, setShowStatusDots] = useState(profile?.show_status_dots ?? true);
 
   // Session / Device states
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -149,6 +153,7 @@ export const Settings: React.FC = () => {
       setFoodBudget(profile.food_budget !== undefined && profile.food_budget !== null ? profile.food_budget.toString() : '200.00');
       setOtherBudget(profile.other_budget !== undefined && profile.other_budget !== null ? profile.other_budget.toString() : '100.00');
       setDisabledCategories(profile.disabled_categories || []);
+      setShowStatusDots(profile.show_status_dots ?? true);
     }
   }, [profile]);
 
@@ -160,7 +165,8 @@ export const Settings: React.FC = () => {
     
     const { error } = await updateProfile({ 
       name: name.trim(),
-      gemini_api_key: geminiApiKey.trim() || null
+      gemini_api_key: geminiApiKey.trim() || null,
+      show_status_dots: showStatusDots,
     });
     setProfileLoading(false);
     if (!error) {
@@ -390,24 +396,25 @@ export const Settings: React.FC = () => {
           <CardContent className="space-y-5">
             {/* Profile Avatar Uploader */}
             <div className="flex flex-col items-center gap-3 pb-3 border-b border-border/50">
-              <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+              <div className="relative group cursor-pointer h-28 w-28 flex items-center justify-center shrink-0" onClick={() => avatarInputRef.current?.click()}>
+                <StatusDots />
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt="Profile Avatar"
-                    className="h-24 w-24 rounded-full object-cover border-2 border-primary shadow-md group-hover:opacity-75 transition-opacity"
+                    className="h-[82%] w-[82%] absolute rounded-full object-cover border-2 border-primary shadow-md group-hover:opacity-75 transition-opacity z-10"
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-primary/10 to-violet-500/10 border-2 border-dashed border-primary/50 flex flex-col items-center justify-center text-primary group-hover:bg-primary/5 transition-colors">
-                    <User className="h-8 w-8 text-primary/60 mb-0.5" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-primary/70">Upload</span>
+                  <div className="h-[82%] w-[82%] absolute rounded-full bg-gradient-to-tr from-primary/10 to-violet-500/10 border-2 border-dashed border-primary/50 flex flex-col items-center justify-center text-primary group-hover:bg-primary/5 transition-colors z-10">
+                    <User className="h-7 w-7 text-primary/60 mb-0.5" />
+                    <span className="text-[9px] font-black uppercase tracking-wider text-primary/70">Upload</span>
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200">
-                  <Camera className="h-6 w-6" />
+                <div className="h-[82%] w-[82%] absolute bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200 z-20">
+                  <Camera className="h-5 w-5" />
                 </div>
                 {avatarUploading && (
-                  <div className="absolute inset-0 bg-background/70 rounded-full flex items-center justify-center">
+                  <div className="h-[82%] w-[82%] absolute bg-background/70 rounded-full flex items-center justify-center z-20">
                     <span className="text-[10px] font-bold text-primary animate-pulse">Saving...</span>
                   </div>
                 )}
@@ -461,6 +468,22 @@ export const Settings: React.FC = () => {
                   >
                     Don't know how to get API key?
                   </Link>
+                </div>
+              </div>
+
+              {/* Status Dotted Circle Controls */}
+              <div className="space-y-3 border-t border-border/40 pt-3">
+                <div className="flex items-center gap-2.5 ml-1">
+                  <input
+                    type="checkbox"
+                    id="show_status_dots"
+                    checked={showStatusDots}
+                    onChange={(e) => setShowStatusDots(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 bg-card cursor-pointer"
+                  />
+                  <label htmlFor="show_status_dots" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                    Show status dotted circle around avatar
+                  </label>
                 </div>
               </div>
               <Input

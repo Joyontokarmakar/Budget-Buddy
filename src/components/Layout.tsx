@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
@@ -6,207 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User } from 'lucide-react';
 import { Button } from './ui';
 import { GlobalSearch } from './GlobalSearch';
-import { db } from '../services/db';
+
+import { StatusDots } from './StatusDots';
 
 export const Layout: React.FC = () => {
   const { profile, signOut } = useAuthStore();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-
-  // Status Dots State
-  const [loans, setLoans] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-
-  useEffect(() => {
-    const loadStatusData = async () => {
-      if (!profile?.id) return;
-      try {
-        const [lns, exps] = await Promise.all([
-          db.getLoans(profile.id),
-          db.getExpenses(profile.id),
-        ]);
-        setLoans(lns);
-        setExpenses(exps);
-      } catch (err) {
-        console.error('Failed to load layout status indicator data:', err);
-      }
-    };
-
-    loadStatusData();
-
-    window.addEventListener('budget-buddy-data-change', loadStatusData);
-    return () => {
-      window.removeEventListener('budget-buddy-data-change', loadStatusData);
-    };
-  }, [profile?.id]);
-
-  // Calculate active loans count
-  const activeTakenLoansCount = loans.filter(l => l.status === 'active' && l.type === 'taken').length;
-
-  // Calculate unpaid past bills count
-  const getUnpaidPastBillsCount = () => {
-    if (!profile || !profile.created_at) return 0;
-    
-    let startD = new Date(profile.created_at);
-    let earliestTime = startD.getTime();
-    
-    expenses.forEach(e => {
-      if (e.date) {
-        const d = new Date(e.date);
-        if (!isNaN(d.getTime()) && d.getTime() < earliestTime) {
-          earliestTime = d.getTime();
-        }
-      }
-    });
-    
-    startD = new Date(earliestTime);
-    const startYear = startD.getFullYear();
-    const startMonth = startD.getMonth();
-    
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    
-    let unpaidCount = 0;
-    let iterYear = startYear;
-    let iterMonth = startMonth;
-    
-    const isBillLogged = (catName: string, monthKey: string) => {
-      return expenses.some(e => {
-        if (!e.date) return false;
-        const d = new Date(e.date);
-        const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        
-        const isSameCategory = e.category?.name.toLowerCase() === catName.toLowerCase();
-        const isInTargetMonth = eMonthKey === monthKey;
-        const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
-        
-        return isSameCategory && (isInTargetMonth || isExplicitPeriod);
-      });
-    };
-
-    while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
-      const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
-      
-      const billsToCheck = [
-        { cat: 'House rent', disabled: profile?.disabled_categories?.includes('house_rent') },
-        { cat: 'Health Insurance', disabled: profile?.disabled_categories?.includes('health_insurance') },
-        { cat: 'Radio Bill', disabled: profile?.disabled_categories?.includes('radio_bill') },
-        { cat: 'Mobile bill', disabled: profile?.disabled_categories?.includes('mobile_bill') },
-        ...(profile?.show_semester_fee
-          ? [{
-              cat: 'Education',
-              disabled: profile?.disabled_categories?.includes('semester_fee')
-            }]
-          : [])
-      ].filter(bill => !bill.disabled);
-      
-      for (const bill of billsToCheck) {
-        if (!isBillLogged(bill.cat, monthKey)) {
-          unpaidCount++;
-        }
-      }
-      
-      iterMonth++;
-      if (iterMonth > 11) {
-        iterMonth = 0;
-        iterYear++;
-      }
-    }
-    
-    return unpaidCount;
-  };
-
-  const unpaidBillsCount = getUnpaidPastBillsCount();
-
-  // Calculate budget progress
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-
-  const thisMonthExpenses = expenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-  });
-
-  const monthlyBudget = profile?.monthly_budget || 700.00;
-  const monthlySpending = thisMonthExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const budgetUsedPercent = monthlyBudget > 0 ? (monthlySpending / monthlyBudget) * 100 : 0;
-
-  // SVG Status Dots drawing
-  const renderStatusDots = () => {
-    const totalDots = 32;
-    let loanDots = activeTakenLoansCount;
-    let billDots = unpaidBillsCount;
-
-    // Cap if we have too many loans + bills to ensure at least 2 dots always represent the budget
-    if (loanDots + billDots > totalDots - 2) {
-      const scale = (totalDots - 2) / (loanDots + billDots);
-      loanDots = Math.round(loanDots * scale);
-      billDots = Math.round(billDots * scale);
-      if (loanDots + billDots > totalDots - 2) {
-        if (loanDots > billDots) {
-          loanDots--;
-        } else {
-          billDots--;
-        }
-      }
-    }
-
-    const dots = [];
-    const radius = 17.6;
-    const centerX = 22;
-    const centerY = 22;
-
-    for (let i = 0; i < totalDots; i++) {
-      const angle = (2 * Math.PI * i) / totalDots;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-
-      let fill = '#34d399'; // default safe (emerald-400)
-      let title = 'Budget: Safe';
-      
-      if (i < loanDots) {
-        fill = '#fbbf24'; // Loan color (amber-400)
-        title = `Loan Outstanding (${activeTakenLoansCount} total)`;
-      } else if (i < loanDots + billDots) {
-        fill = '#fb7185'; // Unpaid bill color (rose-400)
-        title = `Unpaid Past Bill (${unpaidBillsCount} total)`;
-      } else {
-        // Budget progress color
-        if (budgetUsedPercent < 75) {
-          fill = '#34d399';
-          title = `Budget Progress: Safe (${budgetUsedPercent.toFixed(0)}% used)`;
-        } else if (budgetUsedPercent < 100) {
-          fill = '#fbbf24';
-          title = `Budget Progress: Near Limit (${budgetUsedPercent.toFixed(0)}% used)`;
-        } else {
-          fill = '#fb7185';
-          title = `Budget Progress: Exceeded (${budgetUsedPercent.toFixed(0)}% used)`;
-        }
-      }
-
-      dots.push(
-        <circle
-          key={i}
-          cx={x}
-          cy={y}
-          r={1.0}
-          fill={fill}
-          className="transition-colors duration-300"
-        >
-          <title>{title}</title>
-        </circle>
-      );
-    }
-
-    return (
-      <svg className="absolute inset-0 h-full w-full rotate-[-90deg] transition-transform duration-700 ease-out group-hover:rotate-[270deg]">
-        {dots}
-      </svg>
-    );
-  };
 
   const currentTheme = profile?.theme_preference || 'system';
   const currentLang = profile?.preferred_language || i18n.language || 'de';
@@ -250,15 +57,15 @@ export const Layout: React.FC = () => {
               className="group flex items-center gap-2.5 hover:bg-muted/50 p-1.5 rounded-xl transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/10 border-none"
             >
               <div className="relative h-11 w-11 flex items-center justify-center shrink-0">
-                {renderStatusDots()}
+                <StatusDots />
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt="Avatar"
-                    className="h-8.5 w-8.5 rounded-full object-cover border border-border/80 shadow-xs"
+                    className="h-[82%] w-[82%] absolute rounded-full object-cover border border-border/80 shadow-xs"
                   />
                 ) : (
-                  <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-tr from-primary/20 to-violet-500/20 border border-border/60 flex items-center justify-center text-primary font-black text-xs uppercase">
+                  <div className="h-[82%] w-[82%] absolute rounded-full bg-gradient-to-tr from-primary/20 to-violet-500/20 border border-border/60 flex items-center justify-center text-primary font-black text-xs uppercase">
                     {(profile?.name || 'S').charAt(0)}
                   </div>
                 )}

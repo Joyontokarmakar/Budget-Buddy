@@ -26,6 +26,8 @@ export interface Profile {
   food_budget?: number | null;
   other_budget?: number | null;
   disabled_categories?: string[] | null;
+  show_status_dots?: boolean | null;
+  status_dots_count?: number | null;
   created_at: string;
   updated_at: string;
 }

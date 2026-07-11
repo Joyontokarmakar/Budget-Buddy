@@ -49,6 +49,8 @@ const MOCK_PROFILE: Profile = {
   food_budget: 200.00,
   other_budget: 100.00,
   disabled_categories: [],
+  show_status_dots: true,
+  status_dots_count: 40,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
