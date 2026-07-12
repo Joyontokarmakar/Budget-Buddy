@@ -407,11 +407,12 @@ export const Reports: React.FC = () => {
       .slice(0, 5);
   }, [shoppingExpenses, categories]);
 
-  // Monthly stats for Bill Analyzer (filtering category payments month-over-month)
   const billHistory = useMemo(() => {
     if (!selectedBillCategory) return [];
 
-    if (selectedBillCategory === 'Total Expense') {
+    const normCategory = selectedBillCategory.toLowerCase().trim();
+
+    if (normCategory === 'total expense') {
       const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
       
       expenses.forEach(e => {
@@ -437,7 +438,7 @@ export const Reports: React.FC = () => {
       return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
     }
 
-    if (selectedBillCategory === 'Total Discounts') {
+    if (normCategory === 'total discounts') {
       const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
       
       expenses.forEach(e => {
@@ -466,7 +467,7 @@ export const Reports: React.FC = () => {
     const history: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null }[] = [];
     expenses.forEach(e => {
       const cat = categories.find(c => c.id === e.category_id) || e.category;
-      if (cat?.name === selectedBillCategory) {
+      if (cat && cat.name.toLowerCase().trim() === normCategory) {
         if (!e.date) return;
         const [yearStr, monthStr, dayStr] = e.date.split('-');
         const year = parseInt(yearStr);
@@ -1150,7 +1151,7 @@ export const Reports: React.FC = () => {
               onClick={() => setSelectedBillCategory('Total Expense')}
               className={cn(
                 "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
-                selectedBillCategory === 'Total Expense'
+                selectedBillCategory?.toLowerCase() === 'total expense'
                   ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
                   : "bg-card hover:bg-muted border-border/80 text-foreground"
               )}
@@ -1158,7 +1159,7 @@ export const Reports: React.FC = () => {
               <span className="opacity-90">Total Expense</span>
               <span className={cn(
                 "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                selectedBillCategory === 'Total Expense' ? "text-primary-foreground/90" : "text-muted-foreground"
+                selectedBillCategory?.toLowerCase() === 'total expense' ? "text-primary-foreground/90" : "text-muted-foreground"
               )}>
                 Current: €{totalExpenses.toFixed(2)}
               </span>
@@ -1170,7 +1171,7 @@ export const Reports: React.FC = () => {
               onClick={() => setSelectedBillCategory('Total Discounts')}
               className={cn(
                 "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
-                selectedBillCategory === 'Total Discounts'
+                selectedBillCategory?.toLowerCase() === 'total discounts'
                   ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
                   : "bg-card hover:bg-muted border-border/80 text-foreground"
               )}
@@ -1178,17 +1179,17 @@ export const Reports: React.FC = () => {
               <span className="opacity-90">Total Discounts</span>
               <span className={cn(
                 "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                selectedBillCategory === 'Total Discounts' ? "text-primary-foreground/90" : "text-muted-foreground"
+                selectedBillCategory?.toLowerCase() === 'total discounts' ? "text-primary-foreground/90" : "text-muted-foreground"
               )}>
                 Current: €{currentMonthDiscounts.toFixed(2)}
               </span>
             </button>
 
             {dynamicFixedBillsList.map((bill) => {
-              const isActive = selectedBillCategory === bill.name;
+              const isActive = selectedBillCategory?.toLowerCase().trim() === bill.name.toLowerCase().trim();
               return (
                 <button
-                  key={bill.name}
+                  key={bill.id}
                   type="button"
                   onClick={() => setSelectedBillCategory(bill.name)}
                   className={cn(
