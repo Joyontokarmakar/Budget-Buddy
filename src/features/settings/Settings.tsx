@@ -60,7 +60,6 @@ export const Settings: React.FC = () => {
   const [showShopName, setShowShopName] = useState(profile?.show_shop_name ?? true);
   const [stores, setStores] = useState<Store[]>([]);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
-  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [storeNameInput, setStoreNameInput] = useState('');
   const [storeRenderingNameInput, setStoreRenderingNameInput] = useState('');
   const [storeSearchQuery, setStoreSearchQuery] = useState('');
@@ -364,8 +363,9 @@ export const Settings: React.FC = () => {
       
       const updatedStores = await db.getStores(profile.id);
       setStores(updatedStores);
-      setIsStoreModalOpen(false);
       setEditingStore(null);
+      setStoreNameInput('');
+      setStoreRenderingNameInput('');
     } catch (err) {
       console.error('Error saving store:', err);
     } finally {
@@ -731,7 +731,63 @@ export const Settings: React.FC = () => {
             <CardDescription>View, search, or edit your shops and define how they are rendered.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Inline Add/Edit Shop Form */}
+            <div className="p-3.5 rounded-2xl border border-border/40 bg-muted/10 space-y-3">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                {editingStore ? `Edit Shop: ${editingStore.name}` : 'Add New Shop'}
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  type="text"
+                  placeholder="Shop Name (e.g. Lidl)"
+                  value={storeNameInput}
+                  onChange={(e) => setStoreNameInput(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                />
+                <Input
+                  type="text"
+                  placeholder="Display Name Override (optional)"
+                  value={storeRenderingNameInput}
+                  onChange={(e) => setStoreRenderingNameInput(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <p className="text-[10px] text-muted-foreground leading-normal max-w-full sm:max-w-[70%]">
+                  Specify an override display name for transaction list views, or leave blank to show the actual name.
+                </p>
+                <div className="flex gap-2 self-end sm:self-center shrink-0">
+                  {editingStore && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs font-bold px-3"
+                      onClick={() => {
+                        setEditingStore(null);
+                        setStoreNameInput('');
+                        setStoreRenderingNameInput('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs font-bold px-4"
+                    onClick={handleSaveStore}
+                    loading={storeLoading}
+                    disabled={!storeNameInput.trim()}
+                  >
+                    {editingStore ? 'Update Shop' : 'Add Shop'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 border-t border-border/20 pt-4">
               <div className="flex-1">
                 <Input
                   type="text"
@@ -741,20 +797,6 @@ export const Settings: React.FC = () => {
                   className="h-9 text-xs"
                 />
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 text-xs px-3 font-bold cursor-pointer shrink-0"
-                onClick={() => {
-                  setEditingStore(null);
-                  setStoreNameInput('');
-                  setStoreRenderingNameInput('');
-                  setIsStoreModalOpen(true);
-                }}
-              >
-                + Add Shop
-              </Button>
             </div>
             
             <div className="space-y-2.5 max-h-96 overflow-y-auto pr-0.5">
@@ -785,7 +827,6 @@ export const Settings: React.FC = () => {
                           setEditingStore(store);
                           setStoreNameInput(store.name);
                           setStoreRenderingNameInput(store.rendering_name || '');
-                          setIsStoreModalOpen(true);
                         }}
                       >
                         Edit
@@ -801,7 +842,7 @@ export const Settings: React.FC = () => {
                       </Button>
                     </div>
                   </div>
-              ))}
+                ))}
               {stores.filter(s => s.name.toLowerCase().includes(storeSearchQuery.toLowerCase()) || 
                                   (s.rendering_name && s.rendering_name.toLowerCase().includes(storeSearchQuery.toLowerCase()))).length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">No shops found matching "{storeSearchQuery}"</p>
@@ -1090,50 +1131,6 @@ export const Settings: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      </Dialog>
-
-      {/* STORE EDIT MODAL */}
-      <Dialog
-        isOpen={isStoreModalOpen}
-        onClose={() => {
-          setIsStoreModalOpen(false);
-          setEditingStore(null);
-        }}
-        title={editingStore ? `Edit Shop: ${editingStore.name}` : 'Add Custom Shop'}
-        footer={
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={() => {
-              setIsStoreModalOpen(false);
-              setEditingStore(null);
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveStore} loading={storeLoading}>
-              Save Shop
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-          <Input
-            type="text"
-            label="Shop/Merchant Name"
-            value={storeNameInput}
-            onChange={(e) => setStoreNameInput(e.target.value)}
-            required
-            placeholder="e.g. Lidl, Rewe, Netto"
-          />
-          <Input
-            type="text"
-            label="Rendering Name (Display Override)"
-            value={storeRenderingNameInput}
-            onChange={(e) => setStoreRenderingNameInput(e.target.value)}
-            placeholder="e.g. Lidl Berlin (optional)"
-          />
-          <p className="text-[10.5px] text-muted-foreground leading-normal ml-1">
-            The rendering name is an alias used to display this shop's name in transaction list views. If left blank, the shop's actual name will be shown.
-          </p>
         </div>
       </Dialog>
     </div>
