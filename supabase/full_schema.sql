@@ -716,15 +716,19 @@ values ('avatars', 'avatars', true)
 on conflict (id) do nothing;
 
 -- 2. Allow public access to read avatars
+drop policy if exists "Allow public read of avatars" on storage.objects;
 create policy "Allow public read of avatars" on storage.objects
     for select using (bucket_id = 'avatars');
 
 -- 3. Allow authenticated users to upload/manage avatars
+drop policy if exists "Allow authenticated uploads of avatars" on storage.objects;
 create policy "Allow authenticated uploads of avatars" on storage.objects
     for insert with check (bucket_id = 'avatars' and auth.role() = 'authenticated');
 
+drop policy if exists "Allow authenticated updates of avatars" on storage.objects;
 create policy "Allow authenticated updates of avatars" on storage.objects
     for update using (bucket_id = 'avatars' and auth.role() = 'authenticated');
 
+drop policy if exists "Allow authenticated deletes of avatars" on storage.objects;
 create policy "Allow authenticated deletes of avatars" on storage.objects
     for delete using (bucket_id = 'avatars' and auth.role() = 'authenticated');
