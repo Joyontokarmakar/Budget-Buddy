@@ -795,6 +795,7 @@ export const Expenses: React.FC = () => {
         notes: notes.trim() || null,
         receipt_url: ocrConfirmationData?.fileUrl || null,
         items: activeItems.length > 0 ? activeItems : null,
+        discount: parseFloat(discount) || 0,
       });
 
       // Reset Form
@@ -980,6 +981,7 @@ export const Expenses: React.FC = () => {
         payment_account_id: editPaymentAccountId,
         notes: editNotes.trim() || null,
         items: activeItems.length > 0 ? activeItems : null,
+        discount: parseFloat(editDiscount) || 0,
       });
 
       handleCloseEdit();

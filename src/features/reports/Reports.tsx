@@ -1147,7 +1147,7 @@ export const Reports: React.FC = () => {
             {/* Total Expense Button First */}
             <button
               type="button"
-              onClick={() => setSelectedBillCategory(selectedBillCategory === 'Total Expense' ? null : 'Total Expense')}
+              onClick={() => setSelectedBillCategory('Total Expense')}
               className={cn(
                 "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                 selectedBillCategory === 'Total Expense'
@@ -1167,7 +1167,7 @@ export const Reports: React.FC = () => {
             {/* Total Discounts Button Second */}
             <button
               type="button"
-              onClick={() => setSelectedBillCategory(selectedBillCategory === 'Total Discounts' ? null : 'Total Discounts')}
+              onClick={() => setSelectedBillCategory('Total Discounts')}
               className={cn(
                 "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                 selectedBillCategory === 'Total Discounts'
@@ -1190,7 +1190,7 @@ export const Reports: React.FC = () => {
                 <button
                   key={bill.name}
                   type="button"
-                  onClick={() => setSelectedBillCategory(isActive ? null : bill.name)}
+                  onClick={() => setSelectedBillCategory(bill.name)}
                   className={cn(
                     "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                     isActive
