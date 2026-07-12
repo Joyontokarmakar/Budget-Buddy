@@ -331,14 +331,14 @@ export const Settings: React.FC = () => {
 
   const handleDeleteCategory = async (catId: string) => {
     if (!profile) return;
-    if (!window.confirm("Are you sure you want to delete this category? Any expenses under this category will have their category set to 'Other' or null.")) return;
+    if (!window.confirm("Are you sure you want to delete this category? Historical data will be preserved, but it will be hidden from selections.")) return;
     try {
       setBudgetLoading(true);
-      await db.deleteCategory(profile.id, catId);
+      await db.updateCategory(profile.id, catId, { is_active: false });
       const updatedCats = await db.getCategories(profile.id);
       setCategories(updatedCats);
     } catch (err) {
-      console.error('Error deleting category:', err);
+      console.error('Error deactivating category:', err);
     } finally {
       setBudgetLoading(false);
     }
@@ -619,10 +619,10 @@ export const Settings: React.FC = () => {
                 </Button>
               </div>
 
-              <div className="border-t border-border/50 pt-3 mt-3">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Expenses Categories & Budgets
+              <div className="border-t border-border/50 pt-3 mt-3 space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b border-border/20">
+                  <span className="text-[11px] font-black text-foreground uppercase tracking-wider block">
+                    Categories & Budgets
                   </span>
                   <Button
                     type="button"
@@ -644,72 +644,161 @@ export const Settings: React.FC = () => {
                     + Add Category
                   </Button>
                 </div>
-                
-                <div className="space-y-2.5 max-h-96 overflow-y-auto pr-0.5">
-                  {categories.filter(cat => cat.is_active !== false).map(cat => (
-                    <div
-                      key={cat.id}
-                      className={cn(
-                        "p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40",
-                        cat.is_active === false && "opacity-50"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="h-3 w-3 rounded-full shrink-0"
-                          style={{ backgroundColor: cat.color || '#6b7280' }}
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-foreground">{cat.name}</span>
-                          <span className="text-[9.5px] text-muted-foreground font-semibold">
-                            {cat.is_monthly_bill ? 'Monthly Fixed Cost' : 'Variable Expense'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 border-border/20 pt-2.5 sm:pt-0">
-                        <div className="text-right">
-                          <span className="text-[10px] text-muted-foreground font-semibold block leading-none mb-0.5">Budget Amount</span>
-                          <span className="font-mono text-xs font-black text-primary leading-normal">
-                            €{cat.is_monthly_bill ? (cat.monthly_amount || 0).toFixed(2) : '0.00'}
-                          </span>
+
+                {/* Section 1: Monthly Recurring Bills */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Monthly Recurring Bills
+                  </span>
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5 border border-border/10 rounded-2xl p-2 bg-secondary/10 dark:bg-muted/5">
+                    {categories.filter(cat => cat.is_active !== false && cat.is_monthly_bill).map(cat => (
+                      <div
+                        key={cat.id}
+                        className={cn(
+                          "p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40",
+                          cat.is_active === false && "opacity-50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="h-3 w-3 rounded-full shrink-0"
+                            style={{ backgroundColor: cat.color || '#6b7280' }}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-foreground">{cat.name}</span>
+                            <span className="text-[9.5px] text-muted-foreground font-semibold">
+                              Monthly Fixed Cost
+                            </span>
+                          </div>
                         </div>
                         
-                        <div className="flex gap-1.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
-                            onClick={() => {
-                              setEditingCategory(cat);
-                              setCatNameInput(cat.name);
-                              setCatColorInput(cat.color || '#8b5cf6');
-                              setCatIconInput(cat.icon || 'HelpCircle');
-                              setCatIsBillInput(cat.is_monthly_bill || false);
-                              setCatBillAmtInput((cat.monthly_amount || 0).toString());
-                              setCatPrefAccInput(cat.preferred_account_id || '');
-                              setCatIsActiveInput(cat.is_active !== false);
-                              setIsCategoryModalOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          {cat.user_id !== null && (
+                        <div className="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 border-border/20 pt-2.5 sm:pt-0">
+                          <div className="text-right">
+                            <span className="text-[10px] text-muted-foreground font-semibold block leading-none mb-0.5">Budget Amount</span>
+                            <span className="font-mono text-xs font-black text-primary leading-normal">
+                              €{(cat.monthly_amount || 0).toFixed(2)}
+                            </span>
+                          </div>
+                          
+                          <div className="flex gap-1.5">
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
-                              onClick={() => handleDeleteCategory(cat.id)}
+                              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
+                              onClick={() => {
+                                setEditingCategory(cat);
+                                setCatNameInput(cat.name);
+                                setCatColorInput(cat.color || '#8b5cf6');
+                                setCatIconInput(cat.icon || 'HelpCircle');
+                                setCatIsBillInput(cat.is_monthly_bill || false);
+                                setCatBillAmtInput((cat.monthly_amount || 0).toString());
+                                setCatPrefAccInput(cat.preferred_account_id || '');
+                                setCatIsActiveInput(cat.is_active !== false);
+                                setIsCategoryModalOpen(true);
+                              }}
                             >
-                              Delete
+                              Edit
                             </Button>
-                          )}
+                            {cat.user_id !== null && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                    {categories.filter(cat => cat.is_active !== false && cat.is_monthly_bill).length === 0 && (
+                      <div className="text-center py-4 text-xs text-muted-foreground font-semibold">
+                        No recurring bills configured.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 2: Expenses Categories */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Expenses Categories
+                  </span>
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5 border border-border/10 rounded-2xl p-2 bg-secondary/10 dark:bg-muted/5">
+                    {categories.filter(cat => cat.is_active !== false && !cat.is_monthly_bill).map(cat => (
+                      <div
+                        key={cat.id}
+                        className={cn(
+                          "p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40",
+                          cat.is_active === false && "opacity-50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="h-3 w-3 rounded-full shrink-0"
+                            style={{ backgroundColor: cat.color || '#6b7280' }}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-foreground">{cat.name}</span>
+                            <span className="text-[9.5px] text-muted-foreground font-semibold">
+                              Variable Expense
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 border-border/20 pt-2.5 sm:pt-0">
+                          <div className="text-right">
+                            <span className="text-[10px] text-muted-foreground font-semibold block leading-none mb-0.5">Budget Amount</span>
+                            <span className="font-mono text-xs font-black text-primary leading-normal">
+                              €0.00
+                            </span>
+                          </div>
+                          
+                          <div className="flex gap-1.5">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
+                              onClick={() => {
+                                setEditingCategory(cat);
+                                setCatNameInput(cat.name);
+                                setCatColorInput(cat.color || '#8b5cf6');
+                                setCatIconInput(cat.icon || 'HelpCircle');
+                                setCatIsBillInput(cat.is_monthly_bill || false);
+                                setCatBillAmtInput((cat.monthly_amount || 0).toString());
+                                setCatPrefAccInput(cat.preferred_account_id || '');
+                                setCatIsActiveInput(cat.is_active !== false);
+                                setIsCategoryModalOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            {cat.user_id !== null && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                              >
+                                Delete
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {categories.filter(cat => cat.is_active !== false && !cat.is_monthly_bill).length === 0 && (
+                      <div className="text-center py-4 text-xs text-muted-foreground font-semibold">
+                        No regular expense categories configured.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
