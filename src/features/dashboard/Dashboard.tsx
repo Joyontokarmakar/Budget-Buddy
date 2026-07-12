@@ -50,7 +50,10 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     if (profile && profile.onboarded === false) {
-      setShowOnboarding(true);
+      const localOnboarded = localStorage.getItem(`bb-onboarded-${profile.id}`);
+      if (localOnboarded !== 'true') {
+        setShowOnboarding(true);
+      }
     }
   }, [profile]);
 
@@ -67,6 +70,10 @@ export const Dashboard: React.FC = () => {
     ]);
     setNewCustomBillName('');
     setNewCustomBillAmount('');
+  };
+
+  const handleRemoveCustomOnboardingBill = (index: number) => {
+    setCustomOnboardingBills(customOnboardingBills.filter((_, i) => i !== index));
   };
 
   const handleFinishOnboarding = async () => {
@@ -110,6 +117,7 @@ export const Dashboard: React.FC = () => {
       
       const calculatedBudget = totalBillsBudget + 300;
       
+      localStorage.setItem(`bb-onboarded-${profile.id}`, 'true');
       await updateProfile({
         monthly_budget: calculatedBudget,
         onboarded: true,
@@ -1251,76 +1259,112 @@ export const Dashboard: React.FC = () => {
         footer={
           <div className="flex gap-2.5 justify-end w-full">
             {onboardingStep > 1 && (
-              <Button variant="outline" onClick={() => setOnboardingStep(onboardingStep - 1)}>
+              <Button variant="outline" onClick={() => setOnboardingStep(onboardingStep - 1)} className="rounded-xl h-9.5 text-xs font-bold px-4">
                 Back
               </Button>
             )}
             {onboardingStep === 1 ? (
-              <Button onClick={() => setOnboardingStep(2)}>
+              <Button onClick={() => setOnboardingStep(2)} className="rounded-xl h-9.5 text-xs font-bold px-4">
                 Next: Custom Expenses
               </Button>
             ) : (
-              <Button onClick={handleFinishOnboarding} loading={loading}>
+              <Button onClick={handleFinishOnboarding} loading={loading} className="rounded-xl h-9.5 text-xs font-bold px-4">
                 Finish Setup
               </Button>
             )}
           </div>
         }
       >
+        {/* Visual Progress Steps */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-border/30 mb-4.5">
+          <div className="flex items-center gap-2">
+            <span className={cn("text-xs font-extrabold h-6 w-6 rounded-full flex items-center justify-center transition-all duration-300", onboardingStep === 1 ? "bg-primary text-white shadow-sm shadow-primary/20" : "bg-muted text-muted-foreground")}>1</span>
+            <span className={cn("text-xs font-bold transition-all duration-300", onboardingStep === 1 ? "text-foreground" : "text-muted-foreground")}>Recurring Bills</span>
+          </div>
+          <div className="h-0.5 flex-1 mx-3 bg-muted relative rounded-full overflow-hidden">
+            <div className={cn("absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out", onboardingStep === 2 ? "w-full" : "w-1/2")} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn("text-xs font-extrabold h-6 w-6 rounded-full flex items-center justify-center transition-all duration-300", onboardingStep === 2 ? "bg-primary text-white shadow-sm shadow-primary/20" : "bg-muted text-muted-foreground")}>2</span>
+            <span className={cn("text-xs font-bold transition-all duration-300", onboardingStep === 2 ? "text-foreground" : "text-muted-foreground")}>Custom Expenses</span>
+          </div>
+        </div>
+
         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
           {onboardingStep === 1 ? (
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <Calendar className="h-5 w-5" />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-extrabold text-sm tracking-wide">
+                <Calendar className="h-5 w-5 text-primary" />
                 Step 1: Monthly Recurring Bills
               </div>
               <p className="text-xs text-muted-foreground font-semibold leading-normal">
                 Select which recurring bills apply to your budget and set their expected monthly amounts:
               </p>
               
-              <div className="space-y-2.5 pt-1">
-                {Object.keys(selectedBills).map(billName => (
-                  <div key={billName} className="p-3.5 rounded-2xl border border-border/50 bg-muted/15 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedBills[billName]}
-                        onChange={(e) => setSelectedBills({
-                          ...selectedBills,
-                          [billName]: e.target.checked
-                        })}
-                        className="rounded border-border text-primary focus:ring-primary h-4.5 w-4.5 cursor-pointer bg-card"
-                      />
-                      <span className="text-xs font-bold text-foreground">
-                        {billName === 'House rent' ? 'House Rent' : 
-                         billName === 'Health Insurance' ? 'Health Insurance' : 
-                         billName === 'Radio Bill' ? 'Radio Bill (GEZ)' : 
-                         billName === 'Mobile bill' ? 'Mobile Bill' : 'Education / Semester Fee'}
-                      </span>
-                    </div>
-                    {selectedBills[billName] && (
-                      <div className="w-24 shrink-0">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={billAmounts[billName]}
-                          onChange={(e) => setBillAmounts({
-                            ...billAmounts,
-                            [billName]: e.target.value
-                          })}
-                          className="h-8 font-mono text-right text-xs"
-                          placeholder="0.00"
-                        />
+              <div className="space-y-3 pt-1">
+                {Object.keys(selectedBills).map(billName => {
+                  const isChecked = selectedBills[billName];
+                  const label = billName === 'House rent' ? 'House Rent' : 
+                                billName === 'Health Insurance' ? 'Health Insurance' : 
+                                billName === 'Radio Bill' ? 'Radio Bill (GEZ)' : 
+                                billName === 'Mobile bill' ? 'Mobile Bill' : 'Education / Semester Fee';
+                  
+                  return (
+                    <div 
+                      key={billName} 
+                      className={cn(
+                        "p-4 rounded-2xl border transition-all duration-200 flex items-center justify-between gap-3 cursor-pointer",
+                        isChecked 
+                          ? "border-primary bg-primary/5 shadow-sm shadow-primary/5" 
+                          : "border-border/50 bg-muted/15 hover:border-border hover:bg-muted/30"
+                      )}
+                      onClick={() => setSelectedBills({
+                        ...selectedBills,
+                        [billName]: !isChecked
+                      })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-5 w-5 rounded-md border flex items-center justify-center transition-all duration-200",
+                          isChecked 
+                            ? "bg-primary border-primary text-white" 
+                            : "border-border bg-card"
+                        )}>
+                          {isChecked && (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold text-foreground">
+                          {label}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {isChecked && (
+                        <div className="w-28 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={billAmounts[billName]}
+                            onChange={(e) => setBillAmounts({
+                              ...billAmounts,
+                              [billName]: e.target.value
+                            })}
+                            className="h-9 font-mono text-right text-xs rounded-xl focus:ring-primary/20"
+                            placeholder="0.00"
+                            icon={<span className="text-xs text-muted-foreground">€</span>}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <Plus className="h-5 w-5" />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-extrabold text-sm tracking-wide">
+                <Plus className="h-5 w-5 text-primary" />
                 Step 2: Add Custom Monthly Bills
               </div>
               <p className="text-xs text-muted-foreground font-semibold leading-normal">
@@ -1330,36 +1374,48 @@ export const Dashboard: React.FC = () => {
               {customOnboardingBills.length > 0 && (
                 <div className="space-y-2 max-h-36 overflow-y-auto pr-0.5 pt-1">
                   {customOnboardingBills.map((bill, index) => (
-                    <div key={index} className="flex justify-between items-center p-2.5 rounded-xl border border-border/40 bg-muted/10 text-xs font-bold">
-                      <span className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-primary" />
+                    <div key={index} className="flex justify-between items-center p-3 rounded-xl border border-border/40 bg-primary/5 text-xs font-bold transition-all hover:bg-primary/10">
+                      <span className="flex items-center gap-2 text-foreground">
+                        <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                         {bill.name}
                       </span>
-                      <span className="font-mono text-primary">€{parseFloat(bill.amount).toFixed(2)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-primary font-bold">€{parseFloat(bill.amount).toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomOnboardingBill(index)}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded-lg hover:bg-destructive/10 cursor-pointer"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="p-3.5 rounded-2xl border border-border/50 bg-muted/10 space-y-3 pt-3">
+              <div className="p-4 rounded-2xl border border-border/50 bg-muted/10 space-y-3.5 pt-3">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Add Custom Bill</span>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-3">
                   <Input
                     type="text"
                     label="Bill Name"
-                    placeholder="e.g. Gym Membership"
+                    placeholder="e.g. Spotify"
                     value={newCustomBillName}
                     onChange={(e) => setNewCustomBillName(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-9 text-xs rounded-xl"
                   />
                   <Input
                     type="number"
                     step="0.01"
-                    label="Monthly Cost (€)"
-                    placeholder="e.g. 19.90"
+                    label="Monthly Cost"
+                    placeholder="e.g. 10.99"
                     value={newCustomBillAmount}
                     onChange={(e) => setNewCustomBillAmount(e.target.value)}
-                    className="h-8 text-xs font-mono"
+                    className="h-9 text-xs font-mono rounded-xl"
+                    icon={<span className="text-xs text-muted-foreground">€</span>}
                   />
                 </div>
                 <Button
@@ -1367,9 +1423,9 @@ export const Dashboard: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleAddCustomOnboardingBill}
-                  className="w-full text-xs font-bold h-8 cursor-pointer"
+                  className="w-full text-xs font-bold h-9 cursor-pointer rounded-xl bg-card hover:bg-muted"
                 >
-                  Add Custom Item
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Custom Item
                 </Button>
               </div>
             </div>
