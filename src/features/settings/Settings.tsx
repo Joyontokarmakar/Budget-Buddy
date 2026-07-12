@@ -45,6 +45,7 @@ export const Settings: React.FC = () => {
   const [catIsBillInput, setCatIsBillInput] = useState(false);
   const [catBillAmtInput, setCatBillAmtInput] = useState('0.00');
   const [catPrefAccInput, setCatPrefAccInput] = useState('');
+  const [catIsActiveInput, setCatIsActiveInput] = useState(true);
 
   // Accounts state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -212,6 +213,7 @@ export const Settings: React.FC = () => {
           is_monthly_bill: catIsBillInput,
           monthly_amount: parseFloat(catBillAmtInput) || 0,
           preferred_account_id: catPrefAccInput || null,
+          is_active: catIsActiveInput,
         });
       } else {
         await db.createCategory(
@@ -458,6 +460,7 @@ export const Settings: React.FC = () => {
                       setCatIsBillInput(false);
                       setCatBillAmtInput('0.00');
                       setCatPrefAccInput('');
+                      setCatIsActiveInput(true);
                       setIsCategoryModalOpen(true);
                     }}
                   >
@@ -509,6 +512,7 @@ export const Settings: React.FC = () => {
                               setCatIsBillInput(cat.is_monthly_bill || false);
                               setCatBillAmtInput((cat.monthly_amount || 0).toString());
                               setCatPrefAccInput(cat.preferred_account_id || '');
+                              setCatIsActiveInput(cat.is_active !== false);
                               setIsCategoryModalOpen(true);
                             }}
                           >
@@ -766,6 +770,22 @@ export const Settings: React.FC = () => {
 
           <div className="p-3.5 rounded-2xl border border-border/50 bg-muted/10 space-y-3.5 pt-3">
             <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-foreground">Active Category Status</span>
+                <p className="text-[10px] text-muted-foreground">Turn off to deactivate category without deleting historical data</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={catIsActiveInput}
+                  onChange={(e) => setCatIsActiveInput(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-8 h-4 bg-muted-foreground/35 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border/10 pt-3">
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-foreground">Monthly Recurring Bill</span>
                 <p className="text-[10px] text-muted-foreground">Log automatically on the monthly bills checklist</p>
