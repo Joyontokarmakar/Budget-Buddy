@@ -8,7 +8,7 @@ import type { Language, ThemeMode, Account, UserSession, Category } from '../../
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { StatusDots } from '../../components/StatusDots';
-import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -198,6 +198,84 @@ export const Settings: React.FC = () => {
     if (!error) {
       setBudgetSuccess(true);
       setTimeout(() => setBudgetSuccess(false), 3000);
+    }
+  };
+
+  const handlePullFromPreviousMonth = async () => {
+    if (!profile) return;
+    try {
+      setBudgetLoading(true);
+      const exps = await db.getExpenses(profile.id);
+      
+      const now = new Date();
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      const prevMonthExpenses = exps.filter(e => {
+        if (!e.date) return false;
+        return e.date.substring(0, 7) === prevMonthKey;
+      });
+      
+      const spendingMap: { [catId: string]: number } = {};
+      
+      prevMonthExpenses.forEach(e => {
+        const catId = e.category_id;
+        if (!catId) return;
+        
+        const parentAmt = Number(e.amount) || 0;
+        
+        const safeItems = e.items ? (Array.isArray(e.items) ? e.items : []) : [];
+        if (safeItems.length > 0) {
+          safeItems.forEach((it: any) => {
+            const itemCatId = it.category_id || catId;
+            const itemAmt = Number(it.amount) || 0;
+            spendingMap[itemCatId] = (spendingMap[itemCatId] || 0) + itemAmt;
+          });
+        } else {
+          spendingMap[catId] = (spendingMap[catId] || 0) + parentAmt;
+        }
+      });
+      
+      const activeCats = categories.filter(c => c.is_active !== false);
+      const updatedCats = [...categories];
+      
+      for (const cat of activeCats) {
+        const spentVal = spendingMap[cat.id] || 0;
+        
+        await db.updateCategory(profile.id, cat.id, {
+          monthly_amount: parseFloat(spentVal.toFixed(2)),
+        });
+        
+        const idx = updatedCats.findIndex(c => c.id === cat.id);
+        if (idx !== -1) {
+          updatedCats[idx] = {
+            ...updatedCats[idx],
+            monthly_amount: parseFloat(spentVal.toFixed(2))
+          };
+        }
+      }
+      
+      setCategories(updatedCats);
+      
+      const activeBillsSum = updatedCats
+        .filter(c => c.is_monthly_bill && c.is_active !== false)
+        .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+        
+      const foodCat = updatedCats.find(c => c.name.toLowerCase() === 'food');
+      const otherCat = updatedCats.find(c => c.name.toLowerCase() === 'other' || c.name.toLowerCase() === 'shopping');
+      
+      const baseGroceries = (foodCat && foodCat.is_monthly_bill) ? 0 : 200.00;
+      const baseOther = (otherCat && otherCat.is_monthly_bill) ? 0 : 100.00;
+      
+      const recalculated = activeBillsSum + baseGroceries + baseOther;
+      setBudget(recalculated.toFixed(2));
+      
+      setBudgetSuccess(true);
+      setTimeout(() => setBudgetSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to pull from previous month:', err);
+    } finally {
+      setBudgetLoading(false);
     }
   };
 
@@ -431,6 +509,16 @@ export const Settings: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
+                  onClick={handlePullFromPreviousMonth}
+                  className="sm:w-auto w-full h-11 text-xs font-bold gap-2 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
+                  title="Load actual spending from previous month as category budgets"
+                >
+                  <RefreshCw className="h-4 w-4 text-primary" />
+                  Pull Previous Month
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => {
                     const calculated = calculateTotalPlannedBudget();
                     setBudget(calculated.toFixed(2));
@@ -469,7 +557,7 @@ export const Settings: React.FC = () => {
                 </div>
                 
                 <div className="space-y-2.5 max-h-96 overflow-y-auto pr-0.5">
-                  {categories.map(cat => (
+                  {categories.filter(cat => cat.is_active !== false).map(cat => (
                     <div
                       key={cat.id}
                       className={cn(
