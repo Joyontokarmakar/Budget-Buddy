@@ -101,6 +101,10 @@ export const Reports: React.FC = () => {
     return currentMonthDeposits.reduce((sum, d) => sum + d.amount, 0);
   }, [currentMonthDeposits]);
 
+  const currentMonthDiscounts = useMemo(() => {
+    return currentMonthExpenses.reduce((sum, e) => sum + (e.discount || 0), 0);
+  }, [currentMonthExpenses]);
+
   const loansTakenMonthTotal = useMemo(() => {
     return currentMonthLoans.filter(l => l.type === 'taken').reduce((sum, l) => sum + l.amount, 0);
   }, [currentMonthLoans]);
@@ -428,6 +432,32 @@ export const Reports: React.FC = () => {
           };
         }
         monthlySums[monthKey].amount += e.amount;
+      });
+      
+      return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    if (selectedBillCategory === 'Total Discounts') {
+      const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
+      
+      expenses.forEach(e => {
+        if (!e.date || !e.discount || Number(e.discount) <= 0) return;
+        const [yearStr, monthStr] = e.date.split('-');
+        const monthKey = `${yearStr}-${monthStr}`;
+        const year = parseInt(yearStr);
+        const month = parseInt(monthStr);
+        
+        if (!monthlySums[monthKey]) {
+          const localDate = new Date(year, month - 1, 1);
+          monthlySums[monthKey] = {
+            timestamp: localDate.getTime(),
+            monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+            date: 'Full Month',
+            amount: 0,
+            notes: 'Combined discounts'
+          };
+        }
+        monthlySums[monthKey].amount += Number(e.discount);
       });
       
       return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
@@ -1113,7 +1143,7 @@ export const Reports: React.FC = () => {
           </p>
 
           {/* Bill Buttons Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
             {/* Total Expense Button First */}
             <button
               type="button"
@@ -1131,6 +1161,26 @@ export const Reports: React.FC = () => {
                 selectedBillCategory === 'Total Expense' ? "text-primary-foreground/90" : "text-muted-foreground"
               )}>
                 Current: €{totalExpenses.toFixed(2)}
+              </span>
+            </button>
+
+            {/* Total Discounts Button Second */}
+            <button
+              type="button"
+              onClick={() => setSelectedBillCategory(selectedBillCategory === 'Total Discounts' ? null : 'Total Discounts')}
+              className={cn(
+                "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
+                selectedBillCategory === 'Total Discounts'
+                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
+                  : "bg-card hover:bg-muted border-border/80 text-foreground"
+              )}
+            >
+              <span className="opacity-90">Total Discounts</span>
+              <span className={cn(
+                "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
+                selectedBillCategory === 'Total Discounts' ? "text-primary-foreground/90" : "text-muted-foreground"
+              )}>
+                Current: €{currentMonthDiscounts.toFixed(2)}
               </span>
             </button>
 
@@ -1428,6 +1478,14 @@ export const Reports: React.FC = () => {
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       +€{depositsMonthTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-muted/10">
+                    <td className="py-2.5 px-4 text-muted-foreground flex items-center justify-between">
+                      <span>Total Discounts (This Month)</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                      €{currentMonthDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                   <tr className="hover:bg-muted/10">
