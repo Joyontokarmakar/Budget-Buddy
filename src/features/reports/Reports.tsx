@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
@@ -39,7 +39,7 @@ export const Reports: React.FC = () => {
   // Bill Analyzer state
   const [selectedBillCategory, setSelectedBillCategory] = useState<string | null>('Total Expense');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile) return;
     try {
       setLoading(true);
@@ -58,11 +58,16 @@ export const Reports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
     loadData();
-  }, [profile]);
+
+    window.addEventListener('budget-buddy-data-change', loadData);
+    return () => {
+      window.removeEventListener('budget-buddy-data-change', loadData);
+    };
+  }, [loadData]);
 
 
 
@@ -116,16 +121,14 @@ export const Reports: React.FC = () => {
 
   const fixedBills = useMemo(() => {
     return currentMonthExpenses.filter(e => {
-      if (e.category?.is_monthly_bill) return true;
-      const cat = categories.find(c => c.id === e.category_id);
+      const cat = categories.find(c => c.id === e.category_id) || e.category;
       return cat?.is_monthly_bill || false;
     });
   }, [currentMonthExpenses, categories]);
 
   const shoppingExpenses = useMemo(() => {
     return currentMonthExpenses.filter(e => {
-      if (e.category?.is_monthly_bill) return false;
-      const cat = categories.find(c => c.id === e.category_id);
+      const cat = categories.find(c => c.id === e.category_id) || e.category;
       return !cat?.is_monthly_bill;
     }).sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMonthExpenses, categories]);
@@ -237,8 +240,9 @@ export const Reports: React.FC = () => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
           if (cat?.name === 'Food') sum += Number(it.amount);
         });
-      } else if (e.category?.name === 'Food') {
-        sum += Number(e.amount);
+      } else {
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        if (cat?.name === 'Food') sum += Number(e.amount);
       }
     });
     return sum;
@@ -253,8 +257,9 @@ export const Reports: React.FC = () => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
           if (cat?.name === 'Kitchen ware') sum += Number(it.amount);
         });
-      } else if (e.category?.name === 'Kitchen ware') {
-        sum += Number(e.amount);
+      } else {
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        if (cat?.name === 'Kitchen ware') sum += Number(e.amount);
       }
     });
     return sum;
@@ -269,8 +274,9 @@ export const Reports: React.FC = () => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
           if (cat?.name === 'Restaurant') sum += Number(it.amount);
         });
-      } else if (e.category?.name === 'Restaurant') {
-        sum += Number(e.amount);
+      } else {
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        if (cat?.name === 'Restaurant') sum += Number(e.amount);
       }
     });
     return sum;
@@ -285,8 +291,9 @@ export const Reports: React.FC = () => {
           const cat = it.category_id ? categories.find(c => c.id === it.category_id) : null;
           if (cat?.name === 'Shopping') sum += Number(it.amount);
         });
-      } else if (e.category?.name === 'Shopping') {
-        sum += Number(e.amount);
+      } else {
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        if (cat?.name === 'Shopping') sum += Number(e.amount);
       }
     });
     return sum;
@@ -379,7 +386,8 @@ export const Reports: React.FC = () => {
         });
       } else {
         // Fallback for single item purchases (using notes, category or fallback)
-        const name = (e.notes || e.category?.name || 'Purchase').trim();
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        const name = (e.notes || cat?.name || 'Purchase').trim();
         if (name && name.toLowerCase() !== 'discount') {
           if (productMap[name.toLowerCase()]) {
             productMap[name.toLowerCase()].amount += e.amount;
@@ -393,7 +401,7 @@ export const Reports: React.FC = () => {
     return Object.values(productMap)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
-  }, [shoppingExpenses]);
+  }, [shoppingExpenses, categories]);
 
   // Monthly stats for Bill Analyzer (filtering category payments month-over-month)
   const billHistory = useMemo(() => {
@@ -427,7 +435,8 @@ export const Reports: React.FC = () => {
 
     const history: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null }[] = [];
     expenses.forEach(e => {
-      if (e.category?.name === selectedBillCategory) {
+      const cat = categories.find(c => c.id === e.category_id) || e.category;
+      if (cat?.name === selectedBillCategory) {
         if (!e.date) return;
         const [yearStr, monthStr, dayStr] = e.date.split('-');
         const year = parseInt(yearStr);
@@ -446,7 +455,7 @@ export const Reports: React.FC = () => {
     });
 
     return history.sort((a, b) => b.timestamp - a.timestamp);
-  }, [expenses, selectedBillCategory]);
+  }, [expenses, selectedBillCategory, categories]);
 
   const handleExportExcel = () => {
     // Generate CSV data for Detailed Shopping Sheet
