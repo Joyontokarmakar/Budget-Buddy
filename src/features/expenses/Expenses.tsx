@@ -150,7 +150,7 @@ export const Expenses: React.FC = () => {
       }
       // Default item category (prioritizing Food/Groceries)
       if (catData.length > 0 && !itemCategoryId) {
-        const allowedCats = catData.filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()));
+        const allowedCats = catData.filter(cat => !cat.is_monthly_bill && cat.name.toLowerCase() !== 'discount');
         const foodCat = allowedCats.find(cat => cat.name.toLowerCase() === 'food' || cat.name.toLowerCase() === 'groceries');
         if (foodCat) {
           setItemCategoryId(foodCat.id);
@@ -1263,7 +1263,7 @@ export const Expenses: React.FC = () => {
                           className="flex h-9 w-full rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80"
                         >
                           {categories
-                            .filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()))
+                            .filter(cat => !cat.is_monthly_bill && cat.name.toLowerCase() !== 'discount')
                             .map((cat) => (
                               <option key={cat.id} value={cat.id}>
                                 {t(`categories.${cat.name}`, cat.name)}
@@ -2288,7 +2288,7 @@ export const Expenses: React.FC = () => {
                     className="flex h-9 w-full rounded-lg border border-border bg-card px-2 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary font-semibold text-foreground/80"
                   >
                     {categories
-                      .filter(cat => !['house rent', 'health insurance', 'radio bill', 'mobile bill', 'discount'].includes(cat.name.toLowerCase()))
+                      .filter(cat => !cat.is_monthly_bill && cat.name.toLowerCase() !== 'discount')
                       .map((cat) => (
                         <option key={cat.id} value={cat.id}>
                           {t(`categories.${cat.name}`, cat.name)}
@@ -2340,7 +2340,7 @@ export const Expenses: React.FC = () => {
               value={editCategoryId}
               onChange={(e) => setEditCategoryId(e.target.value)}
               options={categories
-                .filter(cat => !['discount'].includes(cat.name.toLowerCase()))
+                .filter(cat => !cat.is_monthly_bill && cat.name.toLowerCase() !== 'discount')
                 .map((cat) => ({
                   value: cat.id,
                   label: t(`categories.${cat.name}`, cat.name),
