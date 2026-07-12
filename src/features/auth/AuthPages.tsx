@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { isSupabaseConfigured } from '../../services/supabase';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
-import { Mail, Lock, User, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, CheckCircle, Globe } from 'lucide-react';
+import { COUNTRIES } from '../../utils/countries';
 
 // =========================================================================
 // SIGN IN PAGE
@@ -161,6 +162,9 @@ export const SignUpPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,7 +178,11 @@ export const SignUpPage: React.FC = () => {
       setError('Passwords do not match');
       return;
     }
-    const { error: err } = await signUp(email, password, name);
+    if (!selectedCountry) {
+      setError('Please select your country of residence');
+      return;
+    }
+    const { error: err } = await signUp(email, password, name, selectedCountry);
     if (err) {
       setError(err);
     } else {
@@ -237,6 +245,71 @@ export const SignUpPage: React.FC = () => {
               icon={<Lock className="h-4 w-4" />}
               required
             />
+
+            {/* Searchable Country of Residence Dropdown */}
+            <div className="relative">
+              <label className="text-xs font-bold text-foreground block mb-1">
+                Country of Residence
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full flex items-center justify-between h-10 px-3 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-left transition-all hover:bg-muted/10 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <span className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  {selectedCountry ? (
+                    <span className="truncate">
+                      {COUNTRIES.find(c => c.name === selectedCountry)?.flag}{' '}
+                      {selectedCountry}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground font-normal">Select your country</span>
+                  )}
+                </span>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute z-50 w-full mt-1.5 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md max-h-56 flex flex-col overflow-hidden">
+                  <div className="p-2 border-b border-border/40 bg-muted/10">
+                    <input
+                      type="text"
+                      placeholder="Search country..."
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      className="w-full h-8 px-2.5 rounded-lg border border-border bg-card text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="overflow-y-auto flex-1 divide-y divide-border/20">
+                    {COUNTRIES.filter(c =>
+                      c.name.toLowerCase().includes(countrySearch.toLowerCase())
+                    ).map(c => (
+                      <button
+                        key={c.code}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCountry(c.name);
+                          setIsDropdownOpen(false);
+                          setCountrySearch('');
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-left hover:bg-primary/5 transition-colors focus:bg-primary/5 cursor-pointer border-none bg-transparent"
+                      >
+                        <span className="text-base leading-none shrink-0">{c.flag}</span>
+                        <span className="truncate">{c.name}</span>
+                      </button>
+                    ))}
+                    {COUNTRIES.filter(c =>
+                      c.name.toLowerCase().includes(countrySearch.toLowerCase())
+                    ).length === 0 && (
+                      <div className="p-3 text-center text-xs text-muted-foreground font-semibold">
+                        No countries found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <Button type="submit" className="w-full" loading={loading}>
               {t('auth.signUp')}

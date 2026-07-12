@@ -6,17 +6,20 @@ export const useStatusDots = () => {
   const { profile } = useAuthStore();
   const [loans, setLoans] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadStatusData = async () => {
     if (!profile?.id) return;
     try {
-      const [lns, exps] = await Promise.all([
+      const [lns, exps, cats] = await Promise.all([
         db.getLoans(profile.id),
         db.getExpenses(profile.id),
+        db.getCategories(profile.id),
       ]);
       setLoans(lns);
       setExpenses(exps);
+      setCategories(cats);
     } catch (err) {
       console.error('Failed to load status indicator data:', err);
     } finally {
@@ -64,13 +67,13 @@ export const useStatusDots = () => {
     let iterYear = startYear;
     let iterMonth = startMonth;
     
-    const isBillLogged = (catName: string, monthKey: string) => {
+    const isBillLogged = (categoryId: string, monthKey: string) => {
       return expenses.some(e => {
         if (!e.date) return false;
         const d = new Date(e.date);
         const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         
-        const isSameCategory = e.category?.name.toLowerCase() === catName.toLowerCase();
+        const isSameCategory = e.category_id === categoryId;
         const isInTargetMonth = eMonthKey === monthKey;
         const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
         
@@ -81,21 +84,10 @@ export const useStatusDots = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = [
-        { cat: 'House rent', disabled: profile?.disabled_categories?.includes('house_rent') },
-        { cat: 'Health Insurance', disabled: profile?.disabled_categories?.includes('health_insurance') },
-        { cat: 'Radio Bill', disabled: profile?.disabled_categories?.includes('radio_bill') },
-        { cat: 'Mobile bill', disabled: profile?.disabled_categories?.includes('mobile_bill') },
-        ...(profile?.show_semester_fee
-          ? [{
-              cat: 'Education',
-              disabled: profile?.disabled_categories?.includes('semester_fee')
-            }]
-          : [])
-      ].filter(bill => !bill.disabled);
+      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
       
       for (const bill of billsToCheck) {
-        if (!isBillLogged(bill.cat, monthKey)) {
+        if (!isBillLogged(bill.id, monthKey)) {
           unpaidCount++;
         }
       }

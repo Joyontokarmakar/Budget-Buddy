@@ -12,22 +12,10 @@ export interface Profile {
   monthly_budget: number;
   avatar_url?: string | null;
   gemini_api_key?: string | null;
-  house_rent?: number | null;
-  health_insurance?: number | null;
-  radio_bill?: number | null;
-  mobile_bill?: number | null;
-  house_rent_account_id?: string | null;
-  health_insurance_account_id?: string | null;
-  radio_bill_account_id?: string | null;
-  mobile_bill_account_id?: string | null;
-  show_semester_fee?: boolean | null;
-  semester_fee?: number | null;
-  semester_fee_account_id?: string | null;
-  food_budget?: number | null;
-  other_budget?: number | null;
-  disabled_categories?: string[] | null;
   show_status_dots?: boolean | null;
   status_dots_count?: number | null;
+  onboarded: boolean;
+  residence_country?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +46,10 @@ export interface Category {
   name: string;
   icon: string | null;
   color: string | null;
+  is_monthly_bill?: boolean;
+  monthly_amount?: number;
+  preferred_account_id?: string | null;
+  is_active?: boolean;
   created_at: string;
 }
 

@@ -352,13 +352,75 @@ function initLocalStorage(userId: string) {
   
   const localCats = localStorage.getItem('bb-categories');
   if (!localCats) {
-    localStorage.setItem('bb-categories', JSON.stringify(DEFAULT_CATEGORIES));
+    const initialCats = DEFAULT_CATEGORIES.map(c => {
+      const isBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
+      const isEdu = c.name === 'Education';
+      let amt = 0.00;
+      if (c.name === 'House rent') amt = 264.50;
+      else if (c.name === 'Health Insurance') amt = 151.42;
+      else if (c.name === 'Radio Bill') amt = 18.36;
+      else if (c.name === 'Mobile bill') amt = 10.00;
+      else if (c.name === 'Education') amt = 350.00;
+      
+      return {
+        ...c,
+        user_id: userId,
+        is_monthly_bill: isBill,
+        monthly_amount: amt,
+        preferred_account_id: null,
+        is_active: isEdu ? false : true
+      };
+    });
+    localStorage.setItem('bb-categories', JSON.stringify(initialCats));
   } else {
     try {
       const parsedCats = JSON.parse(localCats) as Category[];
-      const missingCats = DEFAULT_CATEGORIES.filter(dc => !parsedCats.some(pc => pc.name.toLowerCase() === dc.name.toLowerCase()));
-      if (missingCats.length > 0) {
-        localStorage.setItem('bb-categories', JSON.stringify([...parsedCats, ...missingCats]));
+      let updated = false;
+      const migratedCats = parsedCats.map(c => {
+        if (c.is_monthly_bill === undefined) {
+          updated = true;
+          const isBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
+          const isEdu = c.name === 'Education';
+          let amt = 0.00;
+          if (c.name === 'House rent') amt = 264.50;
+          else if (c.name === 'Health Insurance') amt = 151.42;
+          else if (c.name === 'Radio Bill') amt = 18.36;
+          else if (c.name === 'Mobile bill') amt = 10.00;
+          else if (c.name === 'Education') amt = 350.00;
+
+          return {
+            ...c,
+            user_id: c.user_id || userId,
+            is_monthly_bill: isBill,
+            monthly_amount: amt,
+            preferred_account_id: null,
+            is_active: isEdu ? false : true
+          };
+        }
+        return c;
+      });
+
+      const missingCats = DEFAULT_CATEGORIES.filter(dc => !migratedCats.some(pc => pc.name.toLowerCase() === dc.name.toLowerCase()));
+      if (missingCats.length > 0 || updated) {
+        const added = missingCats.map(c => {
+          const isBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
+          const isEdu = c.name === 'Education';
+          let amt = 0.00;
+          if (c.name === 'House rent') amt = 264.50;
+          else if (c.name === 'Health Insurance') amt = 151.42;
+          else if (c.name === 'Radio Bill') amt = 18.36;
+          else if (c.name === 'Mobile bill') amt = 10.00;
+          else if (c.name === 'Education') amt = 350.00;
+          return {
+            ...c,
+            user_id: userId,
+            is_monthly_bill: isBill,
+            monthly_amount: amt,
+            preferred_account_id: null,
+            is_active: isEdu ? false : true
+          };
+        });
+        localStorage.setItem('bb-categories', JSON.stringify([...migratedCats, ...added]));
       }
     } catch (e) {
       localStorage.setItem('bb-categories', JSON.stringify(DEFAULT_CATEGORIES));
@@ -481,13 +543,33 @@ export const db = {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .or(`user_id.is.null,user_id.eq.${userId}`)
+      .eq('user_id', userId)
       .order('name', { ascending: true });
     if (error) throw error;
-    return data || [];
+    
+    if (data && data.length > 0) {
+      return data;
+    }
+    
+    // Fallback: seed/fetch global defaults
+    const { data: globalData, error: gError } = await supabase
+      .from('categories')
+      .select('*')
+      .is('user_id', null)
+      .order('name', { ascending: true });
+    if (gError) throw gError;
+    return globalData || [];
   },
 
-  createCategory: async (userId: string, name: string, icon: string, color: string): Promise<Category> => {
+  createCategory: async (
+    userId: string, 
+    name: string, 
+    icon: string, 
+    color: string,
+    isMonthlyBill = false,
+    monthlyAmount = 0.00,
+    preferredAccountId: string | null = null
+  ): Promise<Category> => {
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
       const categories = getLocalItems<Category>('bb-categories');
@@ -497,6 +579,10 @@ export const db = {
         name,
         icon,
         color,
+        is_monthly_bill: isMonthlyBill,
+        monthly_amount: monthlyAmount,
+        preferred_account_id: preferredAccountId,
+        is_active: true,
         created_at: new Date().toISOString(),
       };
       categories.push(newCat);
@@ -506,12 +592,65 @@ export const db = {
     }
     const { data, error } = await supabase
       .from('categories')
-      .insert({ user_id: userId, name, icon, color })
+      .insert({ 
+        user_id: userId, 
+        name, 
+        icon, 
+        color,
+        is_monthly_bill: isMonthlyBill,
+        monthly_amount: monthlyAmount,
+        preferred_account_id: preferredAccountId
+      })
       .select()
       .single();
     if (error) throw error;
     notifyDataChange();
     return data;
+  },
+
+  updateCategory: async (userId: string, categoryId: string, updates: Partial<Category>): Promise<Category> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const categories = getLocalItems<Category>('bb-categories');
+      const idx = categories.findIndex(c => c.id === categoryId);
+      if (idx === -1) throw new Error('Category not found');
+      
+      const updatedCat = {
+        ...categories[idx],
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      categories[idx] = updatedCat;
+      setLocalItems('bb-categories', categories);
+      notifyDataChange();
+      return updatedCat;
+    }
+    const { data, error } = await supabase
+      .from('categories')
+      .update(updates)
+      .eq('id', categoryId)
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  deleteCategory: async (userId: string, categoryId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      let categories = getLocalItems<Category>('bb-categories');
+      categories = categories.filter(c => c.id !== categoryId);
+      setLocalItems('bb-categories', categories);
+      notifyDataChange();
+      return;
+    }
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId);
+    if (error) throw error;
+    notifyDataChange();
   },
 
   // STORES

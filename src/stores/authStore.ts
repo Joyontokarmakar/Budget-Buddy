@@ -10,7 +10,7 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, country: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -35,22 +35,10 @@ const MOCK_PROFILE: Profile = {
   preferred_language: 'de',
   theme_preference: 'system',
   monthly_budget: 700.00,
-  house_rent: 264.50,
-  health_insurance: 151.42,
-  radio_bill: 18.36,
-  mobile_bill: 10.00,
-  house_rent_account_id: 'a1',
-  health_insurance_account_id: 'a1',
-  radio_bill_account_id: 'a2',
-  mobile_bill_account_id: 'a2',
-  show_semester_fee: false,
-  semester_fee: 350.00,
-  semester_fee_account_id: 'a1',
-  food_budget: 200.00,
-  other_budget: 100.00,
-  disabled_categories: [],
   show_status_dots: true,
   status_dots_count: 40,
+  onboarded: true,
+  residence_country: 'Germany',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -315,7 +303,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUp: async (email, password, name) => {
+  signUp: async (email, password, name, country) => {
     set({ loading: true });
 
     if (!isSupabaseConfigured) {
@@ -326,6 +314,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         id: mockUser.id,
         name,
         email,
+        onboarded: false, // New users need onboarding setup wizard
+        residence_country: country,
       };
 
       localStorage.setItem('bb-mock-user', JSON.stringify(mockUser));
@@ -352,7 +342,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         password,
         options: {
-          data: { name },
+          data: { name, residence_country: country },
         },
       });
 
@@ -377,6 +367,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           preferred_language: 'de' as Language,
           theme_preference: 'system' as ThemeMode,
           monthly_budget: 700.00,
+          onboarded: false,
+          residence_country: country,
         };
         const { data: insProfile } = await supabase
           .from('profiles')

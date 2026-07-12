@@ -411,7 +411,7 @@ export const Expenses: React.FC = () => {
     }
   }, [items, discount]);
 
-  const isBillLogged = (catName: string, monthKey?: string) => {
+  const isBillLogged = (categoryId: string, monthKey?: string) => {
     let targetMonthKey = monthKey;
     if (!targetMonthKey) {
       if (!date) return false;
@@ -424,7 +424,7 @@ export const Expenses: React.FC = () => {
       const d = new Date(e.date);
       const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       
-      const isSameCategory = e.category?.name.toLowerCase() === catName.toLowerCase();
+      const isSameCategory = e.category_id === categoryId;
       const isInTargetMonth = eMonthKey === targetMonthKey;
       const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${targetMonthKey}]`);
       
@@ -432,14 +432,14 @@ export const Expenses: React.FC = () => {
     });
   };
 
-  const handleQuickLogBill = async (billName: string, catName: string, defaultAmount: number, preferredAccountId?: string | null) => {
+  const handleQuickLogBill = async (billName: string, categoryId: string, defaultAmount: number, preferredAccountId?: string | null) => {
     if (!profile || !paymentAccountId) return;
     
     const accountIdToUse = preferredAccountId || paymentAccountId;
     const account = accounts.find(a => a.id === accountIdToUse) || accounts.find(a => a.id === paymentAccountId);
     const accountName = account ? account.name : 'selected account';
     
-    const matchingExpenses = expenses.filter(e => e.category?.name === catName);
+    const matchingExpenses = expenses.filter(e => e.category_id === categoryId);
     const amountToLog = matchingExpenses.length > 0 ? matchingExpenses[0].amount : defaultAmount;
     
     setConfirmState({
@@ -455,8 +455,6 @@ export const Expenses: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId) => {
         try {
           setSaving(true);
-          const billCat = categories.find(c => c.name === catName);
-          const categoryId = billCat ? billCat.id : null;
           
           await db.createExpense(profile.id, {
             amount: amountToLog,
@@ -523,30 +521,16 @@ export const Expenses: React.FC = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = [
-        { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
-        { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
-        { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
-        { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
-        ...(profile?.show_semester_fee
-          ? [{
-              name: 'Semester Fee',
-              cat: 'Education',
-              amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
-              preferredAccountId: profile?.semester_fee_account_id,
-              disabled: profile?.disabled_categories?.includes('semester_fee')
-            }]
-          : [])
-      ].filter(bill => !bill.disabled);
+      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
       
       for (const bill of billsToCheck) {
-        if (!isBillLogged(bill.cat, monthKey)) {
+        if (!isBillLogged(bill.id, monthKey)) {
           unpaidList.push({
             name: bill.name,
-            cat: bill.cat,
-            amount: bill.amount,
+            cat: bill.id,
+            amount: bill.monthly_amount || 0,
             month: monthKey,
-            preferredAccountId: bill.preferredAccountId
+            preferredAccountId: bill.preferred_account_id
           });
         }
       }
@@ -1018,21 +1002,14 @@ export const Expenses: React.FC = () => {
     return monthKey === selectedMonth;
   });
 
-  const activeBills = [
-    { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
-    { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
-    { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
-    { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
-    ...(profile?.show_semester_fee
-      ? [{
-          name: 'Semester Fee',
-          cat: 'Education',
-          amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
-          preferredAccountId: profile?.semester_fee_account_id,
-          disabled: profile?.disabled_categories?.includes('semester_fee')
-        }]
-      : [])
-  ].filter(bill => !bill.disabled);
+  const activeBills = categories
+    .filter(c => c.is_monthly_bill && c.is_active)
+    .map(c => ({
+      name: c.name,
+      cat: c.id,
+      amount: c.monthly_amount || 0,
+      preferredAccountId: c.preferred_account_id
+    }));
 
   const allBillsLogged = activeBills.length > 0 && activeBills.every(bill => isBillLogged(bill.cat));
 

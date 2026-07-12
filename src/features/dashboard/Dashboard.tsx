@@ -9,7 +9,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -26,6 +26,103 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
+
+  // Onboarding Wizard State
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [selectedBills, setSelectedBills] = useState<{ [key: string]: boolean }>({
+    'House rent': true,
+    'Health Insurance': true,
+    'Radio Bill': false,
+    'Mobile bill': true,
+    'Education': false,
+  });
+  const [billAmounts, setBillAmounts] = useState<{ [key: string]: string }>({
+    'House rent': '264.50',
+    'Health Insurance': '151.42',
+    'Radio Bill': '18.36',
+    'Mobile bill': '10.00',
+    'Education': '350.00',
+  });
+  const [customOnboardingBills, setCustomOnboardingBills] = useState<{ name: string; amount: string; icon: string; color: string }[]>([]);
+  const [newCustomBillName, setNewCustomBillName] = useState('');
+  const [newCustomBillAmount, setNewCustomBillAmount] = useState('');
+
+  useEffect(() => {
+    if (profile && profile.onboarded === false) {
+      setShowOnboarding(true);
+    }
+  }, [profile]);
+
+  const handleAddCustomOnboardingBill = () => {
+    if (!newCustomBillName.trim() || !newCustomBillAmount.trim()) return;
+    setCustomOnboardingBills([
+      ...customOnboardingBills,
+      {
+        name: newCustomBillName.trim(),
+        amount: newCustomBillAmount.trim(),
+        icon: 'HelpCircle',
+        color: '#8b5cf6',
+      }
+    ]);
+    setNewCustomBillName('');
+    setNewCustomBillAmount('');
+  };
+
+  const handleFinishOnboarding = async () => {
+    if (!profile) return;
+    try {
+      setLoading(true);
+      const { updateProfile } = useAuthStore.getState();
+      
+      let totalBillsBudget = 0;
+      
+      for (const catName of Object.keys(selectedBills)) {
+        const isActive = selectedBills[catName];
+        const amount = parseFloat(billAmounts[catName]) || 0;
+        
+        const cat = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        if (cat) {
+          await db.updateCategory(profile.id, cat.id, {
+            is_monthly_bill: isActive,
+            monthly_amount: amount,
+            is_active: true,
+          });
+          if (isActive) {
+            totalBillsBudget += amount;
+          }
+        }
+      }
+      
+      for (const customBill of customOnboardingBills) {
+        const amt = parseFloat(customBill.amount) || 0;
+        await db.createCategory(
+          profile.id,
+          customBill.name,
+          customBill.icon,
+          customBill.color,
+          true,
+          amt,
+          null
+        );
+        totalBillsBudget += amt;
+      }
+      
+      const calculatedBudget = totalBillsBudget + 300;
+      
+      await updateProfile({
+        monthly_budget: calculatedBudget,
+        onboarded: true,
+      });
+      
+      setShowOnboarding(false);
+      await loadDashboardData();
+    } catch (err) {
+      console.error('Failed to save onboarding settings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -151,13 +248,13 @@ export const Dashboard: React.FC = () => {
     return date.toLocaleDateString(i18n.language || 'en', { month: 'long', year: 'numeric' });
   };
 
-  const isBillLogged = (catName: string, monthKey: string) => {
+  const isBillLogged = (categoryId: string, monthKey: string) => {
     return expenses.some(e => {
       if (!e.date) return false;
       const d = new Date(e.date);
       const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       
-      const isSameCategory = e.category?.name.toLowerCase() === catName.toLowerCase();
+      const isSameCategory = e.category_id === categoryId;
       const isInTargetMonth = eMonthKey === monthKey;
       const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
       
@@ -191,6 +288,7 @@ export const Dashboard: React.FC = () => {
     const unpaidList: {
       name: string;
       cat: string;
+      categoryId: string;
       amount: number;
       month: string;
       preferredAccountId?: string | null;
@@ -202,30 +300,17 @@ export const Dashboard: React.FC = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = [
-        { name: 'House Rent', cat: 'House rent', amount: profile?.house_rent !== undefined && profile?.house_rent !== null ? Number(profile.house_rent) : 264.50, preferredAccountId: profile?.house_rent_account_id, disabled: profile?.disabled_categories?.includes('house_rent') },
-        { name: 'Health Insurance', cat: 'Health Insurance', amount: profile?.health_insurance !== undefined && profile?.health_insurance !== null ? Number(profile.health_insurance) : 151.42, preferredAccountId: profile?.health_insurance_account_id, disabled: profile?.disabled_categories?.includes('health_insurance') },
-        { name: 'Radio Bill', cat: 'Radio Bill', amount: profile?.radio_bill !== undefined && profile?.radio_bill !== null ? Number(profile.radio_bill) : 18.36, preferredAccountId: profile?.radio_bill_account_id, disabled: profile?.disabled_categories?.includes('radio_bill') },
-        { name: 'Mobile bill', cat: 'Mobile bill', amount: profile?.mobile_bill !== undefined && profile?.mobile_bill !== null ? Number(profile.mobile_bill) : 10.00, preferredAccountId: profile?.mobile_bill_account_id, disabled: profile?.disabled_categories?.includes('mobile_bill') },
-        ...(profile?.show_semester_fee
-          ? [{
-              name: 'Semester Fee',
-              cat: 'Education',
-              amount: profile?.semester_fee !== undefined && profile?.semester_fee !== null ? Number(profile.semester_fee) : 350.00,
-              preferredAccountId: profile?.semester_fee_account_id,
-              disabled: profile?.disabled_categories?.includes('semester_fee')
-            }]
-          : [])
-      ].filter(bill => !bill.disabled);
+      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
       
       for (const bill of billsToCheck) {
-        if (!isBillLogged(bill.cat, monthKey)) {
+        if (!isBillLogged(bill.id, monthKey)) {
           unpaidList.push({
             name: bill.name,
-            cat: bill.cat,
-            amount: bill.amount,
+            cat: bill.name,
+            categoryId: bill.id,
+            amount: bill.monthly_amount || 0,
             month: monthKey,
-            preferredAccountId: bill.preferredAccountId
+            preferredAccountId: bill.preferred_account_id
           });
         }
       }
@@ -265,8 +350,7 @@ export const Dashboard: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId) => {
         const finalDate = selectedDate || new Date().toISOString().split('T')[0];
         const finalAccountId = selectedAccountId || accountIdToUse;
-        const billCat = categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase());
-        const categoryId = billCat ? billCat.id : null;
+        const categoryId = (bill as any).categoryId || categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase())?.id || null;
         
         try {
           await db.createExpense(profile.id, {
@@ -389,22 +473,15 @@ export const Dashboard: React.FC = () => {
 
   const status = getBudgetStatus();
 
-  // Daily Average Spending (excluding common bills)
-  const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
-  const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
+  // Daily Average Spending (excluding dynamic monthly bills)
   const nonBillExpenses = thisMonthExpenses.filter(e => {
-    // 1. Exclude by category ID
-    if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) {
+    // 1. Exclude if category is flagged as monthly bill
+    if (e.category?.is_monthly_bill) {
       return false;
     }
-    // 2. Exclude by category name
-    const catName = e.category?.name?.toLowerCase();
-    if (catName && commonBillsCategories.includes(catName)) {
-      return false;
-    }
-    // 3. Exclude by notes keyword matching
-    const notes = e.notes?.toLowerCase() || '';
-    if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) {
+    // 2. Exclude by category ID reference check
+    const cat = categories.find(c => c.id === e.category_id);
+    if (cat?.is_monthly_bill) {
       return false;
     }
     return true;
@@ -472,11 +549,13 @@ export const Dashboard: React.FC = () => {
   // Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
   const nonBillExpensesAll = expenses.filter(e => {
-    if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return false;
-    const catName = e.category?.name?.toLowerCase();
-    if (catName && commonBillsCategories.includes(catName)) return false;
-    const notes = e.notes?.toLowerCase() || '';
-    if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return false;
+    if (e.category?.is_monthly_bill) {
+      return false;
+    }
+    const cat = categories.find(c => c.id === e.category_id);
+    if (cat?.is_monthly_bill) {
+      return false;
+    }
     return true;
   });
 
@@ -1154,6 +1233,140 @@ export const Dashboard: React.FC = () => {
                 options={accounts.map(a => ({ value: a.id, label: a.name }))}
                 required
               />
+            </div>
+          )}
+        </div>
+      </Dialog>
+
+      {/* ONBOARDING SETUP WIZARD DIALOG */}
+      <Dialog
+        isOpen={showOnboarding}
+        onClose={() => {}} 
+        title="Setup Your Student Budget Buddy"
+        footer={
+          <div className="flex gap-2.5 justify-end w-full">
+            {onboardingStep > 1 && (
+              <Button variant="outline" onClick={() => setOnboardingStep(onboardingStep - 1)}>
+                Back
+              </Button>
+            )}
+            {onboardingStep === 1 ? (
+              <Button onClick={() => setOnboardingStep(2)}>
+                Next: Custom Expenses
+              </Button>
+            ) : (
+              <Button onClick={handleFinishOnboarding} loading={loading}>
+                Finish Setup
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {onboardingStep === 1 ? (
+            <div className="space-y-3.5">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <Calendar className="h-5 w-5" />
+                Step 1: Monthly Recurring Bills
+              </div>
+              <p className="text-xs text-muted-foreground font-semibold leading-normal">
+                Select which recurring bills apply to your budget and set their expected monthly amounts:
+              </p>
+              
+              <div className="space-y-2.5 pt-1">
+                {Object.keys(selectedBills).map(billName => (
+                  <div key={billName} className="p-3.5 rounded-2xl border border-border/50 bg-muted/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedBills[billName]}
+                        onChange={(e) => setSelectedBills({
+                          ...selectedBills,
+                          [billName]: e.target.checked
+                        })}
+                        className="rounded border-border text-primary focus:ring-primary h-4.5 w-4.5 cursor-pointer bg-card"
+                      />
+                      <span className="text-xs font-bold text-foreground">
+                        {billName === 'House rent' ? 'House Rent' : 
+                         billName === 'Health Insurance' ? 'Health Insurance' : 
+                         billName === 'Radio Bill' ? 'Radio Bill (GEZ)' : 
+                         billName === 'Mobile bill' ? 'Mobile Bill' : 'Education / Semester Fee'}
+                      </span>
+                    </div>
+                    {selectedBills[billName] && (
+                      <div className="w-24 shrink-0">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={billAmounts[billName]}
+                          onChange={(e) => setBillAmounts({
+                            ...billAmounts,
+                            [billName]: e.target.value
+                          })}
+                          className="h-8 font-mono text-right text-xs"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <Plus className="h-5 w-5" />
+                Step 2: Add Custom Monthly Bills
+              </div>
+              <p className="text-xs text-muted-foreground font-semibold leading-normal">
+                If you have other fixed monthly expenses (e.g. Spotify, Gym, Netflix), you can add them below:
+              </p>
+
+              {customOnboardingBills.length > 0 && (
+                <div className="space-y-2 max-h-36 overflow-y-auto pr-0.5 pt-1">
+                  {customOnboardingBills.map((bill, index) => (
+                    <div key={index} className="flex justify-between items-center p-2.5 rounded-xl border border-border/40 bg-muted/10 text-xs font-bold">
+                      <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-primary" />
+                        {bill.name}
+                      </span>
+                      <span className="font-mono text-primary">€{parseFloat(bill.amount).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-3.5 rounded-2xl border border-border/50 bg-muted/10 space-y-3 pt-3">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Add Custom Bill</span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Input
+                    type="text"
+                    label="Bill Name"
+                    placeholder="e.g. Gym Membership"
+                    value={newCustomBillName}
+                    onChange={(e) => setNewCustomBillName(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    label="Monthly Cost (€)"
+                    placeholder="e.g. 19.90"
+                    value={newCustomBillAmount}
+                    onChange={(e) => setNewCustomBillAmount(e.target.value)}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddCustomOnboardingBill}
+                  className="w-full text-xs font-bold h-8 cursor-pointer"
+                >
+                  Add Custom Item
+                </Button>
+              </div>
             </div>
           )}
         </div>
