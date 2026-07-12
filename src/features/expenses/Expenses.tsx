@@ -455,14 +455,17 @@ export const Expenses: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId) => {
         try {
           setSaving(true);
+          const finalDate = selectedDate || date;
+          const dateParts = finalDate.split('-');
+          const monthKey = `${dateParts[0]}-${dateParts[1]}`;
           
           await db.createExpense(profile.id, {
             amount: amountToLog,
-            date: selectedDate || date,
+            date: finalDate,
             category_id: categoryId,
             store_id: null,
             payment_account_id: selectedAccountId || accountIdToUse,
-            notes: `${billName} - Recurring Bill`,
+            notes: `${billName} - Recurring Bill [Bill Period: ${monthKey}]`,
             receipt_url: null,
             items: null
           });
@@ -566,8 +569,7 @@ export const Expenses: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId) => {
         try {
           setSaving(true);
-          const billCat = categories.find(c => c.name === bill.cat);
-          const categoryId = billCat ? billCat.id : null;
+          const categoryId = bill.cat;
           
           await db.createExpense(profile.id, {
             amount: bill.amount,

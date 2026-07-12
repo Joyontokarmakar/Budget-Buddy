@@ -336,7 +336,7 @@ export const Dashboard: React.FC = () => {
     return unpaidList;
   };
 
-  const handlePayMissedBillDirect = async (bill: { name: string; cat: string; amount: number; month: string; preferredAccountId?: string | null }) => {
+  const handlePayMissedBillDirect = async (bill: { name: string; cat: string; categoryId: string; amount: number; month: string; preferredAccountId?: string | null }) => {
     if (!profile) return;
     if (accounts.length === 0) {
       setQuickLogMsg('Please create an asset account (e.g. Bank Account) first!');
@@ -361,7 +361,7 @@ export const Dashboard: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId) => {
         const finalDate = selectedDate || new Date().toISOString().split('T')[0];
         const finalAccountId = selectedAccountId || accountIdToUse;
-        const categoryId = (bill as any).categoryId || categories.find(c => c.name.toLowerCase() === bill.cat.toLowerCase())?.id || null;
+        const categoryId = bill.categoryId;
         
         try {
           await db.createExpense(profile.id, {

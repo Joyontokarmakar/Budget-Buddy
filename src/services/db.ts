@@ -1110,6 +1110,65 @@ export const db = {
     notifyDataChange();
   },
 
+  updateIncome: async (userId: string, incomeId: string, updates: Partial<Omit<Income, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<Income> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const incomes = getLocalItems<Income>('bb-income');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const idx = incomes.findIndex(i => i.id === incomeId && i.user_id === userId);
+      if (idx === -1) throw new Error('Income not found');
+
+      const oldInc = incomes[idx];
+      const newInc = { ...oldInc, ...updates, updated_at: new Date().toISOString() };
+      incomes[idx] = newInc;
+      setLocalItems('bb-income', incomes);
+
+      // Adjust balances manually
+      let updatedAccounts = [...accounts];
+      if (updates.amount !== undefined || updates.destination_account_id !== undefined) {
+        const targetAccountId = updates.destination_account_id || oldInc.destination_account_id;
+        const targetAmount = updates.amount !== undefined ? updates.amount : oldInc.amount;
+
+        if (oldInc.destination_account_id === targetAccountId) {
+          // Adjust single account
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance - oldInc.amount + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        } else {
+          // Revert old account
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === oldInc.destination_account_id) {
+              return { ...a, balance: a.balance - oldInc.amount, updated_at: new Date().toISOString() };
+            }
+            // Add to new account
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        }
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
+
+      notifyDataChange();
+      return newInc;
+    }
+
+    const { data, error } = await supabase
+      .from('income')
+      .update(updates)
+      .eq('id', incomeId)
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
   // RECEIPTS & OCR PREFILL MOCKUP
   uploadReceipt: async (userId: string, file: File): Promise<Partial<Receipt> & { extracted_items?: any[]; extracted_discount?: number }> => {
     const previewUrl = URL.createObjectURL(file);
