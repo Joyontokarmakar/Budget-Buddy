@@ -112,22 +112,23 @@ export const Reports: React.FC = () => {
     return loans.filter(l => l.type === 'provided' && l.status === 'active').reduce((sum, l) => sum + l.remaining_amount, 0);
   }, [loans]);
 
-  // Distinguish Fixed Bills vs Daily Shopping
-  const fixedBillCategories = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'];
+
 
   const fixedBills = useMemo(() => {
     return currentMonthExpenses.filter(e => {
-      const catName = e.category?.name || '';
-      return fixedBillCategories.includes(catName);
+      if (e.category?.is_monthly_bill) return true;
+      const cat = categories.find(c => c.id === e.category_id);
+      return cat?.is_monthly_bill || false;
     });
-  }, [currentMonthExpenses]);
+  }, [currentMonthExpenses, categories]);
 
   const shoppingExpenses = useMemo(() => {
     return currentMonthExpenses.filter(e => {
-      const catName = e.category?.name || '';
-      return !fixedBillCategories.includes(catName);
+      if (e.category?.is_monthly_bill) return false;
+      const cat = categories.find(c => c.id === e.category_id);
+      return !cat?.is_monthly_bill;
     }).sort((a, b) => a.date.localeCompare(b.date));
-  }, [currentMonthExpenses]);
+  }, [currentMonthExpenses, categories]);
 
   // Construct Google Sheet grid items structure
   const sheetData = useMemo(() => {
@@ -295,7 +296,11 @@ export const Reports: React.FC = () => {
       const checkOther = (catId?: string | null) => {
         if (!catId) return true;
         const cat = categories.find(c => c.id === catId);
-        return cat ? !['Food', 'Kitchen ware', 'Restaurant', 'Shopping', ...fixedBillCategories].includes(cat.name) : true;
+        if (!cat) return true;
+        const name = cat.name.toLowerCase();
+        if (['food', 'kitchen ware', 'restaurant', 'shopping'].includes(name)) return false;
+        if (cat.is_monthly_bill) return false;
+        return true;
       };
 
       const safeItems = getSafeItems(e.items);
@@ -314,20 +319,25 @@ export const Reports: React.FC = () => {
     return foodTotal + kitchenTotal + restaurantTotal + shoppingTotalCategory + othersTotal;
   }, [foodTotal, kitchenTotal, restaurantTotal, shoppingTotalCategory, othersTotal]);
 
-  // Fixed bills summaries
-  const rentBill = useMemo(() => fixedBills.find(b => b.category?.name === 'House rent'), [fixedBills]);
-  const insuranceBill = useMemo(() => fixedBills.find(b => b.category?.name === 'Health Insurance'), [fixedBills]);
-  const radioBill = useMemo(() => fixedBills.find(b => b.category?.name === 'Radio Bill'), [fixedBills]);
-  const mobileBill = useMemo(() => fixedBills.find(b => b.category?.name === 'Mobile bill'), [fixedBills]);
-
-  const rentAmount = rentBill?.amount || 0;
-  const insuranceAmount = insuranceBill?.amount || 0;
-  const radioAmount = radioBill?.amount || 0;
-  const mobileAmount = mobileBill?.amount || 0;
+  // Fixed bills summaries (Dynamic)
+  const dynamicFixedBillsList = useMemo(() => {
+    const activeCats = categories.filter(c => c.is_monthly_bill && c.is_active !== false);
+    return activeCats.map(cat => {
+      const matchingExps = fixedBills.filter(b => b.category_id === cat.id || b.category?.name === cat.name);
+      const totalAmount = matchingExps.reduce((sum, b) => sum + Number(b.amount), 0);
+      const loggedDate = matchingExps.find(b => b.date)?.date || null;
+      return {
+        id: cat.id,
+        name: cat.name,
+        amount: totalAmount,
+        date: loggedDate,
+      };
+    });
+  }, [categories, fixedBills]);
 
   const totalCommonBill = useMemo(() => {
-    return rentAmount + insuranceAmount + radioAmount + mobileAmount;
-  }, [rentAmount, insuranceAmount, radioAmount, mobileAmount]);
+    return dynamicFixedBillsList.reduce((sum, b) => sum + b.amount, 0);
+  }, [dynamicFixedBillsList]);
 
   const totalExpenses = useMemo(() => {
     return shoppingSubTotal + totalCommonBill;
@@ -480,14 +490,12 @@ export const Reports: React.FC = () => {
       <tr class="total-row"><td>Shopping Sub Total</td><td class="amount">€${shoppingSubTotal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
     `;
 
-    // Generate common bills rows
-    const commonBillsRowsHtml = `
-      <tr><td>House Rent</td><td class="amount">€${rentAmount.toFixed(2)}</td></tr>
-      <tr><td>Health Insurance</td><td class="amount">€${insuranceAmount.toFixed(2)}</td></tr>
-      <tr><td>Radio Bill</td><td class="amount">€${radioAmount.toFixed(2)}</td></tr>
-      <tr><td>Mobile bill</td><td class="amount">€${mobileAmount.toFixed(2)}</td></tr>
-      <tr class="total-row"><td>Total Common Bill</td><td class="amount">€${totalCommonBill.toFixed(2)}</td></tr>
-    `;
+    // Generate common bills rows (Dynamic)
+    let commonBillsRowsHtml = '';
+    dynamicFixedBillsList.forEach(b => {
+      commonBillsRowsHtml += `<tr><td>${b.name}</td><td class="amount">€${b.amount.toFixed(2)}</td></tr>\n`;
+    });
+    commonBillsRowsHtml += `<tr class="total-row"><td>Total Common Bill</td><td class="amount">€${totalCommonBill.toFixed(2)}</td></tr>`;
 
     // Detailed Shopping list rows
     let shoppingListRowsHtml = '';
@@ -1115,13 +1123,13 @@ export const Reports: React.FC = () => {
               </span>
             </button>
 
-            {fixedBillCategories.map((catName) => {
-              const isActive = selectedBillCategory === catName;
+            {dynamicFixedBillsList.map((bill) => {
+              const isActive = selectedBillCategory === bill.name;
               return (
                 <button
-                  key={catName}
+                  key={bill.name}
                   type="button"
-                  onClick={() => setSelectedBillCategory(isActive ? null : catName)}
+                  onClick={() => setSelectedBillCategory(isActive ? null : bill.name)}
                   className={cn(
                     "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
                     isActive
@@ -1129,18 +1137,13 @@ export const Reports: React.FC = () => {
                       : "bg-card hover:bg-muted border-border/80 text-foreground"
                   )}
                 >
-                  <span className="opacity-90">{catName}</span>
+                  <span className="opacity-90">{bill.name}</span>
                   {/* Show current month value under the button */}
                   <span className={cn(
                     "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
                     isActive ? "text-primary-foreground/90" : "text-muted-foreground"
                   )}>
-                    Current: €{
-                      catName === 'House rent' ? rentAmount.toFixed(2) :
-                      catName === 'Health Insurance' ? insuranceAmount.toFixed(2) :
-                      catName === 'Radio Bill' ? radioAmount.toFixed(2) :
-                      mobileAmount.toFixed(2)
-                    }
+                    Current: €{bill.amount.toFixed(2)}
                   </span>
                 </button>
               );
@@ -1455,42 +1458,21 @@ export const Reports: React.FC = () => {
             <CardContent className="p-0 text-xs font-semibold">
               <table className="w-full border-collapse">
                 <tbody className="divide-y divide-border/30">
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>House Rent</span>
-                      {rentBill && <span className="text-[10px] text-muted-foreground/60">{rentBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{rentAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Health Insurance</span>
-                      {insuranceBill && <span className="text-[10px] text-muted-foreground/60">{insuranceBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{insuranceAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Radio Bill</span>
-                      {radioBill && <span className="text-[10px] text-muted-foreground/60">{radioBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{radioAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-muted/10">
-                    <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
-                      <span>Mobile bill</span>
-                      {mobileBill && <span className="text-[10px] text-muted-foreground/60">{mobileBill.date.split('-').map(x => parseInt(x)).reverse().join('.')}</span>}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                      €{mobileAmount.toFixed(2)}
-                    </td>
-                  </tr>
+                  {dynamicFixedBillsList.map((bill) => (
+                    <tr key={bill.id} className="hover:bg-muted/10">
+                      <td className="py-2.5 px-4 text-muted-foreground flex justify-between">
+                        <span>{bill.name}</span>
+                        {bill.date && (
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {bill.date.split('-').reverse().join('.')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                        €{bill.amount.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
                   
                   <tr className="bg-muted/30 font-bold">
                     <td className="py-2.5 px-4 text-foreground/80">Total Common Bill</td>
