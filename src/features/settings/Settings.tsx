@@ -473,17 +473,32 @@ export const Settings: React.FC = () => {
 
               {/* Status Dotted Circle Controls */}
               <div className="space-y-3 border-t border-border/40 pt-3">
-                <div className="flex items-center gap-2.5 ml-1">
-                  <input
-                    type="checkbox"
-                    id="show_status_dots"
-                    checked={showStatusDots}
-                    onChange={(e) => setShowStatusDots(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 bg-card cursor-pointer"
-                  />
-                  <label htmlFor="show_status_dots" className="text-xs font-bold text-foreground cursor-pointer select-none">
-                    Show status dotted circle around avatar
-                  </label>
+                <div className="flex items-center justify-between ml-1 py-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-foreground">
+                      Status Dotted Circle
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Show status indicators around avatar
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showStatusDots}
+                    onClick={() => setShowStatusDots(!showStatusDots)}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20",
+                      showStatusDots ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-background shadow-md ring-0 transition duration-200 ease-in-out",
+                        showStatusDots ? "translate-x-4" : "translate-x-0"
+                      )}
+                    />
+                  </button>
                 </div>
               </div>
               <Input
