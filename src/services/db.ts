@@ -23,27 +23,73 @@ const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c15', user_id: null, name: 'Discount', icon: 'Percent', color: '#10b981', created_at: new Date().toISOString() },
 ];
 
-const DEFAULT_STORES: Store[] = [
-  { id: 's1', user_id: null, name: 'Lidl', created_at: new Date().toISOString() },
-  { id: 's2', user_id: null, name: 'Aldi Süd', created_at: new Date().toISOString() },
-  { id: 's3', user_id: null, name: 'Aldi Nord', created_at: new Date().toISOString() },
-  { id: 's4', user_id: null, name: 'REWE', created_at: new Date().toISOString() },
-  { id: 's5', user_id: null, name: 'EDEKA', created_at: new Date().toISOString() },
-  { id: 's6', user_id: null, name: 'Kaufland', created_at: new Date().toISOString() },
-  { id: 's7', user_id: null, name: 'dm-drogerie markt', created_at: new Date().toISOString() },
-  { id: 's8', user_id: null, name: 'Rossmann', created_at: new Date().toISOString() },
-  { id: 's9', user_id: null, name: 'Müller', created_at: new Date().toISOString() },
-  { id: 's10', user_id: null, name: 'IKEA', created_at: new Date().toISOString() },
-  { id: 's11', user_id: null, name: 'Decathlon', created_at: new Date().toISOString() },
-  { id: 's12', user_id: null, name: 'Penny', created_at: new Date().toISOString() },
-  { id: 's13', user_id: null, name: 'Netto', created_at: new Date().toISOString() },
-  { id: 's14', user_id: null, name: 'Washing Machine', created_at: new Date().toISOString() },
-  { id: 's15', user_id: null, name: 'Flink', created_at: new Date().toISOString() },
-  { id: 's16', user_id: null, name: 'Allan Pizza', created_at: new Date().toISOString() },
-  { id: 's17', user_id: null, name: '7 days curry & Pizza', created_at: new Date().toISOString() },
-  { id: 's18', user_id: null, name: 'Delhi Masala', created_at: new Date().toISOString() },
-  { id: 's19', user_id: null, name: 'Bollywood shop', created_at: new Date().toISOString() },
-  { id: 's20', user_id: null, name: 'Fleischerei', created_at: new Date().toISOString() },
+const DEFAULT_STORES: (Store & { country?: string })[] = [
+  // Germany
+  { id: 's1', user_id: null, name: 'Lidl', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's2', user_id: null, name: 'Aldi Süd', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's3', user_id: null, name: 'Aldi Nord', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's4', user_id: null, name: 'REWE', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's5', user_id: null, name: 'EDEKA', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's6', user_id: null, name: 'Kaufland', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's7', user_id: null, name: 'dm-drogerie markt', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's8', user_id: null, name: 'Rossmann', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's9', user_id: null, name: 'Müller', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's10', user_id: null, name: 'IKEA', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's11', user_id: null, name: 'Decathlon', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's12', user_id: null, name: 'Penny', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's13', user_id: null, name: 'Netto', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's14', user_id: null, name: 'Washing Machine', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's15', user_id: null, name: 'Flink', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's16', user_id: null, name: 'Allan Pizza', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's17', user_id: null, name: '7 days curry & Pizza', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's18', user_id: null, name: 'Delhi Masala', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's19', user_id: null, name: 'Bollywood shop', country: 'Germany', created_at: new Date().toISOString() },
+  { id: 's20', user_id: null, name: 'Fleischerei', country: 'Germany', created_at: new Date().toISOString() },
+
+  // Bangladesh
+  { id: 's21', user_id: null, name: 'Shwapno', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's22', user_id: null, name: 'Agora', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's23', user_id: null, name: 'Meena Bazar', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's24', user_id: null, name: 'Daily Shopping', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's25', user_id: null, name: 'Unimart', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's26', user_id: null, name: 'Prince Bazar', country: 'Bangladesh', created_at: new Date().toISOString() },
+  { id: 's27', user_id: null, name: 'Aarong', country: 'Bangladesh', created_at: new Date().toISOString() },
+
+  // India
+  { id: 's28', user_id: null, name: 'Reliance Smart', country: 'India', created_at: new Date().toISOString() },
+  { id: 's29', user_id: null, name: 'D-Mart', country: 'India', created_at: new Date().toISOString() },
+  { id: 's30', user_id: null, name: 'Big Bazaar', country: 'India', created_at: new Date().toISOString() },
+  { id: 's31', user_id: null, name: 'More Supermarket', country: 'India', created_at: new Date().toISOString() },
+  { id: 's32', user_id: null, name: 'Spencer\'s', country: 'India', created_at: new Date().toISOString() },
+  { id: 's33', user_id: null, name: 'Star Bazaar', country: 'India', created_at: new Date().toISOString() },
+  { id: 's34', user_id: null, name: 'JioMart', country: 'India', created_at: new Date().toISOString() },
+
+  // United States
+  { id: 's35', user_id: null, name: 'Walmart', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's36', user_id: null, name: 'Target', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's37', user_id: null, name: 'Costco', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's38', user_id: null, name: 'Kroger', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's39', user_id: null, name: 'Whole Foods Market', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's40', user_id: null, name: 'Trader Joe\'s', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's41', user_id: null, name: 'Walgreens', country: 'United States', created_at: new Date().toISOString() },
+  { id: 's42', user_id: null, name: 'CVS Pharmacy', country: 'United States', created_at: new Date().toISOString() },
+
+  // United Kingdom
+  { id: 's43', user_id: null, name: 'Tesco', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's44', user_id: null, name: 'Sainsbury\'s', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's45', user_id: null, name: 'Asda', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's46', user_id: null, name: 'Morrisons', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's47', user_id: null, name: 'Co-op Food', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's48', user_id: null, name: 'Marks & Spencer', country: 'United Kingdom', created_at: new Date().toISOString() },
+  { id: 's49', user_id: null, name: 'Boots', country: 'United Kingdom', created_at: new Date().toISOString() },
+
+  // Global Fallback Defaults
+  { id: 's50', user_id: null, name: 'Amazon', created_at: new Date().toISOString() },
+  { id: 's51', user_id: null, name: 'eBay', created_at: new Date().toISOString() },
+  { id: 's52', user_id: null, name: 'AliExpress', created_at: new Date().toISOString() },
+  { id: 's53', user_id: null, name: 'Uber / Rideshare', created_at: new Date().toISOString() },
+  { id: 's54', user_id: null, name: 'Local Grocery', created_at: new Date().toISOString() },
+  { id: 's55', user_id: null, name: 'Cafe & Restaurant', created_at: new Date().toISOString() },
 ];
 
 const DEFAULT_ACCOUNTS = (userId: string): Account[] => [
@@ -428,11 +474,30 @@ function initLocalStorage(userId: string) {
   }
 
   const localStores = localStorage.getItem('bb-stores');
+  // Get user's residence country
+  const mockProfileStr = localStorage.getItem('bb-mock-profile');
+  let userCountry: string | null = null;
+  if (mockProfileStr) {
+    try {
+      const prof = JSON.parse(mockProfileStr);
+      userCountry = prof.residence_country || null;
+    } catch (e) {}
+  }
+
+  // Filter default stores by country
+  let filteredDefaults = DEFAULT_STORES.filter(s => s.country === userCountry);
+  if (filteredDefaults.length === 0) {
+    // Fallback to global defaults (stores with no country specified)
+    filteredDefaults = DEFAULT_STORES.filter(s => !s.country);
+  }
+
   if (!localStores) {
-    const initialStores = DEFAULT_STORES.map(s => ({
-      ...s,
+    const initialStores = filteredDefaults.map(s => ({
+      id: s.id,
+      name: s.name,
       user_id: userId,
-      rendering_name: null
+      rendering_name: null,
+      created_at: s.created_at
     }));
     localStorage.setItem('bb-stores', JSON.stringify(initialStores));
   } else {
@@ -446,20 +511,24 @@ function initLocalStorage(userId: string) {
         }
         return s;
       });
-      const missingStores = DEFAULT_STORES.filter(ds => !migratedStores.some(ps => ps.name.toLowerCase() === ds.name.toLowerCase()));
+      const missingStores = filteredDefaults.filter(ds => !migratedStores.some(ps => ps.name.toLowerCase() === ds.name.toLowerCase()));
       if (missingStores.length > 0 || updated) {
         const added = missingStores.map(s => ({
-          ...s,
+          id: s.id,
+          name: s.name,
           user_id: userId,
-          rendering_name: null
+          rendering_name: null,
+          created_at: s.created_at
         }));
         localStorage.setItem('bb-stores', JSON.stringify([...migratedStores, ...added]));
       }
     } catch (e) {
-      const initialStores = DEFAULT_STORES.map(s => ({
-        ...s,
+      const initialStores = filteredDefaults.map(s => ({
+        id: s.id,
+        name: s.name,
         user_id: userId,
-        rendering_name: null
+        rendering_name: null,
+        created_at: s.created_at
       }));
       localStorage.setItem('bb-stores', JSON.stringify(initialStores));
     }

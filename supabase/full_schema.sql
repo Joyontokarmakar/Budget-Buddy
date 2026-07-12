@@ -71,6 +71,7 @@ create table public.stores (
     user_id uuid references public.profiles(id) on delete cascade, -- null means global system default
     name text not null,
     rendering_name text,
+    country text,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     unique(user_id, name)
 );
@@ -205,7 +206,7 @@ alter table public.loans enable row level security;
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, email, preferred_language, theme_preference, monthly_budget, onboarded)
+  insert into public.profiles (id, name, email, preferred_language, theme_preference, monthly_budget, onboarded, residence_country)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', 'Student'),
@@ -213,7 +214,8 @@ begin
     coalesce(new.raw_user_meta_data->>'preferred_language', 'de'),
     coalesce(new.raw_user_meta_data->>'theme_preference', 'system'),
     700.00,
-    false
+    false,
+    new.raw_user_meta_data->>'residence_country'
   );
   return new;
 end;
@@ -261,11 +263,22 @@ create trigger on_profile_created_seed_categories
 create or replace function public.seed_new_user_stores()
 returns trigger as $$
 begin
+  -- First seed default stores for their specific country
   insert into public.stores (user_id, name)
   select new.id, name
   from public.stores
-  where user_id is null
+  where user_id is null and country = new.residence_country
   on conflict (user_id, name) do nothing;
+
+  -- If they have no country-specific stores seeded, fallback to seeding global stores (country is null)
+  if not exists (select 1 from public.stores where user_id = new.id) then
+    insert into public.stores (user_id, name)
+    select new.id, name
+    from public.stores
+    where user_id is null and country is null
+    on conflict (user_id, name) do nothing;
+  end if;
+
   return new;
 end;
 $$ language plpgsql security definer;
@@ -620,31 +633,77 @@ insert into public.categories (name, icon, color) values
   ('Other', 'HelpCircle', '#6b7280'),
   ('Discount', 'Percent', '#10b981');
 
--- Seed Default German/Standard Stores (Global ones with user_id NULL)
-insert into public.stores (name) values
-  ('Lidl'),
-  ('Aldi Süd'),
-  ('Aldi Nord'),
-  ('REWE'),
-  ('EDEKA'),
-  ('Kaufland'),
-  ('dm-drogerie markt'),
-  ('Rossmann'),
-  ('Müller'),
-  ('IKEA'),
-  ('Decathlon'),
-  ('Netto'),
-  ('Penny'),
-  ('Saturn'),
-  ('MediaMarkt'),
-  ('Amazon.de'),
-  ('Washing Machine'),
-  ('Flink'),
-  ('Allan Pizza'),
-  ('7 days curry & Pizza'),
-  ('Delhi Masala'),
-  ('Bollywood shop'),
-  ('Fleischerei');
+-- Seed Default Stores country-wise (Global ones with user_id NULL)
+insert into public.stores (name, country) values
+  -- Germany
+  ('Lidl', 'Germany'),
+  ('Aldi Süd', 'Germany'),
+  ('Aldi Nord', 'Germany'),
+  ('REWE', 'Germany'),
+  ('EDEKA', 'Germany'),
+  ('Kaufland', 'Germany'),
+  ('dm-drogerie markt', 'Germany'),
+  ('Rossmann', 'Germany'),
+  ('Müller', 'Germany'),
+  ('IKEA', 'Germany'),
+  ('Decathlon', 'Germany'),
+  ('Netto', 'Germany'),
+  ('Penny', 'Germany'),
+  ('Saturn', 'Germany'),
+  ('MediaMarkt', 'Germany'),
+  ('Amazon.de', 'Germany'),
+  ('Washing Machine', 'Germany'),
+  ('Flink', 'Germany'),
+  ('Allan Pizza', 'Germany'),
+  ('7 days curry & Pizza', 'Germany'),
+  ('Delhi Masala', 'Germany'),
+  ('Bollywood shop', 'Germany'),
+  ('Fleischerei', 'Germany'),
+
+  -- Bangladesh
+  ('Shwapno', 'Bangladesh'),
+  ('Agora', 'Bangladesh'),
+  ('Meena Bazar', 'Bangladesh'),
+  ('Daily Shopping', 'Bangladesh'),
+  ('Unimart', 'Bangladesh'),
+  ('Prince Bazar', 'Bangladesh'),
+  ('Aarong', 'Bangladesh'),
+
+  -- India
+  ('Reliance Smart', 'India'),
+  ('D-Mart', 'India'),
+  ('Big Bazaar', 'India'),
+  ('More Supermarket', 'India'),
+  ('Spencer''s', 'India'),
+  ('Star Bazaar', 'India'),
+  ('JioMart', 'India'),
+
+  -- United States
+  ('Walmart', 'United States'),
+  ('Target', 'United States'),
+  ('Costco', 'United States'),
+  ('Kroger', 'United States'),
+  ('Whole Foods Market', 'United States'),
+  ('Trader Joe''s', 'United States'),
+  ('Walgreens', 'United States'),
+  ('CVS Pharmacy', 'United States'),
+
+  -- United Kingdom
+  ('Tesco', 'United Kingdom'),
+  ('Sainsbury''s', 'United Kingdom'),
+  ('Asda', 'United Kingdom'),
+  ('Morrisons', 'United Kingdom'),
+  ('Co-op Food', 'United Kingdom'),
+  ('Marks & Spencer', 'United Kingdom'),
+  ('Boots', 'United Kingdom'),
+
+  -- Global Fallback Defaults (country is null)
+  ('Amazon', null),
+  ('eBay', null),
+  ('AliExpress', null),
+  ('Uber / Rideshare', null),
+  ('Local Grocery', null),
+  ('Cafe & Restaurant', null);
 
 
 -- =========================================================================
