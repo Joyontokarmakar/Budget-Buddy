@@ -37,6 +37,7 @@ const MOCK_PROFILE: Profile = {
   monthly_budget: 700.00,
   show_status_dots: true,
   status_dots_count: 40,
+  show_shop_name: true,
   onboarded: true,
   residence_country: 'Germany',
   created_at: new Date().toISOString(),

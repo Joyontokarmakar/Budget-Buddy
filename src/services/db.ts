@@ -429,16 +429,39 @@ function initLocalStorage(userId: string) {
 
   const localStores = localStorage.getItem('bb-stores');
   if (!localStores) {
-    localStorage.setItem('bb-stores', JSON.stringify(DEFAULT_STORES));
+    const initialStores = DEFAULT_STORES.map(s => ({
+      ...s,
+      user_id: userId,
+      rendering_name: null
+    }));
+    localStorage.setItem('bb-stores', JSON.stringify(initialStores));
   } else {
     try {
       const parsedStores = JSON.parse(localStores) as Store[];
-      const missingStores = DEFAULT_STORES.filter(ds => !parsedStores.some(ps => ps.name.toLowerCase() === ds.name.toLowerCase()));
-      if (missingStores.length > 0) {
-        localStorage.setItem('bb-stores', JSON.stringify([...parsedStores, ...missingStores]));
+      let updated = false;
+      const migratedStores = parsedStores.map(s => {
+        if (!s.user_id) {
+          updated = true;
+          return { ...s, user_id: userId };
+        }
+        return s;
+      });
+      const missingStores = DEFAULT_STORES.filter(ds => !migratedStores.some(ps => ps.name.toLowerCase() === ds.name.toLowerCase()));
+      if (missingStores.length > 0 || updated) {
+        const added = missingStores.map(s => ({
+          ...s,
+          user_id: userId,
+          rendering_name: null
+        }));
+        localStorage.setItem('bb-stores', JSON.stringify([...migratedStores, ...added]));
       }
     } catch (e) {
-      localStorage.setItem('bb-stores', JSON.stringify(DEFAULT_STORES));
+      const initialStores = DEFAULT_STORES.map(s => ({
+        ...s,
+        user_id: userId,
+        rendering_name: null
+      }));
+      localStorage.setItem('bb-stores', JSON.stringify(initialStores));
     }
   }
 
@@ -657,12 +680,12 @@ export const db = {
   getStores: async (userId: string): Promise<Store[]> => {
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
-      return getLocalItems<Store>('bb-stores');
+      return getLocalItems<Store>('bb-stores').filter(s => s.user_id === userId);
     }
     const { data, error } = await supabase
       .from('stores')
       .select('*')
-      .or(`user_id.is.null,user_id.eq.${userId}`)
+      .eq('user_id', userId)
       .order('name', { ascending: true });
     if (error) throw error;
     return data || [];
@@ -683,13 +706,14 @@ export const db = {
       initLocalStorage(userId);
       const stores = getLocalItems<Store>('bb-stores');
       // Case insensitive check
-      const existing = stores.find(s => s.name.toLowerCase() === normalizedName.toLowerCase());
+      const existing = stores.find(s => s.user_id === userId && s.name.toLowerCase() === normalizedName.toLowerCase());
       if (existing) return existing;
 
       const newStore: Store = {
         id: crypto.randomUUID(),
         user_id: userId,
         name: normalizedName,
+        rendering_name: null,
         created_at: new Date().toISOString(),
       };
       stores.push(newStore);
@@ -702,7 +726,7 @@ export const db = {
       .from('stores')
       .select('*')
       .eq('name', normalizedName)
-      .or(`user_id.is.null,user_id.eq.${userId}`);
+      .eq('user_id', userId);
       
     if (existing && existing.length > 0) {
       return existing[0];
@@ -716,6 +740,50 @@ export const db = {
     if (error) throw error;
     notifyDataChange();
     return data;
+  },
+
+  updateStore: async (userId: string, storeId: string, updates: Partial<Store>): Promise<Store> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const stores = getLocalItems<Store>('bb-stores');
+      const idx = stores.findIndex(s => s.id === storeId);
+      if (idx === -1) throw new Error('Store not found');
+      
+      const updatedStore = {
+        ...stores[idx],
+        ...updates,
+      };
+      stores[idx] = updatedStore;
+      setLocalItems('bb-stores', stores);
+      notifyDataChange();
+      return updatedStore;
+    }
+    const { data, error } = await supabase
+      .from('stores')
+      .update(updates)
+      .eq('id', storeId)
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  deleteStore: async (userId: string, storeId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      let stores = getLocalItems<Store>('bb-stores');
+      stores = stores.filter(s => s.id !== storeId);
+      setLocalItems('bb-stores', stores);
+      notifyDataChange();
+      return;
+    }
+    const { error } = await supabase
+      .from('stores')
+      .delete()
+      .eq('id', storeId);
+    if (error) throw error;
+    notifyDataChange();
   },
 
   // EXPENSES

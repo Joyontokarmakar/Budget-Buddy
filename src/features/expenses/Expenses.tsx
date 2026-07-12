@@ -1519,7 +1519,9 @@ export const Expenses: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-bold text-foreground">
-                          {exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other')}
+                          {profile?.show_shop_name === false
+                            ? t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other')
+                            : (exp.store?.rendering_name || exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other'))}
                         </h4>
                         {exp.receipt_url && (
                           <button
@@ -1604,7 +1606,9 @@ export const Expenses: React.FC = () => {
                     
                     <CardContent className="p-0 divide-y divide-border/40">
                       {dateExpenses.map((exp) => {
-                        const storeName = exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other');
+                        const storeName = profile?.show_shop_name === false
+                          ? t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other')
+                          : (exp.store?.rendering_name || exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other'));
                         
                         return (
                           <div key={exp.id} className="p-5 space-y-4 group">
@@ -1756,7 +1760,9 @@ export const Expenses: React.FC = () => {
                     <tbody className="divide-y divide-border/40">
                       {Object.values(
                         filteredSummaryExpenses.reduce((groups: { [key: string]: { shopName: string; totalAmount: number; expenses: ExpenseWithDetails[] } }, exp) => {
-                          const shopName = exp.store?.name || (t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other') as string);
+                          const shopName = profile?.show_shop_name === false
+                            ? (t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other') as string)
+                            : (exp.store?.rendering_name || exp.store?.name || (t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other') as string));
                           if (!groups[shopName]) {
                             groups[shopName] = {
                               shopName,

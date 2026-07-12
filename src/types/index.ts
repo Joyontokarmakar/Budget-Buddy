@@ -14,6 +14,7 @@ export interface Profile {
   gemini_api_key?: string | null;
   show_status_dots?: boolean | null;
   status_dots_count?: number | null;
+  show_shop_name?: boolean | null;
   onboarded: boolean;
   residence_country?: string | null;
   created_at: string;
@@ -57,6 +58,7 @@ export interface Store {
   id: string;
   user_id: string | null; // null for system defaults
   name: string;
+  rendering_name?: string | null;
   created_at: string;
 }
 

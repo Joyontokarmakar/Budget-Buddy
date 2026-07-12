@@ -233,7 +233,7 @@ export const Analytics: React.FC = () => {
       const notes = e.notes?.toLowerCase() || '';
       if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return;
 
-      const storeName = e.store?.name || 'Other/Unknown';
+      const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
       storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
     }
   });
@@ -693,7 +693,9 @@ export const Analytics: React.FC = () => {
                                           "truncate font-semibold",
                                           isDark ? "text-slate-200" : "text-slate-800"
                                         )}>
-                                          {exp.store?.name || exp.notes || exp.category?.name || 'Expense'}
+                                          {profile?.show_shop_name === false
+                                            ? t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other')
+                                            : (exp.store?.rendering_name || exp.store?.name || exp.notes || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other'))}
                                         </span>
                                       </div>
                                       <span className="font-mono text-rose-500 font-extrabold shrink-0">

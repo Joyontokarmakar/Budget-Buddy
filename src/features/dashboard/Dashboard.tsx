@@ -430,7 +430,9 @@ export const Dashboard: React.FC = () => {
     ...expenses.map(e => ({
       id: e.id,
       type: 'expense' as const,
-      title: e.store?.name || t(`categories.${e.category?.name || 'Other'}`, e.category?.name || 'Other'),
+      title: profile?.show_shop_name === false
+        ? t(`categories.${e.category?.name || 'Other'}`, e.category?.name || 'Other')
+        : (e.store?.rendering_name || e.store?.name || t(`categories.${e.category?.name || 'Other'}`, e.category?.name || 'Other')),
       amount: e.amount,
       date: e.date,
       categoryColor: e.category?.color || '#3b82f6',
@@ -537,7 +539,7 @@ export const Dashboard: React.FC = () => {
   // Store Analytics: Top 5 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
   nonBillExpenses.forEach(e => {
-    const storeName = e.store?.name || 'Other/Unknown';
+    const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
     storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
   });
 

@@ -4,11 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Language, ThemeMode, Account, UserSession, Category } from '../../types';
+import type { Language, ThemeMode, Account, UserSession, Category, Store } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { StatusDots } from '../../components/StatusDots';
-import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw, Store as StoreIcon } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -56,6 +56,16 @@ export const Settings: React.FC = () => {
   // Status Dots settings state
   const [showStatusDots, setShowStatusDots] = useState(profile?.show_status_dots ?? true);
 
+  // Shop settings states
+  const [showShopName, setShowShopName] = useState(profile?.show_shop_name ?? true);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [storeNameInput, setStoreNameInput] = useState('');
+  const [storeRenderingNameInput, setStoreRenderingNameInput] = useState('');
+  const [storeSearchQuery, setStoreSearchQuery] = useState('');
+  const [storeLoading, setStoreLoading] = useState(false);
+
   // Session / Device states
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
@@ -90,12 +100,14 @@ export const Settings: React.FC = () => {
     const loadFinancialData = async () => {
       if (profile) {
         try {
-          const [accs, cats] = await Promise.all([
+          const [accs, cats, strs] = await Promise.all([
             db.getAccounts(profile.id),
-            db.getCategories(profile.id)
+            db.getCategories(profile.id),
+            db.getStores(profile.id)
           ]);
           setAccounts(accs);
           setCategories(cats);
+          setStores(strs);
         } catch (err) {
           console.error(err);
         }
@@ -112,6 +124,7 @@ export const Settings: React.FC = () => {
       setGeminiApiKey(profile.gemini_api_key || '');
       // Removed static profile bills settings loading
       setShowStatusDots(profile.show_status_dots ?? true);
+      setShowShopName(profile.show_shop_name ?? true);
     }
   }, [profile]);
 
@@ -125,6 +138,7 @@ export const Settings: React.FC = () => {
       name: name.trim(),
       gemini_api_key: geminiApiKey.trim() || null,
       show_status_dots: showStatusDots,
+      show_shop_name: showShopName,
     });
     setProfileLoading(false);
     if (!error) {
@@ -330,6 +344,49 @@ export const Settings: React.FC = () => {
       setBudgetLoading(false);
     }
   };
+  const handleSaveStore = async () => {
+    if (!profile || !storeNameInput.trim()) return;
+    try {
+      setStoreLoading(true);
+      if (editingStore) {
+        await db.updateStore(profile.id, editingStore.id, {
+          name: storeNameInput.trim(),
+          rendering_name: storeRenderingNameInput.trim() || null,
+        });
+      } else {
+        const newStore = await db.createStore(profile.id, storeNameInput.trim());
+        if (storeRenderingNameInput.trim()) {
+          await db.updateStore(profile.id, newStore.id, {
+            rendering_name: storeRenderingNameInput.trim()
+          });
+        }
+      }
+      
+      const updatedStores = await db.getStores(profile.id);
+      setStores(updatedStores);
+      setIsStoreModalOpen(false);
+      setEditingStore(null);
+    } catch (err) {
+      console.error('Error saving store:', err);
+    } finally {
+      setStoreLoading(false);
+    }
+  };
+
+  const handleDeleteStore = async (storeId: string) => {
+    if (!profile) return;
+    if (!window.confirm("Are you sure you want to delete this shop/merchant? Any transactions under this merchant will have their merchant set to null.")) return;
+    try {
+      setStoreLoading(true);
+      await db.deleteStore(profile.id, storeId);
+      const updatedStores = await db.getStores(profile.id);
+      setStores(updatedStores);
+    } catch (err) {
+      console.error('Error deleting store:', err);
+    } finally {
+      setStoreLoading(false);
+    }
+  };
 
 
 
@@ -470,6 +527,38 @@ export const Settings: React.FC = () => {
                   </button>
                 </div>
               </div>
+              
+              {/* Show Shop/Merchant Names Controls */}
+              <div className="space-y-3 border-t border-border/40 pt-3">
+                <div className="flex items-center justify-between ml-1 py-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-foreground">
+                      Show Shop/Merchant Names
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Display shop names in transactions feed instead of category name
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showShopName}
+                    onClick={() => setShowShopName(!showShopName)}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary/20",
+                      showShopName ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-background shadow-md ring-0 transition duration-200 ease-in-out",
+                        showShopName ? "translate-x-4" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+              
               <Input
                 label={t('settings.email')}
                 value={email}
@@ -629,6 +718,95 @@ export const Settings: React.FC = () => {
                 Update Monthly Budget Limit
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* SHOPS & MERCHANTS CARD */}
+        <Card className="bg-card/75 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <StoreIcon className="h-4.5 w-4.5 text-muted-foreground" />
+              Shops & Merchants
+            </CardTitle>
+            <CardDescription>View, search, or edit your shops and define how they are rendered.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search shops..."
+                  value={storeSearchQuery}
+                  onChange={(e) => setStoreSearchQuery(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs px-3 font-bold cursor-pointer shrink-0"
+                onClick={() => {
+                  setEditingStore(null);
+                  setStoreNameInput('');
+                  setStoreRenderingNameInput('');
+                  setIsStoreModalOpen(true);
+                }}
+              >
+                + Add Shop
+              </Button>
+            </div>
+            
+            <div className="space-y-2.5 max-h-96 overflow-y-auto pr-0.5">
+              {stores
+                .filter(s => s.name.toLowerCase().includes(storeSearchQuery.toLowerCase()) || 
+                             (s.rendering_name && s.rendering_name.toLowerCase().includes(storeSearchQuery.toLowerCase())))
+                .map(store => (
+                  <div
+                    key={store.id}
+                    className="p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-foreground">{store.name}</span>
+                      {store.rendering_name && (
+                        <span className="text-[10px] text-primary font-semibold mt-0.5">
+                          Rendered as: {store.rendering_name}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-1.5 self-end sm:self-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
+                        onClick={() => {
+                          setEditingStore(store);
+                          setStoreNameInput(store.name);
+                          setStoreRenderingNameInput(store.rendering_name || '');
+                          setIsStoreModalOpen(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
+                        onClick={() => handleDeleteStore(store.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+              ))}
+              {stores.filter(s => s.name.toLowerCase().includes(storeSearchQuery.toLowerCase()) || 
+                                  (s.rendering_name && s.rendering_name.toLowerCase().includes(storeSearchQuery.toLowerCase()))).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">No shops found matching "{storeSearchQuery}"</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -912,6 +1090,50 @@ export const Settings: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      </Dialog>
+
+      {/* STORE EDIT MODAL */}
+      <Dialog
+        isOpen={isStoreModalOpen}
+        onClose={() => {
+          setIsStoreModalOpen(false);
+          setEditingStore(null);
+        }}
+        title={editingStore ? `Edit Shop: ${editingStore.name}` : 'Add Custom Shop'}
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => {
+              setIsStoreModalOpen(false);
+              setEditingStore(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveStore} loading={storeLoading}>
+              Save Shop
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          <Input
+            type="text"
+            label="Shop/Merchant Name"
+            value={storeNameInput}
+            onChange={(e) => setStoreNameInput(e.target.value)}
+            required
+            placeholder="e.g. Lidl, Rewe, Netto"
+          />
+          <Input
+            type="text"
+            label="Rendering Name (Display Override)"
+            value={storeRenderingNameInput}
+            onChange={(e) => setStoreRenderingNameInput(e.target.value)}
+            placeholder="e.g. Lidl Berlin (optional)"
+          />
+          <p className="text-[10.5px] text-muted-foreground leading-normal ml-1">
+            The rendering name is an alias used to display this shop's name in transaction list views. If left blank, the shop's actual name will be shown.
+          </p>
         </div>
       </Dialog>
     </div>

@@ -174,7 +174,9 @@ export const Reports: React.FC = () => {
       let dateItemCounter = 0;
 
       dayExpenses.forEach(exp => {
-        const storeName = exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other');
+        const storeName = profile?.show_shop_name === false
+          ? t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other')
+          : (exp.store?.rendering_name || exp.store?.name || t(`categories.${exp.category?.name || 'Other'}`, exp.category?.name || 'Other'));
         const safeItems = getSafeItems(exp.items);
         const items = safeItems.length > 0 
           ? safeItems 
@@ -350,7 +352,7 @@ export const Reports: React.FC = () => {
   const topStores = useMemo(() => {
     const storeSpendingMap: { [key: string]: number } = {};
     shoppingExpenses.forEach(e => {
-      const storeName = e.store?.name || 'Other/Unknown';
+      const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
       storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
     });
 
