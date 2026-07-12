@@ -263,9 +263,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const getUnpaidPastBills = () => {
-    if (!profile || !profile.created_at) return [];
+    if (!profile) return [];
     
-    let startD = new Date(profile.created_at);
+    let startD = new Date(profile.created_at || new Date().toISOString());
+    if (isNaN(startD.getTime())) {
+      startD = new Date();
+    }
     let earliestTime = startD.getTime();
     
     expenses.forEach(e => {

@@ -156,28 +156,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    try {
-      // 1. Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        set({ user: session.user });
-        
-        // Fetch profile
-        const { data: profile, error } = await supabase
+    const getOrCreateProfile = async (authUser: any): Promise<Profile | null> => {
+      try {
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', authUser.id)
           .single();
 
         if (profile) {
           let updatedProfile = profile;
-          const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+          const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
+          const googleName = authUser.user_metadata?.full_name || authUser.user_metadata?.name;
+          
+          const updates: Partial<Profile> = {};
           if (!profile.avatar_url && googleAvatar) {
+            updates.avatar_url = googleAvatar;
+          }
+          if ((!profile.name || profile.name === 'Student') && googleName) {
+            updates.name = googleName;
+          }
+
+          if (Object.keys(updates).length > 0) {
             try {
               const { data: newProf } = await supabase
                 .from('profiles')
-                .update({ avatar_url: googleAvatar })
+                .update(updates)
                 .eq('id', profile.id)
                 .select()
                 .single();
@@ -185,14 +189,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 updatedProfile = newProf;
               }
             } catch (err) {
-              console.error('Error syncing Google avatar:', err);
+              console.error('Error syncing Google profile updates:', err);
             }
           }
-          set({ profile: updatedProfile });
-          applyLanguageAndTheme(updatedProfile.preferred_language, updatedProfile.theme_preference);
-          await checkAndRegisterSession(updatedProfile, session.user);
-        } else if (error) {
-          console.error('Error fetching profile:', error);
+          return updatedProfile;
+        }
+
+        // Profile doesn't exist, create it (fallback)
+        const googleName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'Student';
+        const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
+        
+        const newProfile = {
+          id: authUser.id,
+          name: googleName,
+          email: authUser.email || null,
+          preferred_language: 'de' as Language,
+          theme_preference: 'system' as ThemeMode,
+          monthly_budget: 700.00,
+          avatar_url: googleAvatar,
+          onboarded: false,
+          residence_country: authUser.user_metadata?.residence_country || 'Germany',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: createdProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error inserting fallback profile:', insertError);
+          return newProfile as Profile;
+        }
+
+        return createdProfile;
+      } catch (err) {
+        console.error('getOrCreateProfile exception:', err);
+        return null;
+      }
+    };
+
+    try {
+      // 1. Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        set({ user: session.user });
+        const userProfile = await getOrCreateProfile(session.user);
+        if (userProfile) {
+          set({ profile: userProfile });
+          applyLanguageAndTheme(userProfile.preferred_language, userProfile.theme_preference);
+          await checkAndRegisterSession(userProfile, session.user);
         }
       }
 
@@ -200,33 +249,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
           set({ user: session.user });
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile) {
-            let updatedProfile = profile;
-            const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
-            if (!profile.avatar_url && googleAvatar) {
-              try {
-                const { data: newProf } = await supabase
-                  .from('profiles')
-                  .update({ avatar_url: googleAvatar })
-                  .eq('id', profile.id)
-                  .select()
-                  .single();
-                if (newProf) {
-                  updatedProfile = newProf;
-                }
-              } catch (err) {
-                console.error('Error syncing Google avatar:', err);
-              }
-            }
-            set({ profile: updatedProfile });
-            applyLanguageAndTheme(updatedProfile.preferred_language, updatedProfile.theme_preference);
-            await checkAndRegisterSession(updatedProfile, session.user);
+          const userProfile = await getOrCreateProfile(session.user);
+          if (userProfile) {
+            set({ profile: userProfile });
+            applyLanguageAndTheme(userProfile.preferred_language, userProfile.theme_preference);
+            await checkAndRegisterSession(userProfile, session.user);
           }
         } else {
           set({ user: null, profile: null });
@@ -370,6 +397,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           monthly_budget: 700.00,
           onboarded: false,
           residence_country: country,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
         const { data: insProfile } = await supabase
           .from('profiles')

@@ -41,9 +41,12 @@ export const useStatusDots = () => {
 
   // Calculate unpaid past bills count
   const getUnpaidPastBillsCount = () => {
-    if (!profile || !profile.created_at) return 0;
+    if (!profile) return 0;
     
-    let startD = new Date(profile.created_at);
+    let startD = new Date(profile.created_at || new Date().toISOString());
+    if (isNaN(startD.getTime())) {
+      startD = new Date();
+    }
     let earliestTime = startD.getTime();
     
     expenses.forEach(e => {

@@ -206,16 +206,24 @@ alter table public.loans enable row level security;
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, email, preferred_language, theme_preference, monthly_budget, onboarded, residence_country)
+  insert into public.profiles (id, name, email, preferred_language, theme_preference, monthly_budget, onboarded, residence_country, avatar_url)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'name', 'Student'),
+    coalesce(
+      new.raw_user_meta_data->>'full_name',
+      new.raw_user_meta_data->>'name',
+      'Student'
+    ),
     new.email,
     coalesce(new.raw_user_meta_data->>'preferred_language', 'de'),
     coalesce(new.raw_user_meta_data->>'theme_preference', 'system'),
     700.00,
     false,
-    new.raw_user_meta_data->>'residence_country'
+    new.raw_user_meta_data->>'residence_country',
+    coalesce(
+      new.raw_user_meta_data->>'avatar_url',
+      new.raw_user_meta_data->>'picture'
+    )
   );
   return new;
 end;
@@ -551,6 +559,7 @@ create trigger on_loan_delete
 
 -- Profiles
 create policy "Users can view own profile" on public.profiles for select using (auth.uid() = id);
+create policy "Users can insert own profile" on public.profiles for insert with check (auth.uid() = id);
 create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 
 -- Accounts
@@ -732,3 +741,16 @@ create policy "Allow authenticated updates of avatars" on storage.objects
 drop policy if exists "Allow authenticated deletes of avatars" on storage.objects;
 create policy "Allow authenticated deletes of avatars" on storage.objects
     for delete using (bucket_id = 'avatars' and auth.role() = 'authenticated');
+
+-- =========================================================================
+-- GRANT PERMISSIONS TO SUPABASE ROLES
+-- =========================================================================
+grant usage on schema public to postgres, anon, authenticated, service_role;
+
+alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to postgres, anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to postgres, anon, authenticated, service_role;
+
+grant all privileges on all tables in schema public to postgres, anon, authenticated, service_role;
+grant all privileges on all sequences in schema public to postgres, anon, authenticated, service_role;
+grant all privileges on all functions in schema public to postgres, anon, authenticated, service_role;
