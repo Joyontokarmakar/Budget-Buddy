@@ -22,6 +22,17 @@ export const Analytics: React.FC = () => {
   // Activity Calendar selectors state
   const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
   const [activityMonth, setActivityMonth] = useState<number>(new Date().getMonth());
+  const [activeTooltipDate, setActiveTooltipDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setActiveTooltipDate(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -242,6 +253,78 @@ export const Analytics: React.FC = () => {
     .map(([name, amount]) => ({ name, amount }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
+
+  // Top Stores of All Time (excluding common bills)
+  interface TopStoreOfAllTime {
+    name: string;
+    totalAmount: number;
+    maxMonth: string;
+    maxMonthAmount: number;
+  }
+
+  const topStoresOfAllTime: TopStoreOfAllTime[] = (() => {
+    if (expenses.length === 0) return [];
+
+    const storeTotalSpending: { [key: string]: number } = {};
+    const storeMonthlySpending: { [key: string]: { [monthKey: string]: number } } = {};
+
+    expenses.forEach(e => {
+      const storeName = e.store?.rendering_name || e.store?.name;
+      if (!storeName || storeName === 'Other/Unknown') return;
+
+      // Exclude common bills
+      if (e.category?.is_monthly_bill) return;
+      if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return;
+      const catName = e.category?.name?.toLowerCase();
+      if (catName && commonBillsCategories.includes(catName)) return;
+      const notes = e.notes?.toLowerCase() || '';
+      if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return;
+
+      if (!e.date) return;
+
+      storeTotalSpending[storeName] = (storeTotalSpending[storeName] || 0) + e.amount;
+
+      const d = new Date(e.date);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!storeMonthlySpending[storeName]) {
+        storeMonthlySpending[storeName] = {};
+      }
+      storeMonthlySpending[storeName][monthKey] = (storeMonthlySpending[storeName][monthKey] || 0) + e.amount;
+    });
+
+    const sortedStores = Object.entries(storeTotalSpending)
+      .map(([name, totalAmount]) => {
+        const monthlyMap = storeMonthlySpending[name] || {};
+        let maxMonthKey = '';
+        let maxMonthAmount = 0;
+
+        Object.entries(monthlyMap).forEach(([monthKey, amount]) => {
+          if (amount > maxMonthAmount) {
+            maxMonthAmount = amount;
+            maxMonthKey = monthKey;
+          }
+        });
+
+        let formattedMonth = '';
+        if (maxMonthKey) {
+          const [yearStr, monthStr] = maxMonthKey.split('-');
+          const dateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+          formattedMonth = dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+        }
+
+        return {
+          name,
+          totalAmount,
+          maxMonth: formattedMonth,
+          maxMonthAmount,
+        };
+      })
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 5);
+
+    return sortedStores;
+  })();
 
   // 5. Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
@@ -649,11 +732,18 @@ export const Analytics: React.FC = () => {
                         return (
                           <div
                             key={`day-${d}`}
+                            onClick={(e) => {
+                              if (hasExpenses) {
+                                e.stopPropagation();
+                                setActiveTooltipDate(prev => prev === dateStr ? null : dateStr);
+                              }
+                            }}
                             className={cn(
                               "group relative flex items-center justify-center aspect-square border transition-all duration-200 cursor-pointer select-none rounded-full overflow-visible hover:z-30",
                               hasExpenses 
                                 ? "hover:scale-105 hover:shadow-md" 
-                                : "border-border/20 hover:bg-muted/20"
+                                : "border-border/20 hover:bg-muted/20",
+                              activeTooltipDate === dateStr && "ring-2 ring-primary ring-offset-2 z-35"
                             )}
                             style={cellStyle}
                           >
@@ -667,11 +757,12 @@ export const Analytics: React.FC = () => {
                             {/* CSS Tooltip */}
                             {hasExpenses && (
                               <div className={cn(
-                                "absolute w-48 sm:w-52 p-3 rounded-xl border shadow-xl pointer-events-none hidden group-hover:block z-50 animate-in fade-in duration-200",
+                                "absolute w-48 sm:w-52 p-3 rounded-xl border shadow-xl pointer-events-none z-50 animate-in fade-in duration-200",
                                 isDark 
                                   ? "bg-slate-800 border-slate-700 text-slate-100" 
                                   : "bg-white border-slate-200 text-slate-900",
-                                tooltipPositionClass
+                                tooltipPositionClass,
+                                activeTooltipDate === dateStr ? "block" : "hidden group-hover:block"
                               )}>
                                 <p className={cn(
                                   "text-[10px] font-extrabold pb-1.5 mb-1.5",
@@ -794,7 +885,44 @@ export const Analytics: React.FC = () => {
           </div>
 
           {/* ROW 3: TOP STORES & PRODUCTS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* TOP STORE OF ALL TIME */}
+            <Card className="hover:border-primary/20 transition-all">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Store className="h-4.5 w-4.5 text-indigo-500" />
+                  Top Stores (All Time)
+                </CardTitle>
+                <CardDescription>Top 5 stores you spent the most at of all time</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {topStoresOfAllTime.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged yet.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topStoresOfAllTime.map((store, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium truncate">
+                              Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
+                          €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* TOP STORES THIS MONTH */}
             <Card className="hover:border-primary/20 transition-all">
               <CardHeader className="pb-2">

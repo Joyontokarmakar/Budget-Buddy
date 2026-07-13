@@ -559,6 +559,81 @@ export const Dashboard: React.FC = () => {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
+  // Top Stores of All Time (excluding common bills)
+  interface TopStoreOfAllTime {
+    name: string;
+    totalAmount: number;
+    maxMonth: string;
+    maxMonthAmount: number;
+  }
+
+  const topStoresOfAllTime: TopStoreOfAllTime[] = (() => {
+    if (expenses.length === 0) return [];
+
+    const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+    const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
+
+    const storeTotalSpending: { [key: string]: number } = {};
+    const storeMonthlySpending: { [key: string]: { [monthKey: string]: number } } = {};
+
+    expenses.forEach(e => {
+      const storeName = e.store?.rendering_name || e.store?.name;
+      if (!storeName || storeName === 'Other/Unknown') return;
+
+      // Exclude common bills
+      if (e.category?.is_monthly_bill) return;
+      if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return;
+      const catName = e.category?.name?.toLowerCase();
+      if (catName && commonBillsCategories.includes(catName)) return;
+      const notes = e.notes?.toLowerCase() || '';
+      if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return;
+
+      if (!e.date) return;
+
+      storeTotalSpending[storeName] = (storeTotalSpending[storeName] || 0) + e.amount;
+
+      const d = new Date(e.date);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!storeMonthlySpending[storeName]) {
+        storeMonthlySpending[storeName] = {};
+      }
+      storeMonthlySpending[storeName][monthKey] = (storeMonthlySpending[storeName][monthKey] || 0) + e.amount;
+    });
+
+    const sortedStores = Object.entries(storeTotalSpending)
+      .map(([name, totalAmount]) => {
+        const monthlyMap = storeMonthlySpending[name] || {};
+        let maxMonthKey = '';
+        let maxMonthAmount = 0;
+
+        Object.entries(monthlyMap).forEach(([monthKey, amount]) => {
+          if (amount > maxMonthAmount) {
+            maxMonthAmount = amount;
+            maxMonthKey = monthKey;
+          }
+        });
+
+        let formattedMonth = '';
+        if (maxMonthKey) {
+          const [yearStr, monthStr] = maxMonthKey.split('-');
+          const dateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+          formattedMonth = dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+        }
+
+        return {
+          name,
+          totalAmount,
+          maxMonth: formattedMonth,
+          maxMonthAmount,
+        };
+      })
+      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .slice(0, 5);
+
+    return sortedStores;
+  })();
+
   // Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
   const nonBillExpensesAll = expenses.filter(e => {
@@ -1018,7 +1093,43 @@ export const Dashboard: React.FC = () => {
       </Card>
 
       {/* Store & Product Analytics widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* Top Stores (All Time) */}
+        <Card className="hover:border-primary/20 transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Store className="h-4.5 w-4.5 text-indigo-500" />
+              Top Stores (All Time)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            {topStoresOfAllTime.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged yet.</p>
+            ) : (
+              <div className="space-y-2.5">
+                {topStoresOfAllTime.map((store, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium truncate">
+                          Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                        </p>
+                      </div>
+                    </div>
+                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
+                      €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Top Stores */}
         <Card className="hover:border-primary/20 transition-all">
           <CardHeader className="pb-2">
