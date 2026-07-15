@@ -877,7 +877,7 @@ export const Reports: React.FC = () => {
           </div>
           <div class="branding">
             <div class="branding-logo">Budget buddy</div>
-            <div class="branding-sub">Premium PWA Tracker</div>
+            <div class="branding-sub">PWA Tracker</div>
           </div>
         </div>
 

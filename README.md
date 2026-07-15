@@ -2,7 +2,7 @@
 
 Developed by **[Joyonto Karmakar](https://joyontokarmakar.netlify.app)**.
 
-> A premium, responsive student-focused financial management Progressive Web App (PWA) designed to simplify student life.
+> A responsive student-focused financial management Progressive Web App (PWA) designed to simplify student life.
 
 Budget buddy features a modern, interactive dashboard, receipt OCR scanning, detailed analytics visualizations, localized multi-language support, and auto-syncs with **Supabase** with a seamless local mock fallback.
 

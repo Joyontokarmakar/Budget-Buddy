@@ -719,7 +719,7 @@ export const Dashboard: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Budget buddy</h1>
-          <p className="text-xs text-muted-foreground">Premium student dashboard overview</p>
+          <p className="text-xs text-muted-foreground">Student dashboard overview</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="h-9 text-xs" onClick={loadDashboardData}>

@@ -369,7 +369,7 @@ export const Expenses: React.FC = () => {
 
     if (ocrConfirmationData.items && ocrConfirmationData.items.length > 0) {
       const mappedItems = ocrConfirmationData.items.map(it => {
-        const matchName = it.categoryName.toLowerCase();
+        const matchName = (it.categoryName || it.category || 'Other').toLowerCase();
         let cat = categories.find(c => c.name.toLowerCase() === matchName);
         if (!cat) {
           if (matchName.includes('grocer') || matchName === 'food') {

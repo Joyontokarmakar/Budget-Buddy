@@ -1219,21 +1219,14 @@ export const db = {
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
-        const prompt = `Analyze this receipt image and extract:
-1. Store/merchant name (e.g. Lidl, REWE, Aldi, dm, Rossmann, Netto, Penny, etc.)
-2. Transaction date in YYYY-MM-DD format
-3. Total amount (number)
-4. Total discount on this purchase (number, positive value, 0 if none)
-5. Items breakdown list. For each item, extract its name, category classification (categorize into one of: 'Food', 'Kitchen ware', 'Shopping', 'Restaurant', 'Other'), and price/amount.
+        const prompt = `Analyze this receipt image (which can be from any country like Germany, Bangladesh, India, USA, Japan, etc., in any language/currency) and extract:
+1. Store/merchant name
+2. Transaction date in YYYY-MM-DD format (infer/estimate if not fully clear, default to today if missing)
+3. Total amount (number, stripping any currency symbols)
+4. Total discount on this purchase (number, positive value, 0 if none, stripping any currency symbols)
+5. Items breakdown list. For each item, extract its name (translate/transliterate to standard Latin characters/English if the receipt is in another script like Bengali, Hindi, Japanese, etc.), category classification (categorize into one of: 'Food', 'Kitchen ware', 'Shopping', 'Restaurant', 'Other'), and price/amount (number, stripping any currency symbols).
 
-Output your response as a raw JSON object ONLY (do not wrap in markdown or backticks) matching this typescript interface:
-interface ReceiptAnalysis {
-  storeName: string;
-  date: string;
-  amount: number;
-  discount: number;
-  items: { name: string; amount: number; categoryName: 'Food' | 'Kitchen ware' | 'Shopping' | 'Restaurant' | 'Other' }[];
-}`;
+Output your response as a raw JSON object matching the requested schema.`;
 
         const response = await fetch(url, {
           method: 'POST',
@@ -1254,6 +1247,31 @@ interface ReceiptAnalysis {
                 ],
               },
             ],
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: "OBJECT",
+                properties: {
+                  storeName: { type: "STRING" },
+                  date: { type: "STRING" },
+                  amount: { type: "NUMBER" },
+                  discount: { type: "NUMBER" },
+                  items: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        name: { type: "STRING" },
+                        amount: { type: "NUMBER" },
+                        categoryName: { type: "STRING" }
+                      },
+                      required: ["name", "amount", "categoryName"]
+                    }
+                  }
+                },
+                required: ["storeName", "date", "amount", "discount", "items"]
+              }
+            }
           }),
         });
 
@@ -1262,6 +1280,11 @@ interface ReceiptAnalysis {
         }
 
         const result = await response.json();
+        
+        if (result.error) {
+          throw new Error(result.error.message || 'Gemini API call failed');
+        }
+
         const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) {
           throw new Error('Failed to extract text from Gemini response');
@@ -1271,17 +1294,31 @@ interface ReceiptAnalysis {
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanedText);
 
-        extractedStore = parsed.storeName || '';
-        extractedDate = parsed.date || new Date().toISOString().split('T')[0];
-        extractedAmount = parsed.amount || 0;
-        extractedDiscount = parsed.discount || 0;
-        extractedItems = parsed.items || [];
+        extractedStore = parsed.storeName || parsed.store || parsed.merchant || '';
+        extractedDate = parsed.date || parsed.transactionDate || new Date().toISOString().split('T')[0];
+        extractedAmount = parsed.amount !== undefined ? parsed.amount : (parsed.total !== undefined ? parsed.total : (parsed.totalAmount || 0));
+        extractedDiscount = parsed.discount !== undefined ? parsed.discount : (parsed.totalDiscount || 0);
+        
+        const rawItems = parsed.items || parsed.products || parsed.lines || [];
+        extractedItems = rawItems.map((it: any) => ({
+          name: it.name || it.description || 'Item',
+          amount: it.amount !== undefined ? it.amount : (it.price !== undefined ? it.price : 0),
+          categoryName: it.categoryName || it.category || 'Other'
+        }));
       } catch (err) {
         console.error('Gemini OCR scan failed, falling back to mock:', err);
         // Fallback to mock
         const mockStores = ['REWE', 'Lidl', 'Aldi Süd', 'dm-drogerie markt', 'Rossmann', 'EDEKA'];
         extractedStore = mockStores[Math.floor(Math.random() * mockStores.length)];
-        extractedAmount = parseFloat((Math.random() * 45 + 5).toFixed(2));
+        extractedDiscount = parseFloat((Math.random() * 2).toFixed(2));
+        extractedItems = [
+          { name: 'Milch', amount: parseFloat((Math.random() * 2 + 1).toFixed(2)), categoryName: 'Food' },
+          { name: 'Brot', amount: parseFloat((Math.random() * 3 + 1.5).toFixed(2)), categoryName: 'Food' },
+          { name: 'Käse', amount: parseFloat((Math.random() * 4 + 2).toFixed(2)), categoryName: 'Food' },
+          { name: 'Spülmittel', amount: parseFloat((Math.random() * 3 + 1).toFixed(2)), categoryName: 'Kitchen ware' }
+        ];
+        const rawSum = extractedItems.reduce((sum, it) => sum + it.amount, 0);
+        extractedAmount = parseFloat((rawSum - extractedDiscount).toFixed(2));
         extractedDate = new Date().toISOString().split('T')[0];
       }
     } else {
@@ -1289,7 +1326,15 @@ interface ReceiptAnalysis {
       await new Promise(resolve => setTimeout(resolve, 1500));
       const mockStores = ['REWE', 'Lidl', 'Aldi Süd', 'dm-drogerie markt', 'Rossmann', 'EDEKA'];
       extractedStore = mockStores[Math.floor(Math.random() * mockStores.length)];
-      extractedAmount = parseFloat((Math.random() * 45 + 5).toFixed(2));
+      extractedDiscount = parseFloat((Math.random() * 2).toFixed(2));
+      extractedItems = [
+        { name: 'Milch', amount: parseFloat((Math.random() * 2 + 1).toFixed(2)), categoryName: 'Food' },
+        { name: 'Brot', amount: parseFloat((Math.random() * 3 + 1.5).toFixed(2)), categoryName: 'Food' },
+        { name: 'Käse', amount: parseFloat((Math.random() * 4 + 2).toFixed(2)), categoryName: 'Food' },
+        { name: 'Spülmittel', amount: parseFloat((Math.random() * 3 + 1).toFixed(2)), categoryName: 'Kitchen ware' }
+      ];
+      const rawSum = extractedItems.reduce((sum, it) => sum + it.amount, 0);
+      extractedAmount = parseFloat((rawSum - extractedDiscount).toFixed(2));
       extractedDate = new Date().toISOString().split('T')[0];
     }
 
@@ -1979,34 +2024,34 @@ interface ReceiptAnalysis {
       {
         store: 'REWE',
         items: [
-          { name: 'Apfel Bio 1kg', amount: 2.99 },
-          { name: 'Frische Vollmilch 1L', amount: 1.15 },
-          { name: 'Vollkornbrot 500g', amount: 1.89 },
-          { name: 'Pasta Spaghetti 500g', amount: 0.99 },
-          { name: 'Tomaten gehackt', amount: 0.85 },
-          { name: 'Studentenfutter 200g', amount: 2.49 }
+          { name: 'Apfel Bio 1kg', amount: 2.99, categoryName: 'Food' },
+          { name: 'Frische Vollmilch 1L', amount: 1.15, categoryName: 'Food' },
+          { name: 'Vollkornbrot 500g', amount: 1.89, categoryName: 'Food' },
+          { name: 'Pasta Spaghetti 500g', amount: 0.99, categoryName: 'Food' },
+          { name: 'Tomaten gehackt', amount: 0.85, categoryName: 'Food' },
+          { name: 'Studentenfutter 200g', amount: 2.49, categoryName: 'Food' }
         ],
         discount: 0.50
       },
       {
         store: 'Lidl',
         items: [
-          { name: 'Bananen 1kg', amount: 1.69 },
-          { name: 'Haferflocken 500g', amount: 0.79 },
-          { name: 'Frischkäse 200g', amount: 1.49 },
-          { name: 'Eier Freiland 10 Stk', amount: 2.29 },
-          { name: 'Tiefkühl-Erdbeeren', amount: 2.99 }
+          { name: 'Bananen 1kg', amount: 1.69, categoryName: 'Food' },
+          { name: 'Haferflocken 500g', amount: 0.79, categoryName: 'Food' },
+          { name: 'Frischkäse 200g', amount: 1.49, categoryName: 'Food' },
+          { name: 'Eier Freiland 10 Stk', amount: 2.29, categoryName: 'Food' },
+          { name: 'Tiefkühl-Erdbeeren', amount: 2.99, categoryName: 'Food' }
         ],
         discount: 0.00
       },
       {
         store: 'Aldi Süd',
         items: [
-          { name: 'Müsli Erdbeer 500g', amount: 3.29 },
-          { name: 'H-Milch 1.5% 1L', amount: 1.09 },
-          { name: 'Kartoffeln 2.5kg', amount: 2.49 },
-          { name: 'Karotten 1kg', amount: 1.29 },
-          { name: 'Käse Aufschnitt 250g', amount: 1.99 }
+          { name: 'Müsli Erdbeer 500g', amount: 3.29, categoryName: 'Food' },
+          { name: 'H-Milch 1.5% 1L', amount: 1.09, categoryName: 'Food' },
+          { name: 'Kartoffeln 2.5kg', amount: 2.49, categoryName: 'Food' },
+          { name: 'Karotten 1kg', amount: 1.29, categoryName: 'Food' },
+          { name: 'Käse Aufschnitt 250g', amount: 1.99, categoryName: 'Food' }
         ],
         discount: 0.25
       }
