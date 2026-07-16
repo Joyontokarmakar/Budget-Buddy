@@ -729,6 +729,12 @@ export const Analytics: React.FC = () => {
                           }
                         }
 
+                        const today = new Date();
+                        const isToday = 
+                          today.getFullYear() === activityYear && 
+                          today.getMonth() === activityMonth && 
+                          today.getDate() === d;
+
                         return (
                           <div
                             key={`day-${d}`}
@@ -743,16 +749,29 @@ export const Analytics: React.FC = () => {
                               hasExpenses 
                                 ? "hover:scale-105 hover:shadow-md" 
                                 : "border-border/20 hover:bg-muted/20",
+                              isToday && "ring-2 ring-primary/80 ring-offset-1 dark:ring-offset-slate-900 z-30",
+                              isToday && !hasExpenses && "bg-primary/10 dark:bg-primary/20 border-primary/30",
                               activeTooltipDate === dateStr && "ring-2 ring-primary ring-offset-2 z-35"
                             )}
                             style={cellStyle}
                           >
                             <span className={cn(
                               "text-[10px] font-bold text-center leading-none", 
-                              hasExpenses ? "text-white font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" : "text-muted-foreground/75"
+                              hasExpenses 
+                                ? "text-white font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" 
+                                : isToday 
+                                  ? "text-primary font-black scale-105" 
+                                  : "text-muted-foreground/75"
                             )}>
                               {d}
                             </span>
+
+                            {isToday && (
+                              <span className={cn(
+                                "absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full",
+                                hasExpenses ? "bg-white" : "bg-primary"
+                              )} />
+                            )}
 
                             {/* CSS Tooltip */}
                             {hasExpenses && (
