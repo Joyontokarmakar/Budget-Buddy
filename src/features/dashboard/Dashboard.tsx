@@ -549,13 +549,45 @@ export const Dashboard: React.FC = () => {
 
   // Store Analytics: Top 5 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
+  const storeDailySpendingMap: { [key: string]: { [date: string]: number } } = {};
   nonBillExpenses.forEach(e => {
     const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
     storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
+
+    if (e.date) {
+      if (!storeDailySpendingMap[storeName]) {
+        storeDailySpendingMap[storeName] = {};
+      }
+      storeDailySpendingMap[storeName][e.date] = (storeDailySpendingMap[storeName][e.date] || 0) + e.amount;
+    }
   });
 
   const topStores = Object.entries(storeSpendingMap)
-    .map(([name, amount]) => ({ name, amount }))
+    .map(([name, amount]) => {
+      const dailyMap = storeDailySpendingMap[name] || {};
+      let maxDateKey = '';
+      let maxDateAmount = 0;
+
+      Object.entries(dailyMap).forEach(([dateKey, dailyAmount]) => {
+        if (dailyAmount > maxDateAmount) {
+          maxDateAmount = dailyAmount;
+          maxDateKey = dateKey;
+        }
+      });
+
+      let formattedDate = '';
+      if (maxDateKey) {
+        const d = new Date(maxDateKey);
+        formattedDate = d.toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      return {
+        name,
+        amount,
+        maxDate: formattedDate,
+        maxDateAmount
+      };
+    })
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
@@ -1145,13 +1177,20 @@ export const Dashboard: React.FC = () => {
               <div className="space-y-2.5">
                 {topStores.map((store, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
                         {index + 1}
                       </span>
-                      <span className="text-foreground/90">{store.name}</span>
+                      <div className="min-w-0 font-semibold">
+                        <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                        {store.maxDate && (
+                          <p className="text-[10px] text-muted-foreground font-medium truncate">
+                            Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
                       €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>

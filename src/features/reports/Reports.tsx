@@ -12,7 +12,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 export const Reports: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -362,16 +362,49 @@ export const Reports: React.FC = () => {
   // Store Analytics for selected month (excluding common bills)
   const topStores = useMemo(() => {
     const storeSpendingMap: { [key: string]: number } = {};
+    const storeDailySpendingMap: { [key: string]: { [date: string]: number } } = {};
+
     shoppingExpenses.forEach(e => {
       const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
       storeSpendingMap[storeName] = (storeSpendingMap[storeName] || 0) + e.amount;
+
+      if (e.date) {
+        if (!storeDailySpendingMap[storeName]) {
+          storeDailySpendingMap[storeName] = {};
+        }
+        storeDailySpendingMap[storeName][e.date] = (storeDailySpendingMap[storeName][e.date] || 0) + e.amount;
+      }
     });
 
     return Object.entries(storeSpendingMap)
-      .map(([name, amount]) => ({ name, amount }))
+      .map(([name, amount]) => {
+        const dailyMap = storeDailySpendingMap[name] || {};
+        let maxDateKey = '';
+        let maxDateAmount = 0;
+
+        Object.entries(dailyMap).forEach(([dateKey, dailyAmount]) => {
+          if (dailyAmount > maxDateAmount) {
+            maxDateAmount = dailyAmount;
+            maxDateKey = dateKey;
+          }
+        });
+
+        let formattedDate = '';
+        if (maxDateKey) {
+          const d = new Date(maxDateKey);
+          formattedDate = d.toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        return {
+          name,
+          amount,
+          maxDate: formattedDate,
+          maxDateAmount
+        };
+      })
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
-  }, [shoppingExpenses]);
+  }, [shoppingExpenses, i18n.language]);
 
   // Product Analytics for selected month (excluding common bills)
   const topProducts = useMemo(() => {
@@ -560,10 +593,16 @@ export const Reports: React.FC = () => {
     // Top Stores
     let topStoresHtml = '';
     topStores.slice(0, 5).forEach((store, idx) => {
+      const smallDateInfo = store.maxDate 
+        ? `<div style="font-size: 8px; color: #64748b; font-weight: 500; margin-left: 12px; margin-top: 2px;">Most on ${store.maxDate} (€${store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</div>` 
+        : '';
       topStoresHtml += `
         <tr>
-          <td>${idx + 1}. ${store.name}</td>
-          <td class="amount">€${store.amount.toFixed(2)}</td>
+          <td style="vertical-align: middle;">
+            ${idx + 1}. ${store.name}
+            ${smallDateInfo}
+          </td>
+          <td class="amount" style="vertical-align: middle;">€${store.amount.toFixed(2)}</td>
         </tr>
       `;
     });
@@ -1425,8 +1464,15 @@ export const Reports: React.FC = () => {
                 <div className="space-y-2">
                   {topStores.map((store, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-muted-foreground">{idx + 1}. {store.name}</span>
-                      <span className="font-mono text-rose-500 font-bold">
+                      <div className="min-w-0">
+                        <span className="text-muted-foreground">{idx + 1}. {store.name}</span>
+                        {store.maxDate && (
+                          <p className="text-[10px] text-muted-foreground font-medium truncate ml-3.5">
+                            Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                          </p>
+                        )}
+                      </div>
+                      <span className="font-mono text-rose-500 font-bold shrink-0 ml-2">
                         €{store.amount.toFixed(2)}
                       </span>
                     </div>
