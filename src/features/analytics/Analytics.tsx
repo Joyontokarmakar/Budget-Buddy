@@ -7,7 +7,7 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner } from '../../components/ui';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
-import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar } from 'lucide-react';
+import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X } from 'lucide-react';
 export const Analytics: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
@@ -23,6 +23,12 @@ export const Analytics: React.FC = () => {
   const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
   const [activityMonth, setActivityMonth] = useState<number>(new Date().getMonth());
   const [activeTooltipDate, setActiveTooltipDate] = useState<string | null>(null);
+
+  // Search states for store analytics
+  const [searchThisMonthQuery, setSearchThisMonthQuery] = useState('');
+  const [isSearchThisMonthOpen, setIsSearchThisMonthOpen] = useState(false);
+  const [searchAllTimeQuery, setSearchAllTimeQuery] = useState('');
+  const [isSearchAllTimeOpen, setIsSearchAllTimeOpen] = useState(false);
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -255,7 +261,7 @@ export const Analytics: React.FC = () => {
     }
   });
 
-  const topStores = Object.entries(storeSpendingMap)
+  const allStoresThisMonth = Object.entries(storeSpendingMap)
     .map(([name, amount]) => {
       const dailyMap = storeDailySpendingMap[name] || {};
       let maxDateKey = '';
@@ -282,7 +288,12 @@ export const Analytics: React.FC = () => {
       };
     })
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .map((store, index) => ({
+      ...store,
+      rank: index + 1
+    }));
+
+  const topStores = allStoresThisMonth.slice(0, 5);
 
   // Top Stores of All Time (excluding common bills)
   interface TopStoreOfAllTime {
@@ -290,10 +301,14 @@ export const Analytics: React.FC = () => {
     totalAmount: number;
     maxMonth: string;
     maxMonthAmount: number;
+    rank: number;
   }
 
-  const topStoresOfAllTime: TopStoreOfAllTime[] = (() => {
+  const allStoresOfAllTime: TopStoreOfAllTime[] = (() => {
     if (expenses.length === 0) return [];
+
+    const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+    const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
 
     const storeTotalSpending: { [key: string]: number } = {};
     const storeMonthlySpending: { [key: string]: { [monthKey: string]: number } } = {};
@@ -351,10 +366,23 @@ export const Analytics: React.FC = () => {
         };
       })
       .sort((a, b) => b.totalAmount - a.totalAmount)
-      .slice(0, 5);
+      .map((store, index) => ({
+        ...store,
+        rank: index + 1
+      }));
 
     return sortedStores;
   })();
+
+  const topStoresOfAllTime = allStoresOfAllTime.slice(0, 5);
+
+  const displayedStoresThisMonth = isSearchThisMonthOpen && searchThisMonthQuery
+    ? allStoresThisMonth.filter(s => s.name.toLowerCase().includes(searchThisMonthQuery.toLowerCase()))
+    : topStores;
+
+  const displayedStoresAllTime = isSearchAllTimeOpen && searchAllTimeQuery
+    ? allStoresOfAllTime.filter(s => s.name.toLowerCase().includes(searchAllTimeQuery.toLowerCase()))
+    : topStoresOfAllTime;
 
   // 5. Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
@@ -935,81 +963,153 @@ export const Analytics: React.FC = () => {
 
           {/* ROW 3: TOP STORES & PRODUCTS */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* TOP STORE OF ALL TIME */}
-            <Card className="hover:border-primary/20 transition-all">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Store className="h-4.5 w-4.5 text-indigo-500" />
-                  Top Stores (All Time)
-                </CardTitle>
-                <CardDescription>Top 5 stores you spent the most at of all time</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2">
-                {topStoresOfAllTime.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged yet.</p>
-                ) : (
-                  <div className="space-y-2.5">
-                    {topStoresOfAllTime.map((store, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-foreground/90 font-bold truncate">{store.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-medium truncate">
-                              Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                            </p>
-                          </div>
-                        </div>
-                        <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
-                          €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+             {/* TOP STORE OF ALL TIME */}
+             <Card className="hover:border-primary/20 transition-all">
+               <CardHeader className="pb-2">
+                 <div className="flex items-center justify-between gap-2">
+                   {isSearchAllTimeOpen ? (
+                     <div className="flex items-center gap-1.5 w-full">
+                       <input
+                         type="text"
+                         placeholder="Search store..."
+                         value={searchAllTimeQuery}
+                         onChange={(e) => setSearchAllTimeQuery(e.target.value)}
+                         className="flex h-8 w-full rounded-lg border border-border bg-card px-2.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-foreground"
+                         autoFocus
+                       />
+                       <button
+                         className="h-8 w-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                         onClick={() => {
+                           setIsSearchAllTimeOpen(false);
+                           setSearchAllTimeQuery('');
+                         }}
+                       >
+                         <X className="h-4 w-4" />
+                       </button>
+                     </div>
+                   ) : (
+                     <>
+                       <div className="min-w-0">
+                         <CardTitle className="text-sm font-bold flex items-center gap-2">
+                           <Store className="h-4.5 w-4.5 text-indigo-500" />
+                           Top Stores (All Time)
+                         </CardTitle>
+                         <CardDescription className="truncate">Top 5 stores you spent the most at of all time</CardDescription>
+                       </div>
+                       <button
+                         className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                         onClick={() => setIsSearchAllTimeOpen(true)}
+                       >
+                         <Search className="h-4 w-4" />
+                       </button>
+                     </>
+                   )}
+                 </div>
+               </CardHeader>
+               <CardContent className="pt-2">
+                 {displayedStoresAllTime.length === 0 ? (
+                   <p className="text-xs text-muted-foreground py-4 text-center font-medium">
+                     {searchAllTimeQuery ? "No matching stores found." : "No store purchases logged yet."}
+                   </p>
+                 ) : (
+                   <div className="space-y-2.5">
+                     {displayedStoresAllTime.map((store, index) => (
+                       <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                         <div className="flex items-center gap-2.5 min-w-0">
+                           <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                             {store.rank}
+                           </span>
+                           <div className="min-w-0">
+                             <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                             <p className="text-[10px] text-muted-foreground font-medium truncate">
+                               Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                             </p>
+                           </div>
+                         </div>
+                         <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
+                           €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </span>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
 
-            {/* TOP STORES THIS MONTH */}
-            <Card className="hover:border-primary/20 transition-all">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Store className="h-4.5 w-4.5 text-indigo-500" />
-                  Top Stores (This Month)
-                </CardTitle>
-                <CardDescription>Top 5 stores you spent the most at this month</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2">
-                {topStores.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged this month.</p>
-                ) : (
-                  <div className="space-y-2.5">
-                    {topStores.map((store, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0 font-semibold">
-                            <p className="text-foreground/90 font-bold truncate">{store.name}</p>
-                            {store.maxDate && (
-                              <p className="text-[10px] text-muted-foreground font-medium truncate">
-                                Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
-                          €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+             {/* TOP STORES THIS MONTH */}
+             <Card className="hover:border-primary/20 transition-all">
+               <CardHeader className="pb-2">
+                 <div className="flex items-center justify-between gap-2">
+                   {isSearchThisMonthOpen ? (
+                     <div className="flex items-center gap-1.5 w-full">
+                       <input
+                         type="text"
+                         placeholder="Search store..."
+                         value={searchThisMonthQuery}
+                         onChange={(e) => setSearchThisMonthQuery(e.target.value)}
+                         className="flex h-8 w-full rounded-lg border border-border bg-card px-2.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-foreground"
+                         autoFocus
+                       />
+                       <button
+                         className="h-8 w-8 flex items-center justify-center shrink-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                         onClick={() => {
+                           setIsSearchThisMonthOpen(false);
+                           setSearchThisMonthQuery('');
+                         }}
+                       >
+                         <X className="h-4 w-4" />
+                       </button>
+                     </div>
+                   ) : (
+                     <>
+                       <div className="min-w-0">
+                         <CardTitle className="text-sm font-bold flex items-center gap-2">
+                           <Store className="h-4.5 w-4.5 text-indigo-500" />
+                           Top Stores (This Month)
+                         </CardTitle>
+                         <CardDescription className="truncate">Top 5 stores you spent the most at this month</CardDescription>
+                       </div>
+                       <button
+                         className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
+                         onClick={() => setIsSearchThisMonthOpen(true)}
+                       >
+                         <Search className="h-4 w-4" />
+                       </button>
+                     </>
+                   )}
+                 </div>
+               </CardHeader>
+               <CardContent className="pt-2">
+                 {displayedStoresThisMonth.length === 0 ? (
+                   <p className="text-xs text-muted-foreground py-4 text-center font-medium">
+                     {searchThisMonthQuery ? "No matching stores found." : "No store purchases logged this month."}
+                   </p>
+                 ) : (
+                   <div className="space-y-2.5">
+                     {displayedStoresThisMonth.map((store, index) => (
+                       <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                         <div className="flex items-center gap-2.5 min-w-0">
+                           <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                             {store.rank}
+                           </span>
+                           <div className="min-w-0 font-semibold">
+                             <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                             {store.maxDate && (
+                               <p className="text-[10px] text-muted-foreground font-medium truncate">
+                                 Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                               </p>
+                             )}
+                           </div>
+                         </div>
+                         <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
+                           €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </span>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
 
             {/* TOP BOUGHT PRODUCTS */}
             <Card className="hover:border-primary/20 transition-all">

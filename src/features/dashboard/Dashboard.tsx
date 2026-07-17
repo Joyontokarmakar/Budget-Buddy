@@ -9,7 +9,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -26,6 +26,12 @@ export const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
+
+  // Search states for store analytics
+  const [searchThisMonthQuery, setSearchThisMonthQuery] = useState('');
+  const [isSearchThisMonthOpen, setIsSearchThisMonthOpen] = useState(false);
+  const [searchAllTimeQuery, setSearchAllTimeQuery] = useState('');
+  const [isSearchAllTimeOpen, setIsSearchAllTimeOpen] = useState(false);
 
   // Onboarding Wizard State
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -562,7 +568,7 @@ export const Dashboard: React.FC = () => {
     }
   });
 
-  const topStores = Object.entries(storeSpendingMap)
+  const allStoresThisMonth = Object.entries(storeSpendingMap)
     .map(([name, amount]) => {
       const dailyMap = storeDailySpendingMap[name] || {};
       let maxDateKey = '';
@@ -589,7 +595,12 @@ export const Dashboard: React.FC = () => {
       };
     })
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+    .map((store, index) => ({
+      ...store,
+      rank: index + 1
+    }));
+
+  const topStores = allStoresThisMonth.slice(0, 5);
 
   // Top Stores of All Time (excluding common bills)
   interface TopStoreOfAllTime {
@@ -597,9 +608,10 @@ export const Dashboard: React.FC = () => {
     totalAmount: number;
     maxMonth: string;
     maxMonthAmount: number;
+    rank: number;
   }
 
-  const topStoresOfAllTime: TopStoreOfAllTime[] = (() => {
+  const allStoresOfAllTime: TopStoreOfAllTime[] = (() => {
     if (expenses.length === 0) return [];
 
     const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
@@ -661,10 +673,23 @@ export const Dashboard: React.FC = () => {
         };
       })
       .sort((a, b) => b.totalAmount - a.totalAmount)
-      .slice(0, 5);
+      .map((store, index) => ({
+        ...store,
+        rank: index + 1
+      }));
 
     return sortedStores;
   })();
+
+  const topStoresOfAllTime = allStoresOfAllTime.slice(0, 5);
+
+  const displayedStoresThisMonth = isSearchThisMonthOpen && searchThisMonthQuery
+    ? allStoresThisMonth.filter(s => s.name.toLowerCase().includes(searchThisMonthQuery.toLowerCase()))
+    : topStores;
+
+  const displayedStoresAllTime = isSearchAllTimeOpen && searchAllTimeQuery
+    ? allStoresOfAllTime.filter(s => s.name.toLowerCase().includes(searchAllTimeQuery.toLowerCase()))
+    : topStoresOfAllTime;
 
   // Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
@@ -1129,21 +1154,59 @@ export const Dashboard: React.FC = () => {
         {/* Top Stores (All Time) */}
         <Card className="hover:border-primary/20 transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Store className="h-4.5 w-4.5 text-indigo-500" />
-              Top Stores (All Time)
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              {isSearchAllTimeOpen ? (
+                <div className="flex items-center gap-1.5 w-full">
+                  <input
+                    type="text"
+                    placeholder="Search store..."
+                    value={searchAllTimeQuery}
+                    onChange={(e) => setSearchAllTimeQuery(e.target.value)}
+                    className="flex h-8 w-full rounded-lg border border-border bg-card px-2.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-foreground"
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 shrink-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setIsSearchAllTimeOpen(false);
+                      setSearchAllTimeQuery('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Store className="h-4.5 w-4.5 text-indigo-500" />
+                    Top Stores (All Time)
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => setIsSearchAllTimeOpen(true)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="pt-2">
-            {topStoresOfAllTime.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged yet.</p>
+            {displayedStoresAllTime.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center font-medium">
+                {searchAllTimeQuery ? "No matching stores found." : "No store purchases logged yet."}
+              </p>
             ) : (
               <div className="space-y-2.5">
-                {topStoresOfAllTime.map((store, index) => (
+                {displayedStoresAllTime.map((store, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                        {index + 1}
+                        {store.rank}
                       </span>
                       <div className="min-w-0">
                         <p className="text-foreground/90 font-bold truncate">{store.name}</p>
@@ -1165,21 +1228,59 @@ export const Dashboard: React.FC = () => {
         {/* Top Stores */}
         <Card className="hover:border-primary/20 transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Store className="h-4.5 w-4.5 text-indigo-500" />
-              Top Stores (This Month)
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              {isSearchThisMonthOpen ? (
+                <div className="flex items-center gap-1.5 w-full">
+                  <input
+                    type="text"
+                    placeholder="Search store..."
+                    value={searchThisMonthQuery}
+                    onChange={(e) => setSearchThisMonthQuery(e.target.value)}
+                    className="flex h-8 w-full rounded-lg border border-border bg-card px-2.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium text-foreground"
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 shrink-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setIsSearchThisMonthOpen(false);
+                      setSearchThisMonthQuery('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Store className="h-4.5 w-4.5 text-indigo-500" />
+                    Top Stores (This Month)
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => setIsSearchThisMonthOpen(true)}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="pt-2">
-            {topStores.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center font-medium">No store purchases logged this month.</p>
+            {displayedStoresThisMonth.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center font-medium">
+                {searchThisMonthQuery ? "No matching stores found." : "No store purchases logged this month."}
+              </p>
             ) : (
               <div className="space-y-2.5">
-                {topStores.map((store, index) => (
+                {displayedStoresThisMonth.map((store, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                        {index + 1}
+                        {store.rank}
                       </span>
                       <div className="min-w-0 font-semibold">
                         <p className="text-foreground/90 font-bold truncate">{store.name}</p>
