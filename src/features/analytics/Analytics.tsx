@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getCategoryColor } from '../../utils/color';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner } from '../../components/ui';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
 import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X } from 'lucide-react';
 export const Analytics: React.FC = () => {
@@ -29,6 +29,10 @@ export const Analytics: React.FC = () => {
   const [isSearchThisMonthOpen, setIsSearchThisMonthOpen] = useState(false);
   const [searchAllTimeQuery, setSearchAllTimeQuery] = useState('');
   const [isSearchAllTimeOpen, setIsSearchAllTimeOpen] = useState(false);
+
+  // Show All modals state
+  const [isShowAllThisMonthOpen, setIsShowAllThisMonthOpen] = useState(false);
+  const [isShowAllAllTimeOpen, setIsShowAllAllTimeOpen] = useState(false);
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -992,7 +996,10 @@ export const Analytics: React.FC = () => {
                        <div className="min-w-0">
                          <CardTitle className="text-sm font-bold flex items-center gap-2">
                            <Store className="h-4.5 w-4.5 text-indigo-500" />
-                           Top Stores (All Time)
+                           <span>
+                             Top Stores (All Time)
+                             <span className="text-[10px] text-muted-foreground font-normal ml-1">({allStoresOfAllTime.length})</span>
+                           </span>
                          </CardTitle>
                          <CardDescription className="truncate">Top 5 stores you spent the most at of all time</CardDescription>
                        </div>
@@ -1031,6 +1038,16 @@ export const Analytics: React.FC = () => {
                          </span>
                        </div>
                      ))}
+                     {allStoresOfAllTime.length > 5 && (
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-3"
+                         onClick={() => setIsShowAllAllTimeOpen(true)}
+                       >
+                         View All Stores
+                       </Button>
+                     )}
                    </div>
                  )}
                </CardContent>
@@ -1065,7 +1082,10 @@ export const Analytics: React.FC = () => {
                        <div className="min-w-0">
                          <CardTitle className="text-sm font-bold flex items-center gap-2">
                            <Store className="h-4.5 w-4.5 text-indigo-500" />
-                           Top Stores (This Month)
+                           <span>
+                             Top Stores (This Month)
+                             <span className="text-[10px] text-muted-foreground font-normal ml-1">({allStoresThisMonth.length})</span>
+                           </span>
                          </CardTitle>
                          <CardDescription className="truncate">Top 5 stores you spent the most at this month</CardDescription>
                        </div>
@@ -1106,6 +1126,16 @@ export const Analytics: React.FC = () => {
                          </span>
                        </div>
                      ))}
+                     {allStoresThisMonth.length > 5 && (
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-3"
+                         onClick={() => setIsShowAllThisMonthOpen(true)}
+                       >
+                         View All Stores
+                       </Button>
+                     )}
                    </div>
                  )}
                </CardContent>
@@ -1143,6 +1173,77 @@ export const Analytics: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modals for viewing all stores */}
+      <Dialog
+        isOpen={isShowAllThisMonthOpen}
+        onClose={() => setIsShowAllThisMonthOpen(false)}
+        title="All Stores (This Month)"
+        description="Full list of stores you spent at this month, sorted by spending amount."
+        footer={
+          <Button variant="outline" size="sm" onClick={() => setIsShowAllThisMonthOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="max-h-[50vh] overflow-y-auto pr-1">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="border-b border-border/60 text-muted-foreground font-semibold">
+                <th className="py-2 w-12 text-center">Rank</th>
+                <th className="py-2">Store Name</th>
+                <th className="py-2 text-right">Total Spent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allStoresThisMonth.map((store) => (
+                <tr key={store.rank} className="border-b border-border/40 hover:bg-muted/30">
+                  <td className="py-2.5 text-center font-bold text-muted-foreground">{store.rank}</td>
+                  <td className="py-2.5 font-medium text-foreground">{store.name}</td>
+                  <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
+                    €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={isShowAllAllTimeOpen}
+        onClose={() => setIsShowAllAllTimeOpen(false)}
+        title="All Stores (All Time)"
+        description="Full list of stores you spent at of all time, sorted by spending amount."
+        footer={
+          <Button variant="outline" size="sm" onClick={() => setIsShowAllAllTimeOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="max-h-[50vh] overflow-y-auto pr-1">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="border-b border-border/60 text-muted-foreground font-semibold">
+                <th className="py-2 w-12 text-center">Rank</th>
+                <th className="py-2">Store Name</th>
+                <th className="py-2 text-right">Total Spent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allStoresOfAllTime.map((store) => (
+                <tr key={store.rank} className="border-b border-border/40 hover:bg-muted/30">
+                  <td className="py-2.5 text-center font-bold text-muted-foreground">{store.rank}</td>
+                  <td className="py-2.5 font-medium text-foreground">{store.name}</td>
+                  <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
+                    €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Dialog>
     </div>
   );
 };

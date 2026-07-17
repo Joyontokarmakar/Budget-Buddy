@@ -1181,7 +1181,10 @@ export const Dashboard: React.FC = () => {
                 <>
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <Store className="h-4.5 w-4.5 text-indigo-500" />
-                    Top Stores (All Time)
+                    <span>
+                      Top Stores (All Time)
+                      <span className="text-[10px] text-muted-foreground font-normal ml-1">({allStoresOfAllTime.length})</span>
+                    </span>
                   </CardTitle>
                   <Button
                     variant="ghost"
@@ -1255,7 +1258,10 @@ export const Dashboard: React.FC = () => {
                 <>
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <Store className="h-4.5 w-4.5 text-indigo-500" />
-                    Top Stores (This Month)
+                    <span>
+                      Top Stores (This Month)
+                      <span className="text-[10px] text-muted-foreground font-normal ml-1">({allStoresThisMonth.length})</span>
+                    </span>
                   </CardTitle>
                   <Button
                     variant="ghost"
