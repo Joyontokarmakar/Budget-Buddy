@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
@@ -33,6 +33,9 @@ export const Analytics: React.FC = () => {
   // Show All modals state
   const [isShowAllThisMonthOpen, setIsShowAllThisMonthOpen] = useState(false);
   const [isShowAllAllTimeOpen, setIsShowAllAllTimeOpen] = useState(false);
+
+  // Selected store chart modal state
+  const [selectedStoreChart, setSelectedStoreChart] = useState<{ storeName: string; type: 'thisMonth' | 'allTime' } | null>(null);
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -379,6 +382,88 @@ export const Analytics: React.FC = () => {
   })();
 
   const topStoresOfAllTime = allStoresOfAllTime.slice(0, 5);
+
+  // Dynamic Chart calculations for the selected store modal
+  const { chartData, totalStoreSpent } = useMemo(() => {
+    if (!selectedStoreChart) return { chartData: [], totalStoreSpent: 0 };
+
+    const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
+    const commonBillsCategoryIds = ['c3', 'c4', 'c5', 'c6'];
+
+    const isBillExpense = (e: ExpenseWithDetails) => {
+      if (e.category?.is_monthly_bill) return true;
+      if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return true;
+      const catName = e.category?.name?.toLowerCase();
+      if (catName && commonBillsCategories.includes(catName)) return true;
+      const notes = e.notes?.toLowerCase() || '';
+      if (notes.includes('rent') || notes.includes('insurance') || notes.includes('radio bill') || notes.includes('mobile bill')) return true;
+      return false;
+    };
+
+    const storeExpenses = expenses.filter(e => {
+      if (isBillExpense(e)) return false;
+      const name = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
+      return name === selectedStoreChart.storeName;
+    });
+
+    if (selectedStoreChart.type === 'allTime') {
+      // Group by month YYYY-MM
+      const monthlySums: { [key: string]: number } = {};
+      storeExpenses.forEach(e => {
+        if (!e.date) return;
+        const d = new Date(e.date);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlySums[monthKey] = (monthlySums[monthKey] || 0) + e.amount;
+      });
+
+      const data = Object.entries(monthlySums)
+        .map(([monthKey, amount]) => {
+          const [yearStr, monthStr] = monthKey.split('-');
+          const dateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+          const label = dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'short', year: 'numeric' });
+          return {
+            key: monthKey,
+            label,
+            amount: parseFloat(amount.toFixed(2))
+          };
+        })
+        .sort((a, b) => a.key.localeCompare(b.key));
+
+      const total = data.reduce((sum, item) => sum + item.amount, 0);
+      return { chartData: data, totalStoreSpent: total };
+    } else {
+      // Group by day YYYY-MM-DD for this month
+      const activeYear = new Date().getFullYear();
+      const activeMonth = new Date().getMonth();
+
+      const thisMonthStoreExpenses = storeExpenses.filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date);
+        return d.getFullYear() === activeYear && d.getMonth() === activeMonth;
+      });
+
+      const dailySums: { [key: string]: number } = {};
+      thisMonthStoreExpenses.forEach(e => {
+        if (!e.date) return;
+        dailySums[e.date] = (dailySums[e.date] || 0) + e.amount;
+      });
+
+      const data = Object.entries(dailySums)
+        .map(([dateKey, amount]) => {
+          const d = new Date(dateKey);
+          const label = d.toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short' });
+          return {
+            key: dateKey,
+            label,
+            amount: parseFloat(amount.toFixed(2))
+          };
+        })
+        .sort((a, b) => a.key.localeCompare(b.key));
+
+      const total = data.reduce((sum, item) => sum + item.amount, 0);
+      return { chartData: data, totalStoreSpent: total };
+    }
+  }, [selectedStoreChart, expenses, i18n.language]);
 
   const displayedStoresThisMonth = isSearchThisMonthOpen && searchThisMonthQuery
     ? allStoresThisMonth.filter(s => s.name.toLowerCase().includes(searchThisMonthQuery.toLowerCase()))
@@ -1027,7 +1112,12 @@ export const Analytics: React.FC = () => {
                              {store.rank}
                            </span>
                            <div className="min-w-0">
-                             <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                             <p 
+                               className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
+                               onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'allTime' })}
+                             >
+                               {store.name}
+                             </p>
                              <p className="text-[10px] text-muted-foreground font-medium truncate">
                                Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                              </p>
@@ -1113,7 +1203,12 @@ export const Analytics: React.FC = () => {
                              {store.rank}
                            </span>
                            <div className="min-w-0 font-semibold">
-                             <p className="text-foreground/90 font-bold truncate">{store.name}</p>
+                             <p 
+                               className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
+                               onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'thisMonth' })}
+                             >
+                               {store.name}
+                             </p>
                              {store.maxDate && (
                                <p className="text-[10px] text-muted-foreground font-medium truncate">
                                  Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
@@ -1199,7 +1294,15 @@ export const Analytics: React.FC = () => {
               {allStoresThisMonth.map((store) => (
                 <tr key={store.rank} className="border-b border-border/40 hover:bg-muted/30">
                   <td className="py-2.5 text-center font-bold text-muted-foreground">{store.rank}</td>
-                  <td className="py-2.5 font-medium text-foreground">{store.name}</td>
+                  <td 
+                    className="py-2.5 font-medium text-foreground cursor-pointer hover:underline hover:text-primary transition-colors"
+                    onClick={() => {
+                      setIsShowAllThisMonthOpen(false);
+                      setSelectedStoreChart({ storeName: store.name, type: 'thisMonth' });
+                    }}
+                  >
+                    {store.name}
+                  </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
@@ -1234,7 +1337,15 @@ export const Analytics: React.FC = () => {
               {allStoresOfAllTime.map((store) => (
                 <tr key={store.rank} className="border-b border-border/40 hover:bg-muted/30">
                   <td className="py-2.5 text-center font-bold text-muted-foreground">{store.rank}</td>
-                  <td className="py-2.5 font-medium text-foreground">{store.name}</td>
+                  <td 
+                    className="py-2.5 font-medium text-foreground cursor-pointer hover:underline hover:text-primary transition-colors"
+                    onClick={() => {
+                      setIsShowAllAllTimeOpen(false);
+                      setSelectedStoreChart({ storeName: store.name, type: 'allTime' });
+                    }}
+                  >
+                    {store.name}
+                  </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
@@ -1242,6 +1353,50 @@ export const Analytics: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      </Dialog>
+
+      {/* Modal for store purchase history chart */}
+      <Dialog
+        isOpen={selectedStoreChart !== null}
+        onClose={() => setSelectedStoreChart(null)}
+        title={selectedStoreChart?.storeName || ''}
+        description={
+          selectedStoreChart?.type === 'allTime'
+            ? `All time monthly spending history. Total: €${totalStoreSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `Daily spending history for this month. Total: €${totalStoreSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        }
+        footer={
+          <Button variant="outline" size="sm" onClick={() => setSelectedStoreChart(null)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="pt-2">
+          {chartData.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center font-medium">No purchase data available to draw chart.</p>
+          ) : (
+            <div className="w-full h-[260px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                  <XAxis dataKey="label" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                  <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} tickFormatter={(val) => `€${val}`} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                      borderColor: isDark ? '#334155' : '#e2e8f0',
+                      borderRadius: '12px',
+                    }}
+                    labelStyle={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: 'bold' }}
+                    itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                    formatter={(value) => [`€${Number(value).toFixed(2)}`, 'Spent']}
+                  />
+                  <Line type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={2.5} activeDot={{ r: 6 }} dot={{ strokeWidth: 2, r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </Dialog>
     </div>
