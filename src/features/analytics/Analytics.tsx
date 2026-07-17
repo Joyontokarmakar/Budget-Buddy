@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
@@ -384,7 +384,7 @@ export const Analytics: React.FC = () => {
   const topStoresOfAllTime = allStoresOfAllTime.slice(0, 5);
 
   // Dynamic Chart calculations for the selected store modal
-  const { chartData, totalStoreSpent } = useMemo(() => {
+  const getChartDataAndTotal = () => {
     if (!selectedStoreChart) return { chartData: [], totalStoreSpent: 0 };
 
     const commonBillsCategories = ['house rent', 'health insurance', 'radio bill', 'mobile bill'];
@@ -463,7 +463,9 @@ export const Analytics: React.FC = () => {
       const total = data.reduce((sum, item) => sum + item.amount, 0);
       return { chartData: data, totalStoreSpent: total };
     }
-  }, [selectedStoreChart, expenses, i18n.language]);
+  };
+
+  const { chartData, totalStoreSpent } = getChartDataAndTotal();
 
   const displayedStoresThisMonth = isSearchThisMonthOpen && searchThisMonthQuery
     ? allStoresThisMonth.filter(s => s.name.toLowerCase().includes(searchThisMonthQuery.toLowerCase()))
