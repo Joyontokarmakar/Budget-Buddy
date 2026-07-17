@@ -1301,7 +1301,14 @@ export const Analytics: React.FC = () => {
                       setSelectedStoreChart({ storeName: store.name, type: 'thisMonth' });
                     }}
                   >
-                    {store.name}
+                    <div>
+                      <p className="font-bold">{store.name}</p>
+                      {store.maxDate && (
+                        <p className="text-[10px] text-muted-foreground font-medium normal-case">
+                          Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                        </p>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1344,7 +1351,12 @@ export const Analytics: React.FC = () => {
                       setSelectedStoreChart({ storeName: store.name, type: 'allTime' });
                     }}
                   >
-                    {store.name}
+                    <div>
+                      <p className="font-bold">{store.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium normal-case">
+                        Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </p>
+                    </div>
                   </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
