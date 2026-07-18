@@ -148,10 +148,13 @@ export const Dashboard: React.FC = () => {
     initialDate?: string;
     showAccountPicker?: boolean;
     initialAccountId?: string;
-    onConfirm: (selectedDate?: string, selectedAccountId?: string) => void;
+    showAmountInput?: boolean;
+    initialAmount?: number;
+    onConfirm: (selectedDate?: string, selectedAccountId?: string, selectedAmount?: number) => void;
   } | null>(null);
   const [modalDate, setModalDate] = useState('');
   const [modalAccountId, setModalAccountId] = useState('');
+  const [modalAmount, setModalAmount] = useState('');
 
   useEffect(() => {
     if (confirmState?.isOpen) {
@@ -160,6 +163,9 @@ export const Dashboard: React.FC = () => {
       }
       if (confirmState.initialAccountId) {
         setModalAccountId(confirmState.initialAccountId);
+      }
+      if (confirmState.initialAmount !== undefined) {
+        setModalAmount(confirmState.initialAmount.toString());
       }
     }
   }, [confirmState]);
@@ -357,21 +363,24 @@ export const Dashboard: React.FC = () => {
     setConfirmState({
       isOpen: true,
       title: `Pay Missed ${bill.name}`,
-      description: `Log payment for missed ${bill.name} of €${bill.amount.toFixed(2)} using ${accountName}? It will be logged under today's date and deducted from the current month's ledger.`,
+      description: `Log payment for missed ${bill.name} using ${accountName}? It will be logged under today's date and deducted from the current month's ledger. You can verify or adjust the date, payment account, and amount below.`,
       confirmText: 'Pay Missed Bill',
       confirmVariant: 'primary',
       showDatePicker: true,
       initialDate: new Date().toISOString().split('T')[0],
       showAccountPicker: true,
       initialAccountId: accountIdToUse,
-      onConfirm: async (selectedDate, selectedAccountId) => {
+      showAmountInput: true,
+      initialAmount: bill.amount,
+      onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
         const finalDate = selectedDate || new Date().toISOString().split('T')[0];
         const finalAccountId = selectedAccountId || accountIdToUse;
         const categoryId = bill.categoryId;
+        const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
         
         try {
           await db.createExpense(profile.id, {
-            amount: bill.amount,
+            amount: finalAmount,
             date: finalDate,
             category_id: categoryId,
             store_id: null,
@@ -1470,7 +1479,12 @@ export const Dashboard: React.FC = () => {
             <Button 
               variant={confirmState?.confirmVariant || 'primary'} 
               onClick={() => {
-                confirmState?.onConfirm(modalDate, modalAccountId);
+                const amtVal = parseFloat(modalAmount);
+                confirmState?.onConfirm(
+                  modalDate, 
+                  modalAccountId, 
+                  isNaN(amtVal) ? undefined : amtVal
+                );
                 setConfirmState(null);
               }}
             >
@@ -1483,6 +1497,18 @@ export const Dashboard: React.FC = () => {
           <p className="text-sm font-semibold text-muted-foreground">
             {confirmState?.description}
           </p>
+          {confirmState?.showAmountInput && (
+            <div className="pt-2">
+              <Input
+                type="number"
+                step="0.01"
+                label="Amount (€)"
+                value={modalAmount}
+                onChange={(e) => setModalAmount(e.target.value)}
+                required
+              />
+            </div>
+          )}
           {confirmState?.showDatePicker && (
             <div className="pt-2">
               <Input
