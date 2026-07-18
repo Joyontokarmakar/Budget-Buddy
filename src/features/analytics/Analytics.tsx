@@ -552,6 +552,8 @@ export const Analytics: React.FC = () => {
     };
   })();
 
+  console.log('[Analytics debug] render activity state:', { activityYear, activityMonth });
+
   const hasData = expenses.length > 0 || incomes.length > 0;
 
   return (
