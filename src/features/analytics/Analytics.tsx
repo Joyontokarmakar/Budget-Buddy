@@ -552,6 +552,20 @@ export const Analytics: React.FC = () => {
     };
   })();
 
+  // Find selected month's active spending days
+  const selectedMonthActiveDays = (() => {
+    const activeDates = new Set<string>();
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const d = new Date(e.date);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() === activityYear && d.getMonth() === activityMonth) {
+        activeDates.add(e.date);
+      }
+    });
+    return activeDates.size;
+  })();
+
   const hasData = expenses.length > 0 || incomes.length > 0;
 
   return (
@@ -1045,14 +1059,22 @@ export const Analytics: React.FC = () => {
                     })()}
                   </div>
                 </div>
-                {maxActiveDaysInfo && (
-                  <div className="mt-4 pt-3.5 border-t border-border/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground animate-in fade-in duration-200">
-                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                <div className="mt-4 pt-3.5 border-t border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-semibold text-muted-foreground animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse" />
                     <span>
-                      Most active spending month: <strong className="text-foreground font-extrabold">{maxActiveDaysInfo.monthLabel}</strong> with <strong className="text-rose-500 font-extrabold">{maxActiveDaysInfo.daysCount} active days</strong>
+                      Selected month activity: <strong className="text-foreground font-extrabold">{selectedMonthActiveDays} active days</strong>
                     </span>
                   </div>
-                )}
+                  {maxActiveDaysInfo && (
+                    <div className="flex items-center gap-2 sm:border-l sm:border-border/50 sm:pl-3.5">
+                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                      <span>
+                        Peak month: <strong className="text-foreground font-extrabold">{maxActiveDaysInfo.monthLabel}</strong> ({maxActiveDaysInfo.daysCount} days)
+                      </span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
