@@ -512,6 +512,46 @@ export const Analytics: React.FC = () => {
   const topProducts = Object.values(productMap)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
+
+  // Find month with max active spending days
+  const maxActiveDaysInfo = (() => {
+    if (expenses.length === 0) return null;
+    
+    const monthlyActiveDates: { [monthKey: string]: Set<string> } = {};
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const d = new Date(e.date);
+      if (isNaN(d.getTime())) return;
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyActiveDates[monthKey]) {
+        monthlyActiveDates[monthKey] = new Set<string>();
+      }
+      monthlyActiveDates[monthKey].add(e.date);
+    });
+    
+    let bestMonthKey = '';
+    let maxDays = 0;
+    
+    Object.entries(monthlyActiveDates).forEach(([monthKey, datesSet]) => {
+      if (datesSet.size > maxDays) {
+        maxDays = datesSet.size;
+        bestMonthKey = monthKey;
+      }
+    });
+    
+    if (!bestMonthKey) return null;
+    
+    const [yearStr, monthStr] = bestMonthKey.split('-');
+    const dateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+    const monthLabel = dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+    
+    return {
+      monthLabel,
+      daysCount: maxDays
+    };
+  })();
+
   const hasData = expenses.length > 0 || incomes.length > 0;
 
   return (
@@ -1005,6 +1045,14 @@ export const Analytics: React.FC = () => {
                     })()}
                   </div>
                 </div>
+                {maxActiveDaysInfo && (
+                  <div className="mt-4 pt-3.5 border-t border-border/50 flex items-center gap-2 text-xs font-semibold text-muted-foreground animate-in fade-in duration-200">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                    <span>
+                      Most active spending month: <strong className="text-foreground font-extrabold">{maxActiveDaysInfo.monthLabel}</strong> with <strong className="text-rose-500 font-extrabold">{maxActiveDaysInfo.daysCount} active days</strong>
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
