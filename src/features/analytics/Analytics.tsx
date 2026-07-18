@@ -552,28 +552,6 @@ export const Analytics: React.FC = () => {
     };
   })();
 
-  // Find selected month's active spending days (timezone-agnostic)
-  const selectedMonthActiveDays = (() => {
-    const activeDates = new Set<string>();
-    expenses.forEach(e => {
-      if (!e.date) return;
-      const parts = e.date.split('-');
-      if (parts.length < 2) return;
-      const y = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10) - 1;
-      if (y === activityYear && m === activityMonth) {
-        activeDates.add(e.date);
-      }
-    });
-    return activeDates.size;
-  })();
-
-  // Format selected month name (timezone-agnostic)
-  const selectedMonthName = (() => {
-    const dateObj = new Date(activityYear, activityMonth, 1);
-    return dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
-  })();
-
   const hasData = expenses.length > 0 || incomes.length > 0;
 
   return (
@@ -1069,29 +1047,54 @@ export const Analytics: React.FC = () => {
                     })()}
                   </div>
                 </div>
-                <div className="mt-4 pt-3.5 border-t border-border/50 space-y-2 animate-in fade-in duration-200">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Active Days
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-muted-foreground">
-                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/20 border border-border/40">
-                      <span className="h-2.5 w-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
-                      <div>
-                        <span className="text-[10px] block text-muted-foreground">Selected Month ({selectedMonthName})</span>
-                        <strong className="text-foreground text-xs font-extrabold">{selectedMonthActiveDays} {selectedMonthActiveDays === 1 ? 'day' : 'days'}</strong>
+                {(() => {
+                  // Find selected month's active spending days (timezone-agnostic)
+                  const currentSelectedMonthActiveDays = (() => {
+                    const activeDates = new Set<string>();
+                    expenses.forEach(e => {
+                      if (!e.date) return;
+                      const parts = e.date.split('-');
+                      if (parts.length < 2) return;
+                      const y = parseInt(parts[0], 10);
+                      const m = parseInt(parts[1], 10) - 1;
+                      if (y === activityYear && m === activityMonth) {
+                        activeDates.add(e.date);
+                      }
+                    });
+                    return activeDates.size;
+                  })();
+
+                  const currentSelectedMonthName = (() => {
+                    const dateObj = new Date(activityYear, activityMonth, 1);
+                    return dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+                  })();
+
+                  return (
+                    <div className="mt-4 pt-3.5 border-t border-border/50 space-y-2 animate-in fade-in duration-200">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Active Days
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-muted-foreground">
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/20 border border-border/40">
+                          <span className="h-2.5 w-2.5 rounded-full bg-primary shrink-0 animate-pulse" />
+                          <div>
+                            <span className="text-[10px] block text-muted-foreground">Selected Month ({currentSelectedMonthName})</span>
+                            <strong className="text-foreground text-xs font-extrabold">{currentSelectedMonthActiveDays} {currentSelectedMonthActiveDays === 1 ? 'day' : 'days'}</strong>
+                          </div>
+                        </div>
+                        {maxActiveDaysInfo && (
+                          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/20 border border-border/40">
+                            <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                            <div>
+                              <span className="text-[10px] block text-muted-foreground">Peak Month ({maxActiveDaysInfo.monthLabel})</span>
+                              <strong className="text-foreground text-xs font-extrabold">{maxActiveDaysInfo.daysCount} {maxActiveDaysInfo.daysCount === 1 ? 'day' : 'days'}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {maxActiveDaysInfo && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/20 border border-border/40">
-                        <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                        <div>
-                          <span className="text-[10px] block text-muted-foreground">Peak Month ({maxActiveDaysInfo.monthLabel})</span>
-                          <strong className="text-foreground text-xs font-extrabold">{maxActiveDaysInfo.daysCount} {maxActiveDaysInfo.daysCount === 1 ? 'day' : 'days'}</strong>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
