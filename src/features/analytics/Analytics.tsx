@@ -645,57 +645,26 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* WEEKLY & DAILY TREND LINE */}
-            <Card className="hover:border-primary/20 transition-all">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <LineIcon className="h-4.5 w-4.5 text-rose-500" />
-                    {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
-                  </CardTitle>
-                  <CardDescription>
-                    {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
-                  </CardDescription>
-                </div>
-                <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
-                  <button
-                    type="button"
-                    onClick={() => setTrendView('weekly')}
-                    className={cn(
-                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                      trendView === 'weekly' 
-                        ? "bg-background text-foreground shadow-xs border border-border/30" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Weekly
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTrendView('daily')}
-                    className={cn(
-                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                      trendView === 'daily' 
-                        ? "bg-background text-foreground shadow-xs border border-border/30" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Daily
-                  </button>
-                </div>
+            {/* MONTHLY COMPARISON TREND */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <BarChart2 className="h-4.5 w-4.5 text-primary" />
+                  Spending Comparison
+                </CardTitle>
+                <CardDescription>Expense historical tracking totals</CardDescription>
               </CardHeader>
               <CardContent className="h-64 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
+                  <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis 
-                      dataKey={trendView === 'weekly' ? 'week' : 'date'} 
-                      stroke={textColor} 
-                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                    />
+                    <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                     <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                     <Tooltip
                       contentStyle={{
@@ -706,15 +675,15 @@ export const Analytics: React.FC = () => {
                       itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
                       formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
                     />
-                    <Line
+                    <Area
                       type="monotone"
-                      dataKey="amount"
+                      dataKey="expenses"
                       stroke="#f43f5e"
-                      strokeWidth={3}
-                      dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
-                      activeDot={{ r: 6 }}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorExp)"
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -1098,26 +1067,57 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* MONTHLY COMPARISON TREND */}
+            {/* WEEKLY & DAILY TREND LINE */}
             <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <BarChart2 className="h-4.5 w-4.5 text-primary" />
-                  Spending Comparison
-                </CardTitle>
-                <CardDescription>Expense historical tracking totals</CardDescription>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <LineIcon className="h-4.5 w-4.5 text-rose-500" />
+                    {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
+                  </CardTitle>
+                  <CardDescription>
+                    {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
+                  </CardDescription>
+                </div>
+                <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
+                  <button
+                    type="button"
+                    onClick={() => setTrendView('weekly')}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                      trendView === 'weekly' 
+                        ? "bg-background text-foreground shadow-xs border border-border/30" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Weekly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrendView('daily')}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
+                      trendView === 'daily' 
+                        ? "bg-background text-foreground shadow-xs border border-border/30" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Daily
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="h-64 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
+                  <LineChart 
+                    data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <XAxis 
+                      dataKey={trendView === 'weekly' ? 'week' : 'date'} 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                    />
                     <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                     <Tooltip
                       contentStyle={{
@@ -1128,15 +1128,15 @@ export const Analytics: React.FC = () => {
                       itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
                       formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
                     />
-                    <Area
+                    <Line
                       type="monotone"
-                      dataKey="expenses"
+                      dataKey="amount"
                       stroke="#f43f5e"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorExp)"
+                      strokeWidth={3}
+                      dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
+                      activeDot={{ r: 6 }}
                     />
-                  </AreaChart>
+                  </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
