@@ -224,80 +224,16 @@ export const Assets: React.FC = () => {
         </Card>
       </div>
 
-      {/* Net Worth Growth Chart */}
-      {assets.length > 0 && (
-        <Card className="lg:col-span-full border border-border/60 bg-card/50 backdrop-blur-md overflow-hidden hover:shadow-md transition-all duration-300">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <TrendingUp className="h-4.5 w-4.5 text-primary" />
-              Net Asset Worth Growth
-            </CardTitle>
-            <CardDescription>Cumulative valuation of your logged major purchases over time</CardDescription>
-          </CardHeader>
-          <CardContent className="h-56 pt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorAssetVal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary, #3b82f6)" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="var(--color-primary, #3b82f6)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} className="stroke-border/40" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke={textColor} 
-                  style={{ fontSize: '10px', fontWeight: '600' }} 
-                />
-                <YAxis 
-                  stroke={textColor} 
-                  style={{ fontSize: '10px', fontWeight: '600' }}
-                  tickFormatter={(val) => `€${val}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                    borderColor: isDark ? '#334155' : '#e2e8f0',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
-                  }}
-                  itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                  formatter={(value: any) => [
-                    `€${value.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`,
-                    'Cumulative Worth'
-                  ]}
-                  labelFormatter={(label, items) => {
-                    if (items && items[0]) {
-                      const payload = items[0].payload;
-                      return `${payload.date} - Logged: ${payload.name} (€${payload.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })})`;
-                    }
-                    return label;
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="var(--color-primary, #3b82f6)" 
-                  strokeWidth={2.5}
-                  fillOpacity={1} 
-                  fill="url(#colorAssetVal)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Asset Log Form */}
       <div className="lg:col-span-1">
-        <Card className="sticky top-20 shadow-md bg-card/75 backdrop-blur-md">
+        <Card className="shadow-md bg-card/75 backdrop-blur-md h-full flex flex-col justify-between">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <PlusCircle className="h-5 w-5 text-primary" />
               Log New Asset
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <form onSubmit={handleAddAsset} className="space-y-4">
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
@@ -356,8 +292,82 @@ export const Assets: React.FC = () => {
         </Card>
       </div>
 
+      {/* Net Worth Growth Chart */}
+      <div className="lg:col-span-2">
+        {assets.length > 0 ? (
+          <Card className="border border-border/60 bg-card/50 backdrop-blur-md overflow-hidden hover:shadow-md transition-all duration-300 h-full flex flex-col justify-between">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <TrendingUp className="h-4.5 w-4.5 text-primary" />
+                Net Asset Worth Growth
+              </CardTitle>
+              <CardDescription>Cumulative valuation of your logged major purchases over time</CardDescription>
+            </CardHeader>
+            <CardContent className="h-64 pt-2 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorAssetVal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-primary, #3b82f6)" stopOpacity={0.25}/>
+                      <stop offset="95%" stopColor="var(--color-primary, #3b82f6)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} className="stroke-border/40" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke={textColor} 
+                    style={{ fontSize: '10px', fontWeight: '600' }} 
+                  />
+                  <YAxis 
+                    stroke={textColor} 
+                    style={{ fontSize: '10px', fontWeight: '600' }}
+                    tickFormatter={(val) => `€${val}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                      borderColor: isDark ? '#334155' : '#e2e8f0',
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
+                    }}
+                    itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                    formatter={(value: any) => [
+                      `€${value.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`,
+                      'Cumulative Worth'
+                    ]}
+                    labelFormatter={(label, items) => {
+                      if (items && items[0]) {
+                        const payload = items[0].payload;
+                        return `${payload.date} - Logged: ${payload.name} (€${payload.price.toLocaleString('de-DE', { minimumFractionDigits: 2 })})`;
+                      }
+                      return label;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="var(--color-primary, #3b82f6)" 
+                    strokeWidth={2.5}
+                    fillOpacity={1} 
+                    fill="url(#colorAssetVal)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border border-dashed border-border/80 bg-card/30 backdrop-blur-md h-full flex flex-col items-center justify-center p-6 text-center">
+            <TrendingUp className="h-10 w-10 text-muted-foreground/30 mb-2 animate-bounce" />
+            <h4 className="text-sm font-bold text-muted-foreground">Asset Worth Growth Chart</h4>
+            <p className="text-xs text-muted-foreground/60 max-w-xs mt-1 leading-relaxed">
+              Your cumulative asset growth trend will populate here in real time as soon as you record your first permanent asset.
+            </p>
+          </Card>
+        )}
+      </div>
+
       {/* Asset Log List */}
-      <div className="lg:col-span-2 space-y-3">
+      <div className="lg:col-span-full space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
             Asset Registry ({filteredAssets.length})
