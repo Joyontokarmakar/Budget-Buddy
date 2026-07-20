@@ -8,7 +8,11 @@ import type { Language, ThemeMode, Account, UserSession, Category, Store } from 
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { StatusDots } from '../../components/StatusDots';
-import { Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw, Store as StoreIcon } from 'lucide-react';
+import { 
+  Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, 
+  Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw, Store as StoreIcon, 
+  Info, Sparkles, CheckCircle2, AlertTriangle, Plus 
+} from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
@@ -33,6 +37,10 @@ export const Settings: React.FC = () => {
   const [budget, setBudget] = useState(profile?.monthly_budget?.toString() || '700');
   const [budgetLoading, setBudgetLoading] = useState(false);
   const [budgetSuccess, setBudgetSuccess] = useState(false);
+
+  // Budget Filter & Guide State
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'bills' | 'variable'>('all');
+  const [showBudgetGuide, setShowBudgetGuide] = useState(false);
 
   // Common Bills State
   // Category Budgets State
@@ -398,6 +406,27 @@ export const Settings: React.FC = () => {
     await updateProfile({ preferred_language: lang });
   };
 
+  // Budget Breakdown Calculations
+  const activeCategories = categories.filter(c => c.is_active !== false);
+
+  const fixedBillsSum = activeCategories
+    .filter(c => c.is_monthly_bill)
+    .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+
+  const variableBudgetsSum = activeCategories
+    .filter(c => !c.is_monthly_bill)
+    .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+
+  const totalPlannedAllocation = fixedBillsSum + variableBudgetsSum;
+  const parsedLimit = parseFloat(budget) || 0;
+  const allocationDiff = parsedLimit - totalPlannedAllocation;
+
+  const filteredCategories = activeCategories.filter(cat => {
+    if (categoryFilter === 'bills') return cat.is_monthly_bill;
+    if (categoryFilter === 'variable') return !cat.is_monthly_bill;
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -575,60 +604,206 @@ export const Settings: React.FC = () => {
 
         {/* BUDGET SETTINGS CARD */}
         <Card className="bg-card/75 backdrop-blur-md">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <PiggyBank className="h-4.5 w-4.5 text-muted-foreground" />
-              {t('settings.budget')}
-            </CardTitle>
-            <CardDescription>Adjust your monthly student spending limit and configure common utilities.</CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <PiggyBank className="h-4.5 w-4.5 text-primary" />
+                {t('settings.budget')}
+              </CardTitle>
+              <button
+                type="button"
+                onClick={() => setShowBudgetGuide(!showBudgetGuide)}
+                className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20"
+              >
+                <Info className="h-3.5 w-3.5" />
+                {showBudgetGuide ? 'Hide Guide' : 'How it works'}
+              </button>
+            </div>
+            <CardDescription>{t('settings.budgetDescription')}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleUpdateBudget} className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    label={t('settings.budgetLabel')}
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    required
-                  />
+          <CardContent className="space-y-5">
+            {/* EDUCATIONAL GUIDE ACCORDION */}
+            {showBudgetGuide && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-violet-500/5 to-transparent border border-primary/20 space-y-2.5 transition-all">
+                <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>{t('settings.budgetGuideTitle')}</span>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePullFromPreviousMonth}
-                  className="sm:w-auto w-full h-11 text-xs font-bold gap-2 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground"
-                  title="Load actual spending from previous month as category budgets"
-                >
-                  <RefreshCw className="h-4 w-4 text-primary" />
-                  Pull Previous Month
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const calculated = calculateTotalPlannedBudget();
-                    setBudget(calculated.toFixed(2));
-                  }}
-                  className="sm:w-auto w-full h-11 text-xs font-bold gap-2 shrink-0 cursor-pointer"
-                >
-                  <Calculator className="h-4 w-4 text-primary" />
-                  Auto-Calculate
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="bg-background/40 p-2 rounded-xl border border-border/30">
+                    <strong className="text-foreground font-semibold">{t('settings.budgetGuideStep1')}</strong>
+                  </p>
+                  <p className="bg-background/40 p-2 rounded-xl border border-border/30">
+                    <strong className="text-foreground font-semibold">{t('settings.budgetGuideStep2')}</strong>
+                  </p>
+                  <p className="bg-background/40 p-2 rounded-xl border border-border/30">
+                    <strong className="text-foreground font-semibold">{t('settings.budgetGuideStep3')}</strong>
+                  </p>
+                  <p className="bg-background/40 p-2 rounded-xl border border-border/30">
+                    <strong className="text-foreground font-semibold">{t('settings.budgetGuideStep4')}</strong>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* VISUAL BUDGET BREAKDOWN & ALLOCATION METRICS */}
+            <div className="p-4 rounded-2xl bg-muted/15 border border-border/40 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                    {t('settings.summaryTotalPlanned')}
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="font-mono text-lg font-black text-foreground">
+                      €{totalPlannedAllocation.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      / €{parsedLimit.toFixed(2)} Limit
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  {allocationDiff === 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {t('settings.summaryBalanced')}
+                    </span>
+                  ) : allocationDiff > 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      <Info className="h-3 w-3" />
+                      €{allocationDiff.toFixed(2)} {t('settings.summaryUnallocated')}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      <AlertTriangle className="h-3 w-3" />
+                      €{Math.abs(allocationDiff).toFixed(2)} {t('settings.summaryOverLimit')}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="border-t border-border/50 pt-3 mt-3 space-y-4">
-                <div className="flex justify-between items-center pb-2 border-b border-border/20">
-                  <span className="text-[11px] font-black text-foreground uppercase tracking-wider block">
-                    Categories & Budgets
-                  </span>
+              {/* Progress Bar Visualizer */}
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden flex">
+                  {parsedLimit > 0 && (
+                    <>
+                      <div
+                        className="bg-indigo-500 transition-all"
+                        style={{ width: `${Math.min(100, (fixedBillsSum / parsedLimit) * 100)}%` }}
+                        title={`Fixed Bills: €${fixedBillsSum.toFixed(2)}`}
+                      />
+                      <div
+                        className="bg-emerald-500 transition-all"
+                        style={{ width: `${Math.min(100 - (fixedBillsSum / parsedLimit) * 100, (variableBudgetsSum / parsedLimit) * 100)}%` }}
+                        title={`Variable Targets: €${variableBudgetsSum.toFixed(2)}`}
+                      />
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
+                    <span>{t('settings.summaryFixedBills')}: €{fixedBillsSum.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span>{t('settings.summaryVariableBudgets')}: €{variableBudgetsSum.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* MONTHLY BUDGET LIMIT INPUT FORM */}
+            <form onSubmit={handleUpdateBudget} className="space-y-4">
+              <div className="space-y-1.5">
+                <Input
+                  type="number"
+                  step="0.01"
+                  label={t('settings.budgetLabel')}
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  required
+                  className="font-mono text-base font-bold"
+                />
+                <p className="text-[10.5px] text-muted-foreground leading-normal ml-0.5">
+                  This limit is shown on your Dashboard progress bar and spending indicators.
+                </p>
+              </div>
+
+              {/* SMART TOOLS ACTION CONTAINER */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="p-3 rounded-2xl border border-border/40 bg-muted/10 space-y-2 flex flex-col justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <RefreshCw className="h-3.5 w-3.5 text-primary" />
+                      Pull Previous Month
+                    </span>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                      {t('settings.pullPreviousSubtitle')}
+                    </p>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[10px] px-2 font-bold cursor-pointer"
+                    onClick={handlePullFromPreviousMonth}
+                    className="w-full text-xs font-bold h-8 cursor-pointer mt-1"
+                  >
+                    Pull Spending
+                  </Button>
+                </div>
+
+                <div className="p-3 rounded-2xl border border-border/40 bg-muted/10 space-y-2 flex flex-col justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Calculator className="h-3.5 w-3.5 text-primary" />
+                      Auto-Calculate Limit
+                    </span>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                      {t('settings.autoCalculateSubtitle')}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const calculated = calculateTotalPlannedBudget();
+                      setBudget(calculated.toFixed(2));
+                    }}
+                    className="w-full text-xs font-bold h-8 cursor-pointer mt-1"
+                  >
+                    Auto-Calculate
+                  </Button>
+                </div>
+              </div>
+
+              <Button type="submit" loading={budgetLoading} className="w-full h-10 font-bold text-xs mt-2">
+                {budgetSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
+                {t('settings.saveBudget')}
+              </Button>
+            </form>
+
+            {/* CATEGORIES & BUDGETS MANAGEMENT SECTION */}
+            <div className="border-t border-border/40 pt-4 mt-4 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/20">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wider block">
+                    Category Target Budgets
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Assign planned monthly spending limits per category
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-bold px-3 cursor-pointer gap-1.5 shrink-0"
                     onClick={() => {
                       setEditingCategory(null);
                       setCatNameInput('');
@@ -641,172 +816,139 @@ export const Settings: React.FC = () => {
                       setIsCategoryModalOpen(true);
                     }}
                   >
-                    + Add Category
+                    <Plus className="h-3.5 w-3.5 text-primary" />
+                    Add Category
                   </Button>
-                </div>
-
-                {/* Section 1: Monthly Recurring Bills */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Monthly Recurring Bills
-                  </span>
-                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5 border border-border/10 rounded-2xl p-2 bg-secondary/10 dark:bg-muted/5">
-                    {categories.filter(cat => cat.is_active !== false && cat.is_monthly_bill).map(cat => (
-                      <div
-                        key={cat.id}
-                        className={cn(
-                          "p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40",
-                          cat.is_active === false && "opacity-50"
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className="h-3 w-3 rounded-full shrink-0"
-                            style={{ backgroundColor: cat.color || '#6b7280' }}
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-foreground">{cat.name}</span>
-                            <span className="text-[9.5px] text-muted-foreground font-semibold">
-                              Monthly Fixed Cost
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 border-border/20 pt-2.5 sm:pt-0">
-                          <div className="text-right">
-                            <span className="text-[10px] text-muted-foreground font-semibold block leading-none mb-0.5">Budget Amount</span>
-                            <span className="font-mono text-xs font-black text-primary leading-normal">
-                              €{(cat.monthly_amount || 0).toFixed(2)}
-                            </span>
-                          </div>
-                          
-                          <div className="flex gap-1.5">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
-                              onClick={() => {
-                                setEditingCategory(cat);
-                                setCatNameInput(cat.name);
-                                setCatColorInput(cat.color || '#8b5cf6');
-                                setCatIconInput(cat.icon || 'HelpCircle');
-                                setCatIsBillInput(cat.is_monthly_bill || false);
-                                setCatBillAmtInput((cat.monthly_amount || 0).toString());
-                                setCatPrefAccInput(cat.preferred_account_id || '');
-                                setCatIsActiveInput(cat.is_active !== false);
-                                setIsCategoryModalOpen(true);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            {cat.user_id !== null && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
-                                onClick={() => handleDeleteCategory(cat.id)}
-                              >
-                                Delete
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {categories.filter(cat => cat.is_active !== false && cat.is_monthly_bill).length === 0 && (
-                      <div className="text-center py-4 text-xs text-muted-foreground font-semibold">
-                        No recurring bills configured.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 2: Expenses Categories */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                    Expenses Categories
-                  </span>
-                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5 border border-border/10 rounded-2xl p-2 bg-secondary/10 dark:bg-muted/5">
-                    {categories.filter(cat => cat.is_active !== false && !cat.is_monthly_bill).map(cat => (
-                      <div
-                        key={cat.id}
-                        className={cn(
-                          "p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/10 border-border/40",
-                          cat.is_active === false && "opacity-50"
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className="h-3 w-3 rounded-full shrink-0"
-                            style={{ backgroundColor: cat.color || '#6b7280' }}
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-foreground">{cat.name}</span>
-                            <span className="text-[9.5px] text-muted-foreground font-semibold">
-                              Variable Expense
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 border-border/20 pt-2.5 sm:pt-0">
-                          <div className="text-right">
-                            <span className="text-[10px] text-muted-foreground font-semibold block leading-none mb-0.5">Budget Amount</span>
-                            <span className="font-mono text-xs font-black text-primary leading-normal">
-                              €0.00
-                            </span>
-                          </div>
-                          
-                          <div className="flex gap-1.5">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
-                              onClick={() => {
-                                setEditingCategory(cat);
-                                setCatNameInput(cat.name);
-                                setCatColorInput(cat.color || '#8b5cf6');
-                                setCatIconInput(cat.icon || 'HelpCircle');
-                                setCatIsBillInput(cat.is_monthly_bill || false);
-                                setCatBillAmtInput((cat.monthly_amount || 0).toString());
-                                setCatPrefAccInput(cat.preferred_account_id || '');
-                                setCatIsActiveInput(cat.is_active !== false);
-                                setIsCategoryModalOpen(true);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                            {cat.user_id !== null && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
-                                onClick={() => handleDeleteCategory(cat.id)}
-                              >
-                                Delete
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {categories.filter(cat => cat.is_active !== false && !cat.is_monthly_bill).length === 0 && (
-                      <div className="text-center py-4 text-xs text-muted-foreground font-semibold">
-                        No regular expense categories configured.
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              <Button type="submit" loading={budgetLoading} className="w-full mt-3">
-                {budgetSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                Update Monthly Budget Limit
-              </Button>
-            </form>
+              {/* SEGMENTED FILTER TABS */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/20 border border-border/30">
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter('all')}
+                  className={cn(
+                    "flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer",
+                    categoryFilter === 'all'
+                      ? "bg-background text-foreground shadow-sm border border-border/40"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t('settings.filterAll')} ({activeCategories.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter('bills')}
+                  className={cn(
+                    "flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer",
+                    categoryFilter === 'bills'
+                      ? "bg-background text-foreground shadow-sm border border-border/40"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t('settings.filterBills')} ({activeCategories.filter(c => c.is_monthly_bill).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryFilter('variable')}
+                  className={cn(
+                    "flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all text-center cursor-pointer",
+                    categoryFilter === 'variable'
+                      ? "bg-background text-foreground shadow-sm border border-border/40"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t('settings.filterVariable')} ({activeCategories.filter(c => !c.is_monthly_bill).length})
+                </button>
+              </div>
+
+              {/* CATEGORIES LIST CARDS */}
+              <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                {filteredCategories.map(cat => (
+                  <div
+                    key={cat.id}
+                    className={cn(
+                      "p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 bg-muted/10 border-border/40 hover:border-border/80",
+                      cat.is_active === false && "opacity-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="h-3.5 w-3.5 rounded-full shrink-0 shadow-sm"
+                        style={{ backgroundColor: cat.color || '#8b5cf6' }}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-foreground truncate">{cat.name}</span>
+                          <span className={cn(
+                            "px-2 py-0.5 text-[9px] font-bold rounded-md uppercase border",
+                            cat.is_monthly_bill
+                              ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          )}>
+                            {cat.is_monthly_bill ? 'Fixed Bill' : 'Variable Category'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                          {cat.is_monthly_bill ? 'Logged in monthly bills checklist' : 'Variable day-to-day spending'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <span className="text-[9.5px] text-muted-foreground font-semibold block leading-none mb-0.5">
+                          {cat.is_monthly_bill ? 'Fixed Cost' : 'Planned Target'}
+                        </span>
+                        <span className="font-mono text-xs font-black text-primary leading-normal">
+                          €{(cat.monthly_amount || 0).toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 cursor-pointer text-primary hover:bg-primary/5 rounded-lg text-[11px] font-bold"
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setCatNameInput(cat.name);
+                            setCatColorInput(cat.color || '#8b5cf6');
+                            setCatIconInput(cat.icon || 'HelpCircle');
+                            setCatIsBillInput(cat.is_monthly_bill || false);
+                            setCatBillAmtInput((cat.monthly_amount || 0).toString());
+                            setCatPrefAccInput(cat.preferred_account_id || '');
+                            setCatIsActiveInput(cat.is_active !== false);
+                            setIsCategoryModalOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        {cat.user_id !== null && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 cursor-pointer text-destructive hover:bg-destructive/5 rounded-lg text-[11px] font-bold"
+                            onClick={() => handleDeleteCategory(cat.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {filteredCategories.length === 0 && (
+                  <div className="text-center py-6 text-xs text-muted-foreground font-medium border border-dashed border-border/40 rounded-2xl">
+                    No categories found for this filter.
+                  </div>
+                )}
+              </div>
+            </div>
+
           </CardContent>
         </Card>
 
@@ -1197,28 +1339,43 @@ export const Settings: React.FC = () => {
               </label>
             </div>
             
-            {catIsBillInput && (
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/20">
+            {/* Target Budget Amount & Preferred Account - ALWAYS VISIBLE */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/20">
+              <div className="space-y-1">
                 <Input
                   type="number"
                   step="0.01"
-                  label="Monthly Cost (€)"
+                  label={catIsBillInput ? "Fixed Monthly Cost (€)" : "Monthly Target Budget (€)"}
                   value={catBillAmtInput}
                   onChange={(e) => setCatBillAmtInput(e.target.value)}
                   className="h-9 text-xs font-mono"
+                  placeholder="0.00"
                   required
                 />
+                <p className="text-[9.5px] text-muted-foreground leading-normal ml-0.5">
+                  {catIsBillInput 
+                    ? "Exact fixed amount billed automatically each month."
+                    : "Planned monthly target limit for variable spending."}
+                </p>
+              </div>
+
+              <div className="space-y-1">
                 <Select
-                  label="Preferred Account"
+                  label="Preferred Payment Account"
                   value={catPrefAccInput}
                   onChange={(e) => setCatPrefAccInput(e.target.value)}
                   options={[
-                    { value: '', label: 'Select Preferred Account' },
+                    { value: '', label: 'Select Preferred Account (Optional)' },
                     ...accounts.map(a => ({ value: a.id, label: a.name }))
                   ]}
                 />
+                <p className="text-[9.5px] text-muted-foreground leading-normal ml-0.5">
+                  {catIsBillInput
+                    ? "Account used for 1-click bill checklist payments."
+                    : "Default payment method for transactions."}
+                </p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </Dialog>
