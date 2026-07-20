@@ -656,24 +656,9 @@ export const db = {
     }
 
     return rawCategories.map(c => {
-      const isDefaultBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
-      const isEdu = c.name === 'Education';
-      let amt = getCategoryMonthlyAmount(c);
-      if (amt === 0) {
-        if (c.name === 'House rent') amt = 264.50;
-        else if (c.name === 'Health Insurance') amt = 151.42;
-        else if (c.name === 'Radio Bill') amt = 18.36;
-        else if (c.name === 'Mobile bill') amt = 10.00;
-        else if (c.name === 'Education') amt = 350.00;
-      }
-      
-      const billFlag = (c.is_monthly_bill !== undefined && c.is_monthly_bill !== null) 
-        ? isCategoryBill(c) 
-        : isDefaultBill;
-
-      const activeFlag = (c.is_active !== undefined && c.is_active !== null)
-        ? isCategoryActive(c)
-        : !isEdu;
+      const billFlag = isCategoryBill(c);
+      const activeFlag = isCategoryActive(c);
+      const amt = getCategoryMonthlyAmount(c);
 
       return {
         ...c,
