@@ -609,8 +609,8 @@ export const Settings: React.FC = () => {
                 className="bg-muted opacity-80"
               />
               <Button type="submit" loading={profileLoading} className="w-full">
-                {profileSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                {t('settings.saveProfile')}
+                {profileSuccess && <Check className="h-4 w-4 mr-2 shrink-0" />}
+                <span>{t('settings.saveProfile')}</span>
               </Button>
             </form>
           </CardContent>
@@ -795,8 +795,8 @@ export const Settings: React.FC = () => {
               </div>
 
               <Button type="submit" loading={budgetLoading} className="w-full h-10 font-bold text-xs mt-2">
-                {budgetSuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                {t('settings.saveBudget')}
+                {budgetSuccess && <Check className="h-4 w-4 mr-2 shrink-0" />}
+                <span>{t('settings.saveBudget')}</span>
               </Button>
             </form>
 
@@ -1163,8 +1163,8 @@ export const Settings: React.FC = () => {
                 required
               />
               <Button type="submit" loading={securityLoading} className="w-full">
-                {securitySuccess ? <Check className="h-4 w-4 mr-2" /> : null}
-                {t('settings.saveSecurity')}
+                {securitySuccess && <Check className="h-4 w-4 mr-2 shrink-0" />}
+                <span>{t('settings.saveSecurity')}</span>
               </Button>
             </form>
           </CardContent>

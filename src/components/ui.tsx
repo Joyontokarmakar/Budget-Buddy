@@ -36,8 +36,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        {children}
+        {loading && <Loader2 className="h-4 w-4 animate-spin mr-2 shrink-0" />}
+        {typeof children === 'string' || typeof children === 'number' ? (
+          <span>{children}</span>
+        ) : (
+          children
+        )}
       </button>
     );
   }
