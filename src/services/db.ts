@@ -655,6 +655,14 @@ export const db = {
       }
     }
 
+    if (rawCategories.length === 0) {
+      initLocalStorage(userId);
+      rawCategories = getLocalItems<Category>('bb-categories');
+      if (rawCategories.length === 0) {
+        rawCategories = DEFAULT_CATEGORIES;
+      }
+    }
+
     return rawCategories.map(c => {
       const billFlag = isCategoryBill(c);
       const activeFlag = isCategoryActive(c);

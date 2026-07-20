@@ -11,7 +11,7 @@ import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../.
 import { StatusDots } from '../../components/StatusDots';
 import { 
   Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, 
-  Upload, Laptop, Smartphone, Trash2, Calculator, RefreshCw, Store as StoreIcon, 
+  Upload, Laptop, Smartphone, Trash2, RefreshCw, Store as StoreIcon, 
   Info, Sparkles, CheckCircle2, AlertTriangle, Plus 
 } from 'lucide-react';
 
@@ -109,9 +109,7 @@ export const Settings: React.FC = () => {
       const targetUserId = profile?.id || 'guest';
       try {
         const cats = await db.getCategories(targetUserId);
-        if (cats && cats.length > 0) {
-          setCategories(cats);
-        }
+        setCategories(cats);
       } catch (err) {
         console.error('Failed to load categories:', err);
       }
@@ -199,20 +197,6 @@ export const Settings: React.FC = () => {
       setPassword('');
       setTimeout(() => setSecuritySuccess(false), 3000);
     }
-  };
-
-  const calculateTotalPlannedBudget = () => {
-    const activeBillsSum = categories
-      .filter(c => isCategoryBill(c) && isCategoryActive(c))
-      .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
-      
-    const foodCat = categories.find(c => c.name.toLowerCase() === 'food');
-    const otherCat = categories.find(c => c.name.toLowerCase() === 'other' || c.name.toLowerCase() === 'shopping');
-    
-    const baseGroceries = (foodCat && isCategoryBill(foodCat)) ? 0 : 200.00;
-    const baseOther = (otherCat && isCategoryBill(otherCat)) ? 0 : 100.00;
-    
-    return activeBillsSum + baseGroceries + baseOther;
   };
 
   const handleUpdateBudget = async (e: React.FormEvent) => {
@@ -758,14 +742,14 @@ export const Settings: React.FC = () => {
               </div>
 
               {/* SMART TOOLS ACTION CONTAINER */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <div className="p-3 rounded-2xl border border-border/40 bg-muted/10 space-y-2 flex flex-col justify-between">
-                  <div>
+              <div className="pt-2">
+                <div className="p-3.5 rounded-2xl border border-border/40 bg-muted/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <RefreshCw className="h-3.5 w-3.5 text-primary" />
                       Pull Previous Month
                     </span>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
+                    <p className="text-[10px] text-muted-foreground leading-normal">
                       {t('settings.pullPreviousSubtitle')}
                     </p>
                   </div>
@@ -774,33 +758,9 @@ export const Settings: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handlePullFromPreviousMonth}
-                    className="w-full text-xs font-bold h-8 cursor-pointer mt-1"
+                    className="text-xs font-bold h-8 cursor-pointer shrink-0 px-4"
                   >
-                    Pull Spending
-                  </Button>
-                </div>
-
-                <div className="p-3 rounded-2xl border border-border/40 bg-muted/10 space-y-2 flex flex-col justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Calculator className="h-3.5 w-3.5 text-primary" />
-                      Auto-Calculate Limit
-                    </span>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-normal">
-                      {t('settings.autoCalculateSubtitle')}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const calculated = calculateTotalPlannedBudget();
-                      setBudget(calculated.toFixed(2));
-                    }}
-                    className="w-full text-xs font-bold h-8 cursor-pointer mt-1"
-                  >
-                    Auto-Calculate
+                    <span>Pull Spending</span>
                   </Button>
                 </div>
               </div>
