@@ -408,14 +408,14 @@ export const Settings: React.FC = () => {
   };
 
   // Budget Breakdown Calculations
-  const activeCategories = categories.filter(isCategoryActive);
+  const allBills = categories.filter(isCategoryBill);
+  const allVariables = categories.filter(c => !isCategoryBill(c));
 
-  const fixedBillsSum = activeCategories
-    .filter(isCategoryBill)
+  const fixedBillsSum = allBills
     .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
 
-  const variableBudgetsSum = activeCategories
-    .filter(c => !isCategoryBill(c))
+  const variableBudgetsSum = allVariables
+    .filter(isCategoryActive)
     .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
 
   const totalPlannedAllocation = fixedBillsSum + variableBudgetsSum;
@@ -848,7 +848,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterAll')} ({categories.length})
+                  <span>{t('settings.filterAll')} ({categories.length})</span>
                 </button>
                 <button
                   type="button"
@@ -860,7 +860,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterBills')} ({categories.filter(isCategoryBill).length})
+                  <span>{t('settings.filterBills')} ({allBills.length})</span>
                 </button>
                 <button
                   type="button"
@@ -872,7 +872,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterVariable')} ({categories.filter(c => !isCategoryBill(c)).length})
+                  <span>{t('settings.filterVariable')} ({allVariables.length})</span>
                 </button>
               </div>
 
