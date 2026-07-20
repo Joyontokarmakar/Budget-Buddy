@@ -421,11 +421,22 @@ export const Settings: React.FC = () => {
   const parsedLimit = parseFloat(budget) || 0;
   const allocationDiff = parsedLimit - totalPlannedAllocation;
 
-  const filteredCategories = activeCategories.filter(cat => {
-    if (categoryFilter === 'bills') return cat.is_monthly_bill;
-    if (categoryFilter === 'variable') return !cat.is_monthly_bill;
-    return true;
-  });
+  const filteredCategories = activeCategories
+    .filter(cat => {
+      if (categoryFilter === 'bills') return cat.is_monthly_bill;
+      if (categoryFilter === 'variable') return !cat.is_monthly_bill;
+      return true;
+    })
+    .sort((a, b) => {
+      // Fixed monthly bills shown on top
+      if (a.is_monthly_bill && !b.is_monthly_bill) return -1;
+      if (!a.is_monthly_bill && b.is_monthly_bill) return 1;
+      // Secondary sort: highest budget amount first, then alphabetical by name
+      if ((b.monthly_amount || 0) !== (a.monthly_amount || 0)) {
+        return (b.monthly_amount || 0) - (a.monthly_amount || 0);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="space-y-6">
