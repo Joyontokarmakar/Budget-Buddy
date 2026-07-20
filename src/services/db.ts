@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails } from '../types';
+import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../utils/category';
 
 // =========================================================================
 // MOCK DATA SEED INITIALIZATION (FOR LOCAL OFFLINE / NO-SUPABASE MODE)
@@ -630,7 +631,13 @@ export const db = {
   getCategories: async (userId: string): Promise<Category[]> => {
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
-      return getLocalItems<Category>('bb-categories');
+      const items = getLocalItems<Category>('bb-categories');
+      return items.map(c => ({
+        ...c,
+        is_monthly_bill: isCategoryBill(c),
+        is_active: isCategoryActive(c),
+        monthly_amount: getCategoryMonthlyAmount(c),
+      }));
     }
     const { data, error } = await supabase
       .from('categories')
@@ -640,7 +647,12 @@ export const db = {
     if (error) throw error;
     
     if (data && data.length > 0) {
-      return data;
+      return data.map(c => ({
+        ...c,
+        is_monthly_bill: isCategoryBill(c),
+        is_active: isCategoryActive(c),
+        monthly_amount: getCategoryMonthlyAmount(c),
+      }));
     }
     
     // Fallback: seed/fetch global defaults
@@ -650,7 +662,23 @@ export const db = {
       .is('user_id', null)
       .order('name', { ascending: true });
     if (gError) throw gError;
-    return globalData || [];
+    return (globalData || []).map(c => {
+      const isDefaultBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
+      let amt = getCategoryMonthlyAmount(c);
+      if (amt === 0) {
+        if (c.name === 'House rent') amt = 264.50;
+        else if (c.name === 'Health Insurance') amt = 151.42;
+        else if (c.name === 'Radio Bill') amt = 18.36;
+        else if (c.name === 'Mobile bill') amt = 10.00;
+        else if (c.name === 'Education') amt = 350.00;
+      }
+      return {
+        ...c,
+        is_monthly_bill: c.is_monthly_bill !== undefined ? isCategoryBill(c) : isDefaultBill,
+        is_active: isCategoryActive(c),
+        monthly_amount: amt,
+      };
+    });
   },
 
   createCategory: async (

@@ -9,6 +9,7 @@ import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
+import { isCategoryBill, isCategoryActive } from '../../utils/category';
 import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -323,7 +324,7 @@ export const Dashboard: React.FC = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
+      const billsToCheck = categories.filter(c => isCategoryBill(c) && isCategoryActive(c));
       
       for (const bill of billsToCheck) {
         if (!isBillLogged(bill.id, monthKey)) {
@@ -504,12 +505,12 @@ export const Dashboard: React.FC = () => {
   // Daily Average Spending (excluding dynamic monthly bills)
   const nonBillExpenses = thisMonthExpenses.filter(e => {
     // 1. Exclude if category is flagged as monthly bill
-    if (e.category?.is_monthly_bill) {
+    if (isCategoryBill(e.category)) {
       return false;
     }
     // 2. Exclude by category ID reference check
     const cat = categories.find(c => c.id === e.category_id);
-    if (cat?.is_monthly_bill) {
+    if (isCategoryBill(cat)) {
       return false;
     }
     return true;
@@ -634,7 +635,7 @@ export const Dashboard: React.FC = () => {
       if (!storeName || storeName === 'Other/Unknown') return;
 
       // Exclude common bills
-      if (e.category?.is_monthly_bill) return;
+      if (isCategoryBill(e.category)) return;
       if (e.category_id && commonBillsCategoryIds.includes(e.category_id)) return;
       const catName = e.category?.name?.toLowerCase();
       if (catName && commonBillsCategories.includes(catName)) return;
@@ -703,11 +704,11 @@ export const Dashboard: React.FC = () => {
   // Product Analytics: Top bought Products (Product, Month, Amount) scanning items (excluding common bills)
   const productMap: { [key: string]: { name: string; month: string; amount: number } } = {};
   const nonBillExpensesAll = expenses.filter(e => {
-    if (e.category?.is_monthly_bill) {
+    if (isCategoryBill(e.category)) {
       return false;
     }
     const cat = categories.find(c => c.id === e.category_id);
-    if (cat?.is_monthly_bill) {
+    if (isCategoryBill(cat)) {
       return false;
     }
     return true;

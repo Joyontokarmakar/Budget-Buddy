@@ -5,6 +5,7 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, Category, DepositWithDetails, LoanWithDetails } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
 import { cn } from '../../utils/cn';
+import { isCategoryBill, isCategoryActive } from '../../utils/category';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
@@ -126,14 +127,14 @@ export const Reports: React.FC = () => {
   const fixedBills = useMemo(() => {
     return currentMonthExpenses.filter(e => {
       const cat = categories.find(c => c.id === e.category_id) || e.category;
-      return cat?.is_monthly_bill || false;
+      return isCategoryBill(cat);
     });
   }, [currentMonthExpenses, categories]);
 
   const shoppingExpenses = useMemo(() => {
     return currentMonthExpenses.filter(e => {
       const cat = categories.find(c => c.id === e.category_id) || e.category;
-      return !cat?.is_monthly_bill;
+      return !isCategoryBill(cat);
     }).sort((a, b) => a.date.localeCompare(b.date));
   }, [currentMonthExpenses, categories]);
 
@@ -334,7 +335,7 @@ export const Reports: React.FC = () => {
 
   // Fixed bills summaries (Dynamic)
   const dynamicFixedBillsList = useMemo(() => {
-    const activeCats = categories.filter(c => c.is_monthly_bill && c.is_active !== false);
+    const activeCats = categories.filter(c => isCategoryBill(c) && isCategoryActive(c));
     return activeCats.map(cat => {
       const matchingExps = fixedBills.filter(b => b.category_id === cat.id || b.category?.name === cat.name);
       const totalAmount = matchingExps.reduce((sum, b) => sum + Number(b.amount), 0);

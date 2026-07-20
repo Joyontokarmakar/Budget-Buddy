@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { db } from '../services/db';
+import { isCategoryBill, isCategoryActive } from '../utils/category';
 
 export const useStatusDots = () => {
   const { profile } = useAuthStore();
@@ -87,7 +88,7 @@ export const useStatusDots = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
+      const billsToCheck = categories.filter(c => isCategoryBill(c) && isCategoryActive(c));
       
       for (const bill of billsToCheck) {
         if (!isBillLogged(bill.id, monthKey)) {

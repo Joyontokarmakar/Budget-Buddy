@@ -67,16 +67,16 @@ export const StatusDots: React.FC = () => {
     }
 
     dots.push(
-      <circle
-        key={i}
-        cx={x}
-        cy={y}
-        r={dotRadius}
-        fill={fill}
-        className="transition-colors duration-300"
-      >
+      <g key={i}>
         <title>{title}</title>
-      </circle>
+        <circle
+          cx={x}
+          cy={y}
+          r={dotRadius}
+          fill={fill}
+          className="transition-colors duration-300"
+        />
+      </g>
     );
   }
 

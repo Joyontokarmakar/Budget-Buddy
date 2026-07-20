@@ -7,6 +7,7 @@ import { db } from '../../services/db';
 import type { Language, ThemeMode, Account, UserSession, Category, Store } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
+import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../../utils/category';
 import { StatusDots } from '../../components/StatusDots';
 import { 
   Settings as SettingsIcon, User, Shield, Palette, PiggyBank, LogOut, Check, Camera, 
@@ -191,14 +192,14 @@ export const Settings: React.FC = () => {
 
   const calculateTotalPlannedBudget = () => {
     const activeBillsSum = categories
-      .filter(c => c.is_monthly_bill && c.is_active !== false)
-      .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+      .filter(c => isCategoryBill(c) && isCategoryActive(c))
+      .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
       
     const foodCat = categories.find(c => c.name.toLowerCase() === 'food');
     const otherCat = categories.find(c => c.name.toLowerCase() === 'other' || c.name.toLowerCase() === 'shopping');
     
-    const baseGroceries = (foodCat && foodCat.is_monthly_bill) ? 0 : 200.00;
-    const baseOther = (otherCat && otherCat.is_monthly_bill) ? 0 : 100.00;
+    const baseGroceries = (foodCat && isCategoryBill(foodCat)) ? 0 : 200.00;
+    const baseOther = (otherCat && isCategoryBill(otherCat)) ? 0 : 100.00;
     
     return activeBillsSum + baseGroceries + baseOther;
   };
@@ -279,14 +280,14 @@ export const Settings: React.FC = () => {
       setCategories(updatedCats);
       
       const activeBillsSum = updatedCats
-        .filter(c => c.is_monthly_bill && c.is_active !== false)
-        .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+        .filter(c => isCategoryBill(c) && isCategoryActive(c))
+        .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
         
       const foodCat = updatedCats.find(c => c.name.toLowerCase() === 'food');
       const otherCat = updatedCats.find(c => c.name.toLowerCase() === 'other' || c.name.toLowerCase() === 'shopping');
       
-      const baseGroceries = (foodCat && foodCat.is_monthly_bill) ? 0 : 200.00;
-      const baseOther = (otherCat && otherCat.is_monthly_bill) ? 0 : 100.00;
+      const baseGroceries = (foodCat && isCategoryBill(foodCat)) ? 0 : 200.00;
+      const baseOther = (otherCat && isCategoryBill(otherCat)) ? 0 : 100.00;
       
       const recalculated = activeBillsSum + baseGroceries + baseOther;
       setBudget(recalculated.toFixed(2));
@@ -407,15 +408,15 @@ export const Settings: React.FC = () => {
   };
 
   // Budget Breakdown Calculations
-  const activeCategories = categories.filter(c => c.is_active !== false);
+  const activeCategories = categories.filter(isCategoryActive);
 
   const fixedBillsSum = activeCategories
-    .filter(c => c.is_monthly_bill)
-    .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+    .filter(isCategoryBill)
+    .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
 
   const variableBudgetsSum = activeCategories
-    .filter(c => !c.is_monthly_bill)
-    .reduce((sum, c) => sum + (c.monthly_amount || 0), 0);
+    .filter(c => !isCategoryBill(c))
+    .reduce((sum, c) => sum + getCategoryMonthlyAmount(c), 0);
 
   const totalPlannedAllocation = fixedBillsSum + variableBudgetsSum;
   const parsedLimit = parseFloat(budget) || 0;
@@ -423,17 +424,19 @@ export const Settings: React.FC = () => {
 
   const filteredCategories = activeCategories
     .filter(cat => {
-      if (categoryFilter === 'bills') return cat.is_monthly_bill;
-      if (categoryFilter === 'variable') return !cat.is_monthly_bill;
+      if (categoryFilter === 'bills') return isCategoryBill(cat);
+      if (categoryFilter === 'variable') return !isCategoryBill(cat);
       return true;
     })
     .sort((a, b) => {
       // Fixed monthly bills shown on top
-      if (a.is_monthly_bill && !b.is_monthly_bill) return -1;
-      if (!a.is_monthly_bill && b.is_monthly_bill) return 1;
+      if (isCategoryBill(a) && !isCategoryBill(b)) return -1;
+      if (!isCategoryBill(a) && isCategoryBill(b)) return 1;
       // Secondary sort: highest budget amount first, then alphabetical by name
-      if ((b.monthly_amount || 0) !== (a.monthly_amount || 0)) {
-        return (b.monthly_amount || 0) - (a.monthly_amount || 0);
+      const amtA = getCategoryMonthlyAmount(a);
+      const amtB = getCategoryMonthlyAmount(b);
+      if (amtB !== amtA) {
+        return amtB - amtA;
       }
       return a.name.localeCompare(b.name);
     });
@@ -698,7 +701,7 @@ export const Settings: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden flex">
                   {parsedLimit > 0 && (
-                    <>
+                    <React.Fragment key="budget-bars">
                       <div
                         className="bg-indigo-500 transition-all"
                         style={{ width: `${Math.min(100, (fixedBillsSum / parsedLimit) * 100)}%` }}
@@ -709,7 +712,7 @@ export const Settings: React.FC = () => {
                         style={{ width: `${Math.min(100 - (fixedBillsSum / parsedLimit) * 100, (variableBudgetsSum / parsedLimit) * 100)}%` }}
                         title={`Variable Targets: €${variableBudgetsSum.toFixed(2)}`}
                       />
-                    </>
+                    </React.Fragment>
                   )}
                 </div>
 
@@ -857,7 +860,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterBills')} ({activeCategories.filter(c => c.is_monthly_bill).length})
+                  {t('settings.filterBills')} ({activeCategories.filter(isCategoryBill).length})
                 </button>
                 <button
                   type="button"
@@ -869,7 +872,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterVariable')} ({activeCategories.filter(c => !c.is_monthly_bill).length})
+                  {t('settings.filterVariable')} ({activeCategories.filter(c => !isCategoryBill(c)).length})
                 </button>
               </div>
 
@@ -880,7 +883,7 @@ export const Settings: React.FC = () => {
                     key={cat.id}
                     className={cn(
                       "p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 bg-muted/10 border-border/40 hover:border-border/80",
-                      cat.is_active === false && "opacity-50"
+                      !isCategoryActive(cat) && "opacity-50"
                     )}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -893,15 +896,15 @@ export const Settings: React.FC = () => {
                           <span className="text-xs font-bold text-foreground truncate">{cat.name}</span>
                           <span className={cn(
                             "px-2 py-0.5 text-[9px] font-bold rounded-md uppercase border",
-                            cat.is_monthly_bill
+                            isCategoryBill(cat)
                               ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
                               : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                           )}>
-                            {cat.is_monthly_bill ? 'Fixed Bill' : 'Variable Category'}
+                            {isCategoryBill(cat) ? 'Fixed Bill' : 'Variable Category'}
                           </span>
                         </div>
                         <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
-                          {cat.is_monthly_bill ? 'Logged in monthly bills checklist' : 'Variable day-to-day spending'}
+                          {isCategoryBill(cat) ? 'Logged in monthly bills checklist' : 'Variable day-to-day spending'}
                         </span>
                       </div>
                     </div>
@@ -909,10 +912,10 @@ export const Settings: React.FC = () => {
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
                         <span className="text-[9.5px] text-muted-foreground font-semibold block leading-none mb-0.5">
-                          {cat.is_monthly_bill ? 'Fixed Cost' : 'Planned Target'}
+                          {isCategoryBill(cat) ? 'Fixed Cost' : 'Planned Target'}
                         </span>
                         <span className="font-mono text-xs font-black text-primary leading-normal">
-                          €{(cat.monthly_amount || 0).toFixed(2)}
+                          €{getCategoryMonthlyAmount(cat).toFixed(2)}
                         </span>
                       </div>
 
@@ -927,10 +930,10 @@ export const Settings: React.FC = () => {
                             setCatNameInput(cat.name);
                             setCatColorInput(cat.color || '#8b5cf6');
                             setCatIconInput(cat.icon || 'HelpCircle');
-                            setCatIsBillInput(cat.is_monthly_bill || false);
-                            setCatBillAmtInput((cat.monthly_amount || 0).toString());
+                            setCatIsBillInput(isCategoryBill(cat));
+                            setCatBillAmtInput(getCategoryMonthlyAmount(cat).toString());
                             setCatPrefAccInput(cat.preferred_account_id || '');
-                            setCatIsActiveInput(cat.is_active !== false);
+                            setCatIsActiveInput(isCategoryActive(cat));
                             setIsCategoryModalOpen(true);
                           }}
                         >

@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
 import { cn } from '../../utils/cn';
+import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../../utils/category';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
@@ -156,7 +157,7 @@ export const Expenses: React.FC = () => {
       }
       // Default item category (prioritizing Food/Groceries)
       if (catData.length > 0 && !itemCategoryId) {
-        const allowedCats = catData.filter(cat => !cat.is_monthly_bill && cat.name.toLowerCase() !== 'discount');
+        const allowedCats = catData.filter(cat => !isCategoryBill(cat) && cat.name.toLowerCase() !== 'discount');
         const foodCat = allowedCats.find(cat => cat.name.toLowerCase() === 'food' || cat.name.toLowerCase() === 'groceries');
         if (foodCat) {
           setItemCategoryId(foodCat.id);
@@ -533,14 +534,14 @@ export const Expenses: React.FC = () => {
     while (iterYear < currentYear || (iterYear === currentYear && iterMonth < currentMonth)) {
       const monthKey = `${iterYear}-${String(iterMonth + 1).padStart(2, '0')}`;
       
-      const billsToCheck = categories.filter(c => c.is_monthly_bill && c.is_active);
+      const billsToCheck = categories.filter(c => isCategoryBill(c) && isCategoryActive(c));
       
       for (const bill of billsToCheck) {
         if (!isBillLogged(bill.id, monthKey)) {
           unpaidList.push({
             name: bill.name,
             cat: bill.id,
-            amount: bill.monthly_amount || 0,
+            amount: getCategoryMonthlyAmount(bill),
             month: monthKey,
             preferredAccountId: bill.preferred_account_id
           });
@@ -1019,11 +1020,11 @@ export const Expenses: React.FC = () => {
   });
 
   const activeBills = categories
-    .filter(c => c.is_monthly_bill && c.is_active)
+    .filter(c => isCategoryBill(c) && isCategoryActive(c))
     .map(c => ({
       name: c.name,
       cat: c.id,
-      amount: c.monthly_amount || 0,
+      amount: getCategoryMonthlyAmount(c),
       preferredAccountId: c.preferred_account_id
     }));
 
