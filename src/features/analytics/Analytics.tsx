@@ -911,9 +911,9 @@ export const Analytics: React.FC = () => {
                               hasExpenses 
                                 ? "hover:scale-105 hover:shadow-md" 
                                 : "border-border/20 hover:bg-muted/20",
-                              isToday && "ring-2 ring-primary/80 ring-offset-1 dark:ring-offset-slate-900 z-30",
+                              isToday && "ring-2 ring-primary/80 ring-offset-1 dark:ring-offset-slate-900 z-10",
                               isToday && !hasExpenses && "bg-primary/10 dark:bg-primary/20 border-primary/30",
-                              activeTooltipDate === dateStr && "ring-2 ring-primary ring-offset-2 z-35"
+                              activeTooltipDate === dateStr && "ring-2 ring-primary ring-offset-2 z-15"
                             )}
                             style={cellStyle}
                           >
@@ -938,7 +938,7 @@ export const Analytics: React.FC = () => {
                             {/* CSS Tooltip */}
                             {hasExpenses && (
                               <div className={cn(
-                                "absolute w-48 sm:w-52 p-3 rounded-xl border shadow-xl pointer-events-none z-50 animate-in fade-in duration-200",
+                                "absolute w-48 sm:w-52 p-3 rounded-xl border shadow-xl pointer-events-none z-20 animate-in fade-in duration-200",
                                 isDark 
                                   ? "bg-slate-800 border-slate-700 text-slate-100" 
                                   : "bg-white border-slate-200 text-slate-900",
