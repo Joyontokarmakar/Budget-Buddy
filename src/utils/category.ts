@@ -12,7 +12,11 @@ export const isCategoryBill = (c?: Partial<Category> | null): boolean => {
     return true;
   }
   const nameLower = (c.name || '').toLowerCase().trim();
-  if (DEFAULT_BILL_NAMES.includes(nameLower) && c.is_monthly_bill !== false && (c.is_monthly_bill as any) !== 'false') {
+  if (DEFAULT_BILL_NAMES.includes(nameLower)) {
+    // If it's a known default recurring bill name, treat as a bill unless user explicitly cleared amount AND disabled bill flag
+    if ((c.is_monthly_bill === false || (c.is_monthly_bill as any) === 'false') && (c.monthly_amount === 0 || c.monthly_amount === null)) {
+      return false;
+    }
     return true;
   }
   return false;
@@ -30,7 +34,7 @@ export const isCategoryActive = (c?: Partial<Category> | null): boolean => {
 
 /**
  * Safely parses and returns the monthly budget amount for a category as a number.
- * If 0 or missing, returns standard student default amounts for standard recurring bills.
+ * If 0 or missing, returns standard student default amounts for default recurring bills.
  */
 export const getCategoryMonthlyAmount = (c?: Partial<Category> | null): number => {
   if (!c) return 0;

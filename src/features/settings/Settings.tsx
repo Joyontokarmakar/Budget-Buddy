@@ -106,18 +106,29 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     const loadFinancialData = async () => {
+      const targetUserId = profile?.id || 'guest';
+      try {
+        const cats = await db.getCategories(targetUserId);
+        if (cats && cats.length > 0) {
+          setCategories(cats);
+        }
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+
       if (profile) {
         try {
-          const [accs, cats, strs] = await Promise.all([
-            db.getAccounts(profile.id),
-            db.getCategories(profile.id),
-            db.getStores(profile.id)
-          ]);
+          const accs = await db.getAccounts(profile.id);
           setAccounts(accs);
-          setCategories(cats);
+        } catch (err) {
+          console.error('Failed to load accounts:', err);
+        }
+
+        try {
+          const strs = await db.getStores(profile.id);
           setStores(strs);
         } catch (err) {
-          console.error(err);
+          console.error('Failed to load stores:', err);
         }
       }
     };
