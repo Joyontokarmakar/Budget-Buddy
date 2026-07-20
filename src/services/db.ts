@@ -629,41 +629,35 @@ export const db = {
 
   // CATEGORIES
   getCategories: async (userId: string): Promise<Category[]> => {
+    let rawCategories: Category[] = [];
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
-      const items = getLocalItems<Category>('bb-categories');
-      return items.map(c => ({
-        ...c,
-        is_monthly_bill: isCategoryBill(c),
-        is_active: isCategoryActive(c),
-        monthly_amount: getCategoryMonthlyAmount(c),
-      }));
+      rawCategories = getLocalItems<Category>('bb-categories');
+    } else {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        rawCategories = data;
+      } else {
+        // Fallback: seed/fetch global defaults
+        const { data: globalData, error: gError } = await supabase
+          .from('categories')
+          .select('*')
+          .is('user_id', null)
+          .order('name', { ascending: true });
+        if (gError) throw gError;
+        rawCategories = globalData || [];
+      }
     }
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('user_id', userId)
-      .order('name', { ascending: true });
-    if (error) throw error;
-    
-    if (data && data.length > 0) {
-      return data.map(c => ({
-        ...c,
-        is_monthly_bill: isCategoryBill(c),
-        is_active: isCategoryActive(c),
-        monthly_amount: getCategoryMonthlyAmount(c),
-      }));
-    }
-    
-    // Fallback: seed/fetch global defaults
-    const { data: globalData, error: gError } = await supabase
-      .from('categories')
-      .select('*')
-      .is('user_id', null)
-      .order('name', { ascending: true });
-    if (gError) throw gError;
-    return (globalData || []).map(c => {
+
+    return rawCategories.map(c => {
       const isDefaultBill = ['House rent', 'Health Insurance', 'Radio Bill', 'Mobile bill'].includes(c.name);
+      const isEdu = c.name === 'Education';
       let amt = getCategoryMonthlyAmount(c);
       if (amt === 0) {
         if (c.name === 'House rent') amt = 264.50;
@@ -672,10 +666,19 @@ export const db = {
         else if (c.name === 'Mobile bill') amt = 10.00;
         else if (c.name === 'Education') amt = 350.00;
       }
+      
+      const billFlag = (c.is_monthly_bill !== undefined && c.is_monthly_bill !== null) 
+        ? isCategoryBill(c) 
+        : isDefaultBill;
+
+      const activeFlag = (c.is_active !== undefined && c.is_active !== null)
+        ? isCategoryActive(c)
+        : !isEdu;
+
       return {
         ...c,
-        is_monthly_bill: c.is_monthly_bill !== undefined ? isCategoryBill(c) : isDefaultBill,
-        is_active: isCategoryActive(c),
+        is_monthly_bill: billFlag,
+        is_active: activeFlag,
         monthly_amount: amt,
       };
     });

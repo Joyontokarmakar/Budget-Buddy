@@ -422,7 +422,7 @@ export const Settings: React.FC = () => {
   const parsedLimit = parseFloat(budget) || 0;
   const allocationDiff = parsedLimit - totalPlannedAllocation;
 
-  const filteredCategories = activeCategories
+  const filteredCategories = categories
     .filter(cat => {
       if (categoryFilter === 'bills') return isCategoryBill(cat);
       if (categoryFilter === 'variable') return !isCategoryBill(cat);
@@ -848,7 +848,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterAll')} ({activeCategories.length})
+                  {t('settings.filterAll')} ({categories.length})
                 </button>
                 <button
                   type="button"
@@ -860,7 +860,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterBills')} ({activeCategories.filter(isCategoryBill).length})
+                  {t('settings.filterBills')} ({categories.filter(isCategoryBill).length})
                 </button>
                 <button
                   type="button"
@@ -872,7 +872,7 @@ export const Settings: React.FC = () => {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t('settings.filterVariable')} ({activeCategories.filter(c => !isCategoryBill(c)).length})
+                  {t('settings.filterVariable')} ({categories.filter(c => !isCategoryBill(c)).length})
                 </button>
               </div>
 
