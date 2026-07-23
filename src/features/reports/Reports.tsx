@@ -64,9 +64,18 @@ export const Reports: React.FC = () => {
   useEffect(() => {
     loadData();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+
     window.addEventListener('budget-buddy-data-change', loadData);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       window.removeEventListener('budget-buddy-data-change', loadData);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadData]);
 
@@ -340,11 +349,13 @@ export const Reports: React.FC = () => {
       const matchingExps = fixedBills.filter(b => b.category_id === cat.id || b.category?.name === cat.name);
       const totalAmount = matchingExps.reduce((sum, b) => sum + Number(b.amount), 0);
       const loggedDate = matchingExps.find(b => b.date)?.date || null;
+      const accountName = matchingExps.find(b => b.account?.name)?.account?.name || null;
       return {
         id: cat.id,
         name: cat.name,
         amount: totalAmount,
         date: loggedDate,
+        accountName,
       };
     });
   }, [categories, fixedBills]);
@@ -1241,12 +1252,22 @@ export const Reports: React.FC = () => {
                 >
                   <span className="opacity-90">{bill.name}</span>
                   {/* Show current month value under the button */}
-                  <span className={cn(
-                    "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                    isActive ? "text-primary-foreground/90" : "text-muted-foreground"
-                  )}>
-                    Current: €{bill.amount.toFixed(2)}
-                  </span>
+                  <div>
+                    <span className={cn(
+                      "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
+                      isActive ? "text-primary-foreground/90" : "text-muted-foreground"
+                    )}>
+                      Current: €{bill.amount.toFixed(2)}
+                    </span>
+                    {bill.amount > 0 && bill.accountName && (
+                      <span className={cn(
+                        "text-[8px] font-semibold opacity-75 block mt-0.5",
+                        isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+                      )}>
+                        By {bill.accountName}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}

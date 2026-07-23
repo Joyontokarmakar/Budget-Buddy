@@ -406,9 +406,18 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadDashboardData();
+      }
+    };
+
     window.addEventListener('budget-buddy-data-change', loadDashboardData);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       window.removeEventListener('budget-buddy-data-change', loadDashboardData);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [profile]);
 

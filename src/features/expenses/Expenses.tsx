@@ -179,6 +179,20 @@ export const Expenses: React.FC = () => {
 
   useEffect(() => {
     loadData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+
+    window.addEventListener('budget-buddy-data-change', loadData);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('budget-buddy-data-change', loadData);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [profile]);
 
   useEffect(() => {
