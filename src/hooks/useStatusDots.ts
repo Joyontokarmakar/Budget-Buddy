@@ -108,6 +108,31 @@ export const useStatusDots = () => {
 
   const unpaidBillsCount = getUnpaidPastBillsCount();
 
+  // Calculate advanced paid bills count
+  const getAdvancedPaidBillsCount = () => {
+    if (!profile) return 0;
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    let count = 0;
+    expenses.forEach(e => {
+      if (!e.date) return;
+      const match = e.notes?.match(/\[Bill Period:\s*(\d{4}-\d{2})\]/);
+      if (match && match[1]) {
+        const periodKey = match[1];
+        if (periodKey > currentMonthKey) {
+          const cat = categories.find(c => c.id === e.category_id);
+          if (cat && isCategoryBill(cat)) {
+            count++;
+          }
+        }
+      }
+    });
+    return count;
+  };
+
+  const advancedPaidBillsCount = getAdvancedPaidBillsCount();
+
   // Calculate budget progress
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -127,6 +152,7 @@ export const useStatusDots = () => {
     statusDotsCount: profile?.status_dots_count ?? 40,
     activeTakenLoansCount,
     unpaidBillsCount,
+    advancedPaidBillsCount,
     budgetUsedPercent,
     loading
   };

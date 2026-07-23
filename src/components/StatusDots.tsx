@@ -6,6 +6,7 @@ export const StatusDots: React.FC = () => {
     showStatusDots,
     activeTakenLoansCount,
     unpaidBillsCount,
+    advancedPaidBillsCount,
     budgetUsedPercent
   } = useStatusDots();
 
@@ -15,19 +16,16 @@ export const StatusDots: React.FC = () => {
 
   let loanDots = activeTakenLoansCount;
   let billDots = unpaidBillsCount;
+  let advBillDots = advancedPaidBillsCount;
 
-  // Cap if we have too many loans + bills to ensure at least 2 dots always represent the budget
-  if (loanDots + billDots > totalDots - 2) {
-    const scale = (totalDots - 2) / (loanDots + billDots);
-    loanDots = Math.round(loanDots * scale);
-    billDots = Math.round(billDots * scale);
-    if (loanDots + billDots > totalDots - 2) {
-      if (loanDots > billDots) {
-        loanDots--;
-      } else {
-        billDots--;
-      }
-    }
+  // Cap if we have too many overlays to ensure at least 2 dots always represent the budget progress
+  const maxOverlays = totalDots - 2;
+  const totalOverlays = loanDots + billDots + advBillDots;
+  if (totalOverlays > maxOverlays) {
+    const scale = maxOverlays / totalOverlays;
+    loanDots = Math.floor(loanDots * scale);
+    billDots = Math.floor(billDots * scale);
+    advBillDots = Math.floor(advBillDots * scale);
   }
 
   const dots = [];
@@ -52,6 +50,9 @@ export const StatusDots: React.FC = () => {
     } else if (i < loanDots + billDots) {
       fill = '#fb7185'; // Unpaid bill color (rose-400)
       title = `Unpaid Past Bill (${unpaidBillsCount} total)`;
+    } else if (i < loanDots + billDots + advBillDots) {
+      fill = '#818cf8'; // Advanced paid bill color (indigo-400)
+      title = `Advanced Paid Bill (${advancedPaidBillsCount} total)`;
     } else {
       // Budget progress color
       if (budgetUsedPercent < 75) {
