@@ -44,6 +44,17 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   });
 }
 
+// Auto reload page when service worker updates to prevent chunk hashing issues
+if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

@@ -405,6 +405,11 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+
+    window.addEventListener('budget-buddy-data-change', loadDashboardData);
+    return () => {
+      window.removeEventListener('budget-buddy-data-change', loadDashboardData);
+    };
   }, [profile]);
 
   if (loading && accounts.length === 0) {

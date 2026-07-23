@@ -576,9 +576,22 @@ function setLocalItems<T>(key: string, items: T[]) {
   localStorage.setItem(key, JSON.stringify(items));
 }
 
+const dataChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window
+  ? new BroadcastChannel('budget-buddy-data-channel')
+  : null;
+
+if (dataChannel) {
+  dataChannel.onmessage = (event) => {
+    if (event.data === 'data-change' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('budget-buddy-data-change'));
+    }
+  };
+}
+
 const notifyDataChange = () => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('budget-buddy-data-change'));
+    dataChannel?.postMessage('data-change');
   }
 };
 
