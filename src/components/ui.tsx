@@ -66,9 +66,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <div className="w-full flex flex-col gap-1.5">
         {label && <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>}
         <div 
-          className={cn("relative flex items-center", type === 'date' ? 'cursor-pointer' : '')}
+          className={cn("relative flex items-center", (type === 'date' || type === 'month') ? 'cursor-pointer' : '')}
           onClick={(e) => {
-            if (type === 'date') {
+            if (type === 'date' || type === 'month') {
               const inputEl = e.currentTarget.querySelector('input');
               if (inputEl) {
                 try {
@@ -89,7 +89,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               icon ? 'pl-10' : '',
               isPasswordType ? 'pr-11' : '',
               error ? 'border-destructive focus:ring-destructive/20 focus:border-destructive' : '',
-              type === 'date' ? 'cursor-pointer' : '',
+              (type === 'date' || type === 'month') ? 'cursor-pointer' : '',
               className
             )}
             {...props}
