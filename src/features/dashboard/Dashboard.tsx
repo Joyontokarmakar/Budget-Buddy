@@ -10,7 +10,7 @@ import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -23,7 +23,7 @@ export const Dashboard: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
-  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | null>(null);
+  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | 'advBills' | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
@@ -348,6 +348,46 @@ export const Dashboard: React.FC = () => {
     }
     
     return unpaidList;
+  };
+
+  const getAdvancedPaidBills = () => {
+    if (!profile) return [];
+    
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    const advList: {
+      id: string;
+      name: string;
+      amount: number;
+      month: string;
+      date: string;
+      accountName?: string;
+    }[] = [];
+    
+    expenses.forEach(e => {
+      if (!e.date) return;
+      
+      const match = e.notes?.match(/\[Bill Period:\s*(\d{4}-\d{2})\]/);
+      if (match && match[1]) {
+        const periodKey = match[1];
+        if (periodKey > currentMonthKey) {
+          const cat = categories.find(c => c.id === e.category_id);
+          if (cat && isCategoryBill(cat)) {
+            advList.push({
+              id: e.id,
+              name: cat.name,
+              amount: e.amount,
+              month: periodKey,
+              date: e.date,
+              accountName: e.account?.name
+            });
+          }
+        }
+      }
+    });
+    
+    return advList.sort((a, b) => a.month.localeCompare(b.month));
   };
 
   const handlePayMissedBillDirect = async (bill: { name: string; cat: string; categoryId: string; amount: number; month: string; preferredAccountId?: string | null }) => {
@@ -956,8 +996,8 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Pending Actions Overview Grid */}
-      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0 || getAdvancedPaidBills().length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
           
           {/* Unpaid Bills Box */}
           {getUnpaidPastBills().length > 0 && (
@@ -984,6 +1024,34 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'bills' ? 'rotate-180 text-destructive' : '')} />
+            </div>
+          )}
+
+          {/* Advanced Paid Bills Box */}
+          {getAdvancedPaidBills().length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'advBills' ? null : 'advBills')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'advBills' 
+                  ? "bg-emerald-500/10 border-emerald-500/40 ring-2 ring-emerald-500/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner">
+                  <Check className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Advanced Paid Bills
+                  </span>
+                  <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                    {getAdvancedPaidBills().length} Paid
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'advBills' ? 'rotate-180 text-emerald-500' : '')} />
             </div>
           )}
 
@@ -1051,6 +1119,43 @@ export const Dashboard: React.FC = () => {
                     >
                       {t('expenses.payNow')}
                     </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expanded Advanced Paid Bills Details Panel */}
+      {expandedSection === 'advBills' && getAdvancedPaidBills().length > 0 && (
+        <Card className="bg-emerald-500/5 border-emerald-500/20 border shadow-xs mt-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <Check className="h-4.5 w-4.5 shrink-0" />
+              Advanced Paid Bills
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              You have pre-paid these bills for future months. They will automatically check off in your monthly checklist when their billing periods start.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {getAdvancedPaidBills().map((bill) => (
+                <div key={bill.id} className="flex items-center justify-between p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-extrabold text-foreground truncate">{bill.name}</span>
+                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
+                      {formatMonthKey(bill.month)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
+                      €{bill.amount.toFixed(2)}
+                    </span>
+                    <span className="text-[8px] text-muted-foreground font-semibold mt-0.5">
+                      Paid: {new Date(bill.date).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               ))}
