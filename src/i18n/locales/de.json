@@ -104,7 +104,12 @@
     "noData": "Nicht genügend Transaktionen vorhanden. Erfasse mehr Buchungen!",
     "expenses": "Ausgaben",
     "income": "Einnahmen",
-    "legendAmount": "Betrag (€)"
+    "legendAmount": "Betrag (€)",
+    "timeframeLabel": "Zeitraum:",
+    "last3Months": "Letzte 3 Monate",
+    "last6Months": "Letzte 6 Monate",
+    "last12Months": "Letzte 12 Monate",
+    "allTime": "Gesamter Zeitraum"
   },
   "settings": {
     "title": "Einstellungen",

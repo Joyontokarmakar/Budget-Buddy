@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
@@ -16,6 +16,7 @@ export const Expenses: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { profile, updateProfile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
 
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -102,6 +103,7 @@ export const Expenses: React.FC = () => {
     showAmountInput?: boolean;
     initialAmount?: number;
     onConfirm: (selectedDate?: string, selectedAccountId?: string, selectedAmount?: number) => void;
+    onAdvanced?: (selectedDate?: string, selectedAccountId?: string, selectedAmount?: number) => void;
   } | null>(null);
   const [modalDate, setModalDate] = useState('');
   const [modalAccountId, setModalAccountId] = useState('');
@@ -432,6 +434,37 @@ export const Expenses: React.FC = () => {
     }
   }, [items, discount]);
 
+  // Prefill state from React Router location (e.g. redirected from Dashboard "Advanced Log")
+  useEffect(() => {
+    if (location.state && (location.state as any).prefilledBill) {
+      const { name, categoryId, amount: billAmt, notes: billNotes, date: billDate, preferredAccountId } = (location.state as any).prefilledBill;
+      
+      // Prefill main form
+      setAmount(billAmt.toString());
+      if (billDate) setDate(billDate);
+      if (preferredAccountId) setPaymentAccountId(preferredAccountId);
+      setNotes(billNotes || '');
+      setItems([{
+        id: crypto.randomUUID(),
+        name: `${name} - Recurring Bill`,
+        amount: billAmt,
+        category_id: categoryId
+      }]);
+      if (categoryId) setItemCategoryId(categoryId);
+      
+      // Clear location state so it doesn't prefill again on refresh
+      window.history.replaceState({}, document.title);
+      
+      // Scroll to form
+      setTimeout(() => {
+        const formEl = document.querySelector('form');
+        if (formEl) {
+          formEl.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [location]);
+
   const isBillLogged = (categoryId: string, monthKey?: string) => {
     let targetMonthKey = monthKey;
     if (!targetMonthKey) {
@@ -496,6 +529,32 @@ export const Expenses: React.FC = () => {
       initialAccountId: accountIdToUse,
       showAmountInput: true,
       initialAmount: amountToLog,
+      onAdvanced: (selectedDate, selectedAccountId, selectedAmount) => {
+        const finalAmount = selectedAmount !== undefined ? selectedAmount : amountToLog;
+        const finalDate = selectedDate || date;
+        const dateParts = finalDate.split('-');
+        const monthKey = `${dateParts[0]}-${dateParts[1]}`;
+        const finalAccountId = selectedAccountId || accountIdToUse;
+
+        setAmount(finalAmount.toString());
+        setDate(finalDate);
+        setPaymentAccountId(finalAccountId);
+        setNotes(`${billName} - Recurring Bill [Bill Period: ${monthKey}]`);
+        setItems([{
+          id: crypto.randomUUID(),
+          name: `${billName} - Recurring Bill`,
+          amount: finalAmount,
+          category_id: categoryId
+        }]);
+        setItemCategoryId(categoryId);
+
+        setTimeout(() => {
+          const formEl = document.querySelector('form');
+          if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      },
       onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
         try {
           setSaving(true);
@@ -613,6 +672,30 @@ export const Expenses: React.FC = () => {
       initialAccountId: accountIdToUse,
       showAmountInput: true,
       initialAmount: bill.amount,
+      onAdvanced: (selectedDate, selectedAccountId, selectedAmount) => {
+        const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
+        const finalDate = selectedDate || date;
+        const finalAccountId = selectedAccountId || accountIdToUse;
+
+        setAmount(finalAmount.toString());
+        setDate(finalDate);
+        setPaymentAccountId(finalAccountId);
+        setNotes(`${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`);
+        setItems([{
+          id: crypto.randomUUID(),
+          name: `${bill.name} - Missed Bill`,
+          amount: finalAmount,
+          category_id: bill.cat
+        }]);
+        setItemCategoryId(bill.cat);
+
+        setTimeout(() => {
+          const formEl = document.querySelector('form');
+          if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      },
       onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
         try {
           setSaving(true);
@@ -2487,24 +2570,48 @@ export const Expenses: React.FC = () => {
         onClose={() => setConfirmState(null)}
         title={confirmState?.title || ''}
         footer={
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={() => setConfirmState(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button 
-              variant={confirmState?.confirmVariant || 'primary'} 
-              onClick={() => {
-                const amtVal = parseFloat(modalAmount);
-                confirmState?.onConfirm(
-                  modalDate, 
-                  modalAccountId, 
-                  isNaN(amtVal) ? undefined : amtVal
-                );
-                setConfirmState(null);
-              }}
-            >
-              {confirmState?.confirmText || 'Confirm'}
-            </Button>
+          <div className="flex gap-2.5 w-full justify-between items-center">
+            <div>
+              {confirmState?.onAdvanced && (
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    const amtVal = parseFloat(modalAmount);
+                    confirmState.onAdvanced?.(
+                      modalDate, 
+                      modalAccountId, 
+                      isNaN(amtVal) ? undefined : amtVal
+                    );
+                    setConfirmState(null);
+                  }}
+                  className="text-primary hover:bg-primary/5 font-extrabold text-xs px-3 h-9 rounded-xl"
+                >
+                  Advanced Options
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2.5">
+              <Button variant="outline" type="button" onClick={() => setConfirmState(null)} className="h-9 text-xs rounded-xl">
+                {t('common.cancel')}
+              </Button>
+              <Button 
+                variant={confirmState?.confirmVariant || 'primary'} 
+                type="button"
+                onClick={() => {
+                  const amtVal = parseFloat(modalAmount);
+                  confirmState?.onConfirm(
+                    modalDate, 
+                    modalAccountId, 
+                    isNaN(amtVal) ? undefined : amtVal
+                  );
+                  setConfirmState(null);
+                }}
+                className="h-9 text-xs rounded-xl font-bold"
+              >
+                {confirmState?.confirmText || 'Confirm'}
+              </Button>
+            </div>
           </div>
         }
       >

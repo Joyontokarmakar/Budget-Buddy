@@ -104,7 +104,12 @@
     "noData": "Insufficient data to display charts. Add more transactions!",
     "expenses": "Expenses",
     "income": "Income",
-    "legendAmount": "Amount (€)"
+    "legendAmount": "Amount (€)",
+    "timeframeLabel": "Timeframe:",
+    "last3Months": "Last 3 Months",
+    "last6Months": "Last 6 Months",
+    "last12Months": "Last 12 Months",
+    "allTime": "All Time"
   },
   "settings": {
     "title": "Settings",

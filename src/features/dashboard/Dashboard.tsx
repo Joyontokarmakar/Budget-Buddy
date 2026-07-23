@@ -152,6 +152,7 @@ export const Dashboard: React.FC = () => {
     showAmountInput?: boolean;
     initialAmount?: number;
     onConfirm: (selectedDate?: string, selectedAccountId?: string, selectedAmount?: number) => void;
+    onAdvanced?: (selectedDate?: string, selectedAccountId?: string, selectedAmount?: number) => void;
   } | null>(null);
   const [modalDate, setModalDate] = useState('');
   const [modalAccountId, setModalAccountId] = useState('');
@@ -373,6 +374,24 @@ export const Dashboard: React.FC = () => {
       initialAccountId: accountIdToUse,
       showAmountInput: true,
       initialAmount: bill.amount,
+      onAdvanced: (selectedDate, selectedAccountId, selectedAmount) => {
+        const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
+        const finalDate = selectedDate || new Date().toISOString().split('T')[0];
+        const finalAccountId = selectedAccountId || accountIdToUse;
+
+        navigate('/expenses', {
+          state: {
+            prefilledBill: {
+              name: bill.name,
+              categoryId: bill.categoryId,
+              amount: finalAmount,
+              notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+              date: finalDate,
+              preferredAccountId: finalAccountId
+            }
+          }
+        });
+      },
       onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
         const finalDate = selectedDate || new Date().toISOString().split('T')[0];
         const finalAccountId = selectedAccountId || accountIdToUse;
@@ -1487,24 +1506,48 @@ export const Dashboard: React.FC = () => {
         onClose={() => setConfirmState(null)}
         title={confirmState?.title || ''}
         footer={
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={() => setConfirmState(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button 
-              variant={confirmState?.confirmVariant || 'primary'} 
-              onClick={() => {
-                const amtVal = parseFloat(modalAmount);
-                confirmState?.onConfirm(
-                  modalDate, 
-                  modalAccountId, 
-                  isNaN(amtVal) ? undefined : amtVal
-                );
-                setConfirmState(null);
-              }}
-            >
-              {confirmState?.confirmText || 'Confirm'}
-            </Button>
+          <div className="flex gap-2.5 w-full justify-between items-center">
+            <div>
+              {confirmState?.onAdvanced && (
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => {
+                    const amtVal = parseFloat(modalAmount);
+                    confirmState.onAdvanced?.(
+                      modalDate, 
+                      modalAccountId, 
+                      isNaN(amtVal) ? undefined : amtVal
+                    );
+                    setConfirmState(null);
+                  }}
+                  className="text-primary hover:bg-primary/5 font-extrabold text-xs px-3 h-9 rounded-xl"
+                >
+                  Advanced Options
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2.5">
+              <Button variant="outline" type="button" onClick={() => setConfirmState(null)} className="h-9 text-xs rounded-xl">
+                {t('common.cancel')}
+              </Button>
+              <Button 
+                variant={confirmState?.confirmVariant || 'primary'} 
+                type="button"
+                onClick={() => {
+                  const amtVal = parseFloat(modalAmount);
+                  confirmState?.onConfirm(
+                    modalDate, 
+                    modalAccountId, 
+                    isNaN(amtVal) ? undefined : amtVal
+                  );
+                  setConfirmState(null);
+                }}
+                className="h-9 text-xs rounded-xl font-bold"
+              >
+                {confirmState?.confirmText || 'Confirm'}
+              </Button>
+            </div>
           </div>
         }
       >

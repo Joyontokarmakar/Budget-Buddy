@@ -18,6 +18,7 @@ export const Analytics: React.FC = () => {
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
   const [categoryMonth, setCategoryMonth] = useState<string>('all');
+  const [timeframe, setTimeframe] = useState<'3' | '6' | '12' | 'all'>('3');
 
   // Activity Calendar selectors state
   const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
@@ -205,12 +206,39 @@ export const Analytics: React.FC = () => {
     };
   });
 
-  // 3. Monthly Spending Comparison (Last 3 Months)
+  // 3. Monthly Spending Comparison (Dynamic Timeframe)
   const monthlySpendingMap: { [key: string]: { month: string; expenses: number; income: number } } = {};
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
-  // Init last 3 months
-  for (let i = 2; i >= 0; i--) {
+  // Calculate months to show based on selected timeframe
+  let monthsCount = 3;
+  if (timeframe === '6') monthsCount = 6;
+  else if (timeframe === '12') monthsCount = 12;
+  else if (timeframe === 'all') {
+    let earliest = new Date();
+    expenses.forEach(e => {
+      if (e.date) {
+        const d = new Date(e.date);
+        if (!isNaN(d.getTime()) && d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+    });
+    incomes.forEach(i => {
+      if (i.date) {
+        const d = new Date(i.date);
+        if (!isNaN(d.getTime()) && d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+    });
+    const now = new Date();
+    const diffMonths = (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1;
+    monthsCount = Math.max(1, diffMonths);
+  }
+
+  // Init months chronologically
+  for (let i = monthsCount - 1; i >= 0; i--) {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
     const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
@@ -558,9 +586,24 @@ export const Analytics: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('analytics.title')}</h1>
-        <p className="text-xs text-muted-foreground">Visualize your student budget performance and spending trends</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('analytics.title')}</h1>
+          <p className="text-xs text-muted-foreground">Visualize your student budget performance and spending trends</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">{t('analytics.timeframeLabel')}</span>
+          <select
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value as any)}
+            className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+          >
+            <option value="3">{t('analytics.last3Months')}</option>
+            <option value="6">{t('analytics.last6Months')}</option>
+            <option value="12">{t('analytics.last12Months')}</option>
+            <option value="all">{t('analytics.allTime')}</option>
+          </select>
+        </div>
       </div>
 
       {!hasData ? (

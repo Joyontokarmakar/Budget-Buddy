@@ -84,7 +84,7 @@ create table public.expenses (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     date date default current_date not null,
-    amount numeric(10, 2) not null check (amount > 0),
+    amount numeric(10, 2) not null check (amount >= 0),
     category_id uuid references public.categories(id) on delete set null,
     store_id uuid references public.stores(id) on delete set null,
     payment_account_id uuid references public.accounts(id) on delete cascade not null,
