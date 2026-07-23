@@ -109,6 +109,16 @@ export const Expenses: React.FC = () => {
   const [modalAccountId, setModalAccountId] = useState('');
   const [modalAmount, setModalAmount] = useState('');
 
+  // Advance Pay State
+  const [isAdvancePayOpen, setIsAdvancePayOpen] = useState(false);
+  const [advCategoryId, setAdvCategoryId] = useState('');
+  const [advMonth, setAdvMonth] = useState('');
+  const [advDate, setAdvDate] = useState(new Date().toISOString().split('T')[0]);
+  const [advAmount, setAdvAmount] = useState('');
+  const [advAccountId, setAdvAccountId] = useState('');
+  const [advSaving, setAdvSaving] = useState(false);
+  const [advError, setAdvError] = useState<string | null>(null);
+
   useEffect(() => {
     if (confirmState?.isOpen) {
       if (confirmState.initialDate) {
@@ -723,6 +733,55 @@ export const Expenses: React.FC = () => {
         }
       }
     });
+  };
+
+  const handleSaveAdvancePay = async () => {
+    if (!profile) return;
+    const numericAmt = parseFloat(advAmount);
+    if (isNaN(numericAmt) || numericAmt < 0) {
+      setAdvError('Amount must be €0.00 or greater');
+      return;
+    }
+    if (!advMonth) {
+      setAdvError('Please select the target bill month');
+      return;
+    }
+    const selectedCat = categories.find(c => c.id === advCategoryId);
+    if (!selectedCat) {
+      setAdvError('Please select a valid bill type');
+      return;
+    }
+    if (!advAccountId) {
+      setAdvError('Please select a payment account');
+      return;
+    }
+
+    try {
+      setAdvSaving(true);
+      setAdvError(null);
+
+      const billName = selectedCat.name;
+
+      await db.createExpense(profile.id, {
+        amount: numericAmt,
+        date: advDate,
+        category_id: advCategoryId,
+        store_id: null,
+        payment_account_id: advAccountId,
+        notes: `${billName} - Advanced Pay for ${advMonth} [Bill Period: ${advMonth}]`,
+        receipt_url: null,
+        items: null
+      });
+
+      setIsAdvancePayOpen(false);
+      setSuccessMsg(`${billName} advanced payment for ${advMonth} logged successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await loadData();
+    } catch (err: any) {
+      setAdvError(err.message || 'Error recording advanced payment');
+    } finally {
+      setAdvSaving(false);
+    }
   };
 
   const handleAddItem = () => {
@@ -1487,12 +1546,42 @@ export const Expenses: React.FC = () => {
                   <Calendar className="h-5 w-5 text-primary" />
                   {t('expenses.monthlyBillsTitle')}
                 </span>
-                {allBillsLogged && (
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <Check className="h-3 w-3 stroke-[3]" />
-                    Done
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className="h-7 text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg px-2 cursor-pointer"
+                    onClick={() => {
+                      const billCats = categories.filter(c => isCategoryBill(c) && isCategoryActive(c));
+                      if (billCats.length > 0) {
+                        const firstCat = billCats[0];
+                        setAdvCategoryId(firstCat.id);
+                        setAdvAmount(getCategoryMonthlyAmount(firstCat).toString());
+                        setAdvAccountId(firstCat.preferred_account_id || paymentAccountId || accounts[0]?.id || '');
+                      } else {
+                        setAdvCategoryId('');
+                        setAdvAmount('');
+                        setAdvAccountId(paymentAccountId || accounts[0]?.id || '');
+                      }
+                      
+                      const nextM = new Date();
+                      nextM.setMonth(nextM.getMonth() + 1);
+                      setAdvMonth(`${nextM.getFullYear()}-${String(nextM.getMonth() + 1).padStart(2, '0')}`);
+                      
+                      setAdvDate(new Date().toISOString().split('T')[0]);
+                      setAdvError(null);
+                      setIsAdvancePayOpen(true);
+                    }}
+                  >
+                    Pay in Advance
+                  </Button>
+                  {allBillsLogged && (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <Check className="h-3 w-3 stroke-[3]" />
+                      Done
+                    </span>
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -2653,6 +2742,100 @@ export const Expenses: React.FC = () => {
               />
             </div>
           )}
+        </div>
+      </Dialog>
+
+      {/* PAY BILL IN ADVANCE DIALOG */}
+      <Dialog
+        isOpen={isAdvancePayOpen}
+        onClose={() => setIsAdvancePayOpen(false)}
+        title="Pay Bill in Advance"
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" type="button" onClick={() => setIsAdvancePayOpen(false)} className="h-9 text-xs rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              type="button"
+              loading={advSaving}
+              onClick={handleSaveAdvancePay}
+              disabled={!advCategoryId || !advMonth || !advDate || !advAmount || parseFloat(advAmount) < 0}
+              className="h-9 text-xs rounded-xl font-bold"
+            >
+              Record Advance Payment
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {advError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {advError}
+            </div>
+          )}
+
+          {/* 1. Category */}
+          <Select
+            label="Bill Type (Category)"
+            value={advCategoryId}
+            onChange={(e) => {
+              const catId = e.target.value;
+              setAdvCategoryId(catId);
+              const selectedCat = categories.find(c => c.id === catId);
+              if (selectedCat) {
+                setAdvAmount(getCategoryMonthlyAmount(selectedCat).toString());
+                if (selectedCat.preferred_account_id) {
+                  setAdvAccountId(selectedCat.preferred_account_id);
+                }
+              }
+            }}
+            options={categories
+              .filter(c => isCategoryBill(c) && isCategoryActive(c))
+              .map(c => ({ value: c.id, label: t(`categories.${c.name}`, c.name) }))
+            }
+            required
+          />
+
+          {/* 2. Month */}
+          <Input
+            type="month"
+            label="Target Bill Month"
+            value={advMonth}
+            onChange={(e) => setAdvMonth(e.target.value)}
+            required
+          />
+
+          {/* 3. Payment Date */}
+          <Input
+            type="date"
+            label="Payment Date (Recorded Date)"
+            value={advDate}
+            onChange={(e) => setAdvDate(e.target.value)}
+            required
+          />
+
+          {/* 4. Amount */}
+          <Input
+            type="number"
+            step="0.01"
+            label="Amount (€)"
+            value={advAmount}
+            onChange={(e) => setAdvAmount(e.target.value)}
+            required
+          />
+
+          {/* 5. Account */}
+          <Select
+            label="Payment Account"
+            value={advAccountId}
+            onChange={(e) => setAdvAccountId(e.target.value)}
+            options={accounts.map(acc => ({
+              value: acc.id,
+              label: `${acc.name} (€${acc.balance.toFixed(2)})`
+            }))}
+            required
+          />
         </div>
       </Dialog>
     </div>
