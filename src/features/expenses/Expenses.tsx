@@ -439,6 +439,27 @@ export const Expenses: React.FC = () => {
     });
   };
 
+  const getLoggedBillExpense = (categoryId: string, monthKey?: string) => {
+    let targetMonthKey = monthKey;
+    if (!targetMonthKey) {
+      if (!date) return undefined;
+      const dateParts = date.split('-');
+      targetMonthKey = `${dateParts[0]}-${dateParts[1]}`;
+    }
+    
+    return expenses.find(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      const isSameCategory = e.category_id === categoryId;
+      const isInTargetMonth = eMonthKey === targetMonthKey;
+      const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${targetMonthKey}]`);
+      
+      return isSameCategory && (isInTargetMonth || isExplicitPeriod);
+    });
+  };
+
   const handleQuickLogBill = async (billName: string, categoryId: string, defaultAmount: number, preferredAccountId?: string | null) => {
     if (!profile || !paymentAccountId) return;
     
@@ -1383,7 +1404,8 @@ export const Expenses: React.FC = () => {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {activeBills.map(bill => {
-                  const logged = isBillLogged(bill.cat);
+                  const loggedExpense = getLoggedBillExpense(bill.cat);
+                  const logged = !!loggedExpense;
                   return (
                     <button
                       key={bill.name}
@@ -1409,7 +1431,16 @@ export const Expenses: React.FC = () => {
                         "font-mono text-[11px] font-black block mt-2",
                         logged ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
                       )}>
-                        {logged ? 'Logged' : `€${bill.amount.toFixed(2)}`}
+                        {logged && loggedExpense ? (
+                          <>
+                            <div>{new Date(loggedExpense.date).toLocaleDateString('de-DE')}</div>
+                            <div className="text-[10px] font-semibold opacity-85 mt-0.5">
+                              €{loggedExpense.amount.toFixed(2)} By {loggedExpense.account?.name || 'Account'}
+                            </div>
+                          </>
+                        ) : (
+                          `€${bill.amount.toFixed(2)}`
+                        )}
                       </span>
                     </button>
                   );
