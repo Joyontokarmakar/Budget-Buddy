@@ -39,6 +39,7 @@ export const Reports: React.FC = () => {
 
   // Bill Analyzer state
   const [selectedBillCategory, setSelectedBillCategory] = useState<string | null>('Total Expense');
+  const [historyYear, setHistoryYear] = useState<string>('All');
 
   const loadData = useCallback(async () => {
     if (!profile) return;
@@ -532,6 +533,28 @@ export const Reports: React.FC = () => {
 
     return history.sort((a, b) => b.timestamp - a.timestamp);
   }, [expenses, selectedBillCategory, categories]);
+
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    expenses.forEach(e => {
+      if (e.date) {
+        const year = e.date.substring(0, 4);
+        if (year && year.length === 4 && !isNaN(Number(year))) {
+          yearsSet.add(year);
+        }
+      }
+    });
+    yearsSet.add(new Date().getFullYear().toString());
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [expenses]);
+
+  const filteredBillHistory = useMemo(() => {
+    if (historyYear === 'All') return billHistory;
+    return billHistory.filter(item => {
+      const date = new Date(item.timestamp);
+      return date.getFullYear().toString() === historyYear;
+    });
+  }, [billHistory, historyYear]);
 
   const handleExportExcel = () => {
     // Generate CSV data for Detailed Shopping Sheet
@@ -1276,31 +1299,43 @@ export const Reports: React.FC = () => {
           {/* History Table */}
           {selectedBillCategory ? (
             <div className="space-y-3.5 pt-2">
-              <div className="flex justify-between items-center px-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   History for {selectedBillCategory}
                 </span>
-                <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
-                  {billHistory.length} logs
-                </span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={historyYear}
+                    onChange={(e) => setHistoryYear(e.target.value)}
+                    className="text-[10px] font-bold bg-muted hover:bg-muted/80 border border-border/80 rounded-lg px-2.5 py-1 outline-none cursor-pointer text-foreground transition-colors"
+                  >
+                    <option value="All">All Years</option>
+                    {availableYears.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                    {filteredBillHistory.length} logs
+                  </span>
+                </div>
               </div>
 
-              {billHistory.length === 0 ? (
+              {filteredBillHistory.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-                  No records found for this category.
+                  No records found for this category and year.
                 </div>
               ) : (
-                <div className="border border-border/50 rounded-xl overflow-x-auto bg-card/40">
+                <div className="border border-border/50 rounded-xl max-h-72 overflow-auto bg-card/40 scrollbar-thin">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-muted/40 text-muted-foreground font-bold border-b border-border text-[9px] uppercase">
+                    <thead className="sticky top-0 bg-muted/95 backdrop-blur-xs z-10 border-b border-border">
+                      <tr className="text-muted-foreground font-bold text-[9px] uppercase">
                         <th className="py-2.5 px-3">Billing Month</th>
                         <th className="py-2.5 px-3">{selectedBillCategory === 'Total Expense' ? 'Period' : 'Date Paid'}</th>
                         <th className="py-2.5 px-3 text-right w-36">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20 font-semibold text-foreground/90">
-                      {billHistory.map((item, index) => (
+                      {filteredBillHistory.map((item, index) => (
                         <tr key={index} className="hover:bg-muted/20">
                           <td className="py-2.5 px-3 text-foreground font-bold">{item.monthLabel}</td>
                           <td className="py-2.5 px-3 text-muted-foreground/80 font-medium">{item.date}</td>
