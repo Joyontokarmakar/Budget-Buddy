@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, ExpenseWithDetails, IncomeWithDetails, Category } from '../../types';
+import type { Account, ExpenseWithDetails, IncomeWithDetails, Category, EMI } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner, Dialog, Input, Select } from '../../components/ui';
 import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
+import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -23,7 +24,8 @@ export const Dashboard: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
-  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | 'advBills' | null>(null);
+  const [emis, setEmis] = useState<EMI[]>([]);
+  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | 'advBills' | 'emis' | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
@@ -176,18 +178,20 @@ export const Dashboard: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, exps, incs, cats, lns] = await Promise.all([
+      const [accs, exps, incs, cats, lns, ems] = await Promise.all([
         db.getAccounts(profile.id),
         db.getExpenses(profile.id),
         db.getIncome(profile.id),
         db.getCategories(profile.id),
         db.getLoans(profile.id),
+        db.getEmis(profile.id),
       ]);
       setAccounts(accs);
       setExpenses(exps);
       setIncomes(incs);
       setCategories(cats);
       setLoans(lns);
+      setEmis(ems);
     } catch (e) {
       console.error(e);
     } finally {
@@ -339,6 +343,35 @@ export const Dashboard: React.FC = () => {
           });
         }
       }
+
+      // Check EMIs active in this past month key
+      emis.forEach(emi => {
+        const range = getEmiMonthsRange(emi.buy_date, emi.emi_months);
+        if (range.includes(monthKey)) {
+          const idx = range.indexOf(monthKey) + 1;
+          const isLogged = expenses.some(e => {
+            if (!e.date || e.emi_id !== emi.id) return false;
+            const d = new Date(e.date);
+            const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
+            return eMonthKey === monthKey || isExplicitPeriod;
+          });
+
+          if (!isLogged) {
+            unpaidList.push({
+              name: `${emi.item_name} (${idx}/${emi.emi_months})`,
+              cat: emi.id,
+              categoryId: emi.category_id || categories.find(c => c.name.toLowerCase() === 'shopping' || c.name.toLowerCase() === 'electronic')?.id || null,
+              amount: emi.installment_amount,
+              month: monthKey,
+              preferredAccountId: emi.category_id ? (categories.find(c => c.id === emi.category_id)?.preferred_account_id || null) : null,
+              isEmi: true,
+              emiId: emi.id,
+              installmentIndex: idx
+            } as any);
+          }
+        }
+      });
       
       iterMonth++;
       if (iterMonth > 11) {
@@ -390,7 +423,17 @@ export const Dashboard: React.FC = () => {
     return advList.sort((a, b) => a.month.localeCompare(b.month));
   };
 
-  const handlePayMissedBillDirect = async (bill: { name: string; cat: string; categoryId: string; amount: number; month: string; preferredAccountId?: string | null }) => {
+  const handlePayMissedBillDirect = async (bill: {
+    name: string;
+    cat: string;
+    categoryId: string;
+    amount: number;
+    month: string;
+    preferredAccountId?: string | null;
+    isEmi?: boolean;
+    emiId?: string;
+    installmentIndex?: number;
+  }) => {
     if (!profile) return;
     if (accounts.length === 0) {
       setQuickLogMsg('Please create an asset account (e.g. Bank Account) first!');
@@ -404,7 +447,7 @@ export const Dashboard: React.FC = () => {
     
     setConfirmState({
       isOpen: true,
-      title: `Pay Missed ${bill.name}`,
+      title: bill.isEmi ? `Pay Missed EMI: ${bill.name}` : `Pay Missed ${bill.name}`,
       description: `Log payment for missed ${bill.name} using ${accountName}? It will be logged under today's date and deducted from the current month's ledger. You can verify or adjust the date, payment account, and amount below.`,
       confirmText: 'Pay Missed Bill',
       confirmVariant: 'primary',
@@ -418,6 +461,10 @@ export const Dashboard: React.FC = () => {
         const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
         const finalDate = selectedDate || new Date().toISOString().split('T')[0];
         const finalAccountId = selectedAccountId || accountIdToUse;
+        
+        const noteText = bill.isEmi
+          ? `[EMI] ${bill.name} - Missed Installment for ${bill.month} [Bill Period: ${bill.month}]`
+          : `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`;
 
         navigate('/expenses', {
           state: {
@@ -425,7 +472,7 @@ export const Dashboard: React.FC = () => {
               name: bill.name,
               categoryId: bill.categoryId,
               amount: finalAmount,
-              notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+              notes: noteText,
               date: finalDate,
               preferredAccountId: finalAccountId
             }
@@ -438,6 +485,10 @@ export const Dashboard: React.FC = () => {
         const categoryId = bill.categoryId;
         const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
         
+        const noteText = bill.isEmi
+          ? `[EMI] ${bill.name} - Missed Installment for ${bill.month} [Bill Period: ${bill.month}]`
+          : `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`;
+
         try {
           await db.createExpense(profile.id, {
             amount: finalAmount,
@@ -445,9 +496,10 @@ export const Dashboard: React.FC = () => {
             category_id: categoryId,
             store_id: null,
             payment_account_id: finalAccountId,
-            notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+            notes: noteText,
             receipt_url: null,
-            items: null
+            items: null,
+            emi_id: bill.isEmi ? bill.emiId : null
           });
           
           setQuickLogMsg(`${bill.name} for ${formatMonthKey(bill.month)} paid and logged successfully!`);
@@ -516,6 +568,12 @@ export const Dashboard: React.FC = () => {
 
   // Active taken loans
   const activeTakenLoans = loans.filter(l => l.status === 'active' && l.type === 'taken');
+
+  // Active EMIs
+  const activeEmis = emis.filter(emi => {
+    const paidCount = expenses.filter(e => e.emi_id === emi.id).length;
+    return paidCount < emi.emi_months;
+  });
 
   // Recent transactions (merged and sorted)
   const recentTransactions: {
@@ -996,8 +1054,8 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Pending Actions Overview Grid */}
-      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0 || getAdvancedPaidBills().length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0 || getAdvancedPaidBills().length > 0 || activeEmis.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
           
           {/* Unpaid Bills Box */}
           {getUnpaidPastBills().length > 0 && (
@@ -1082,7 +1140,89 @@ export const Dashboard: React.FC = () => {
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'loans' ? 'rotate-180 text-amber-500' : '')} />
             </div>
           )}
+
+          {/* Active EMIs Box */}
+          {activeEmis.length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'emis' ? null : 'emis')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'emis' 
+                  ? "bg-indigo-500/10 border-indigo-500/40 ring-2 ring-indigo-500/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
+                  <CreditCard className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Active EMIs
+                  </span>
+                  <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5 block">
+                    {activeEmis.length} Active
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'emis' ? 'rotate-180 text-indigo-500' : '')} />
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Expanded EMIs Details Panel */}
+      {expandedSection === 'emis' && activeEmis.length > 0 && (
+        <Card className="bg-indigo-500/5 border-indigo-500/20 border shadow-xs mt-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+              <CreditCard className="h-4.5 w-4.5 shrink-0" />
+              Active EMI Facilities
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              You are paying installments on these active purchases. You can review installment progress and outstanding liabilities.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+              {activeEmis.map((emi) => {
+                const paidCount = expenses.filter(e => e.emi_id === emi.id).length;
+                const remainingAmount = emi.total_amount - (paidCount * emi.installment_amount);
+                const percentPaid = (paidCount / emi.emi_months) * 100;
+                
+                return (
+                  <div key={emi.id} className="p-3.5 rounded-2xl border border-border/60 bg-card/65 backdrop-blur-xs flex flex-col justify-between gap-2.5">
+                    <div className="min-w-0">
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs font-extrabold text-foreground truncate block">{emi.item_name}</span>
+                        <span className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wide bg-indigo-500/10 px-1 py-0.5 rounded-md">
+                          {paidCount}/{emi.emi_months} Paid
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline mt-2">
+                        <span className="text-[10px] text-muted-foreground font-bold">Outstanding:</span>
+                        <span className="font-mono text-xs font-black text-foreground">€{remainingAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-baseline mt-0.5">
+                        <span className="text-[10px] text-muted-foreground font-bold">Installment:</span>
+                        <span className="font-mono text-[10px] font-bold text-foreground">€{emi.installment_amount.toFixed(2)}/mo</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shadow-inner">
+                        <div 
+                          className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+                          style={{ width: `${percentPaid}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Expanded Bills Details Panel */}

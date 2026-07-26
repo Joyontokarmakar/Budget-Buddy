@@ -197,6 +197,29 @@ create table public.loans (
 -- Enable RLS on Loans
 alter table public.loans enable row level security;
 
+-- 13. Create EMI Facilities Table
+create table public.emis (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references public.profiles(id) on delete cascade not null,
+    item_name text not null,
+    buy_date date default current_date not null,
+    emi_months int not null check (emi_months > 0),
+    total_amount numeric(10, 2) not null check (total_amount >= 0),
+    installment_amount numeric(10, 2) not null check (installment_amount >= 0),
+    interest_rate numeric(5, 2) not null check (interest_rate >= 0),
+    actual_price numeric(10, 2) not null check (actual_price >= 0),
+    category_id uuid references public.categories(id) on delete set null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS on EMIs
+alter table public.emis enable row level security;
+
+-- Alter public.expenses to add emi_id column
+alter table public.expenses add column if not exists emi_id uuid references public.emis(id) on delete set null;
+
+
 
 -- =========================================================================
 -- DATABASE TRIGGERS AND FUNCTIONS
@@ -618,6 +641,13 @@ create policy "Users can view own loans" on public.loans for select using (auth.
 create policy "Users can insert own loans" on public.loans for insert with check (auth.uid() = user_id);
 create policy "Users can update own loans" on public.loans for update using (auth.uid() = user_id);
 create policy "Users can delete own loans" on public.loans for delete using (auth.uid() = user_id);
+
+-- EMIs
+create policy "Users can view own emis" on public.emis for select using (auth.uid() = user_id);
+create policy "Users can insert own emis" on public.emis for insert with check (auth.uid() = user_id);
+create policy "Users can update own emis" on public.emis for update using (auth.uid() = user_id);
+create policy "Users can delete own emis" on public.emis for delete using (auth.uid() = user_id);
+
 
 
 -- =========================================================================

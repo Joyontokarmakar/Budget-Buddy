@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails } from '../types';
+import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails, EMI } from '../types';
 import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../utils/category';
 
 // =========================================================================
@@ -563,6 +563,9 @@ function initLocalStorage(userId: string) {
   }
   if (!localStorage.getItem('bb-loans')) {
     localStorage.setItem('bb-loans', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('bb-emis')) {
+    localStorage.setItem('bb-emis', JSON.stringify([]));
   }
 }
 
@@ -2143,6 +2146,98 @@ Output your response as a raw JSON object matching the requested schema.`;
         file_url: previewUrl
       };
     }
+  },
+
+  getEmis: async (userId: string): Promise<EMI[]> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      return getLocalItems<EMI>('bb-emis');
+    }
+    const { data, error } = await supabase
+      .from('emis')
+      .select('*')
+      .order('buy_date', { ascending: false });
+    if (error) throw error;
+    return (data as unknown as EMI[]) || [];
+  },
+
+  createEmi: async (userId: string, emi: Omit<EMI, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<EMI> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const emis = getLocalItems<EMI>('bb-emis');
+      const newEmi: EMI = {
+        ...emi,
+        id: crypto.randomUUID(),
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      emis.push(newEmi);
+      setLocalItems('bb-emis', emis);
+      notifyDataChange();
+      return newEmi;
+    }
+    const { data, error } = await supabase
+      .from('emis')
+      .insert({ ...emi, user_id: userId })
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  updateEmi: async (userId: string, emiId: string, updates: Partial<Omit<EMI, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<EMI> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const emis = getLocalItems<EMI>('bb-emis');
+      const idx = emis.findIndex(e => e.id === emiId && e.user_id === userId);
+      if (idx === -1) throw new Error('EMI Facility not found');
+      const updatedEmi = {
+        ...emis[idx],
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      emis[idx] = updatedEmi;
+      setLocalItems('bb-emis', emis);
+      notifyDataChange();
+      return updatedEmi;
+    }
+    const { data, error } = await supabase
+      .from('emis')
+      .update(updates)
+      .eq('id', emiId)
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  deleteEmi: async (userId: string, emiId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const emis = getLocalItems<EMI>('bb-emis');
+      setLocalItems('bb-emis', emis.filter(e => e.id !== emiId));
+      
+      const expenses = getLocalItems<Expense>('bb-expenses');
+      const updatedExpenses = expenses.map(exp => {
+        if (exp.emi_id === emiId) {
+          return { ...exp, emi_id: null };
+        }
+        return exp;
+      });
+      setLocalItems('bb-expenses', updatedExpenses);
+      
+      notifyDataChange();
+      return;
+    }
+    const { error } = await supabase
+      .from('emis')
+      .delete()
+      .eq('id', emiId);
+    if (error) throw error;
+    notifyDataChange();
   },
 };
 

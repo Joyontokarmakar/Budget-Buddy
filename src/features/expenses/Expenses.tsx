@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { ExpenseWithDetails, Account, Category, Store } from '../../types';
+import type { ExpenseWithDetails, Account, Category, Store, EMI } from '../../types';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../../utils/category';
+import { getEmiMonthsRange } from '../../utils/emi';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardContent, Dialog, Spinner } from '../../components/ui';
@@ -22,6 +23,7 @@ export const Expenses: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [emis, setEmis] = useState<EMI[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -152,16 +154,18 @@ export const Expenses: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [expData, accData, catData, storeData] = await Promise.all([
+      const [expData, accData, catData, storeData, emiData] = await Promise.all([
         db.getExpenses(profile.id),
         db.getAccounts(profile.id),
         db.getCategories(profile.id),
         db.getStores(profile.id),
+        db.getEmis(profile.id),
       ]);
       setExpenses(expData);
       setAccounts(accData);
       setCategories(catData);
       setStores(storeData);
+      setEmis(emiData);
 
       // Default payment account
       if (accData.length > 0 && !paymentAccountId) {
@@ -496,6 +500,120 @@ export const Expenses: React.FC = () => {
     });
   };
 
+  const isEmiLogged = (emiId: string, monthKey?: string) => {
+    let targetMonthKey = monthKey;
+    if (!targetMonthKey) {
+      if (!date) return false;
+      const dateParts = date.split('-');
+      targetMonthKey = `${dateParts[0]}-${dateParts[1]}`;
+    }
+    return expenses.some(e => {
+      if (!e.date || e.emi_id !== emiId) return false;
+      const d = new Date(e.date);
+      const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${targetMonthKey}]`);
+      return eMonthKey === targetMonthKey || isExplicitPeriod;
+    });
+  };
+
+  const getLoggedEmiExpense = (emiId: string, monthKey?: string) => {
+    let targetMonthKey = monthKey;
+    if (!targetMonthKey) {
+      if (!date) return undefined;
+      const dateParts = date.split('-');
+      targetMonthKey = `${dateParts[0]}-${dateParts[1]}`;
+    }
+    return expenses.find(e => {
+      if (!e.date || e.emi_id !== emiId) return false;
+      const d = new Date(e.date);
+      const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${targetMonthKey}]`);
+      return eMonthKey === targetMonthKey || isExplicitPeriod;
+    });
+  };
+
+  const handleQuickLogEmi = async (
+    emiId: string,
+    itemName: string,
+    amount: number,
+    preferredAccountId: string | null,
+    installmentIndex: number,
+    categoryId: string | null
+  ) => {
+    if (!profile || !paymentAccountId) return;
+    
+    const accountIdToUse = preferredAccountId || paymentAccountId;
+    const account = accounts.find(a => a.id === accountIdToUse) || accounts.find(a => a.id === paymentAccountId);
+    const accountName = account ? account.name : 'selected account';
+    
+    setConfirmState({
+      isOpen: true,
+      title: `Log EMI: ${itemName}`,
+      description: `Log installment ${installmentIndex} for ${itemName} using ${accountName}? You can verify or adjust details below.`,
+      confirmText: 'Log Installment',
+      confirmVariant: 'primary',
+      showDatePicker: true,
+      initialDate: date,
+      showAccountPicker: true,
+      initialAccountId: accountIdToUse,
+      showAmountInput: true,
+      initialAmount: amount,
+      onAdvanced: (selectedDate, selectedAccountId, selectedAmount) => {
+        const finalAmount = selectedAmount !== undefined ? selectedAmount : amount;
+        const finalDate = selectedDate || date;
+        const finalMonthKey = `${finalDate.split('-')[0]}-${finalDate.split('-')[1]}`;
+        const finalAccountId = selectedAccountId || accountIdToUse;
+
+        setAmount(finalAmount.toString());
+        setDate(finalDate);
+        setPaymentAccountId(finalAccountId);
+        setNotes(`[EMI] ${itemName} (Installment ${installmentIndex}) [Bill Period: ${finalMonthKey}]`);
+        setItems([{
+          id: crypto.randomUUID(),
+          name: `${itemName} (EMI ${installmentIndex})`,
+          amount: finalAmount,
+          category_id: categoryId
+        }]);
+        if (categoryId) setItemCategoryId(categoryId);
+        
+        setTimeout(() => {
+          const formEl = document.querySelector('form');
+          if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      },
+      onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
+        try {
+          setSaving(true);
+          const finalDate = selectedDate || date;
+          const finalMonthKey = `${finalDate.split('-')[0]}-${finalDate.split('-')[1]}`;
+          const finalAmount = selectedAmount !== undefined ? selectedAmount : amount;
+          
+          await db.createExpense(profile.id, {
+            amount: finalAmount,
+            date: finalDate,
+            category_id: categoryId,
+            store_id: null,
+            payment_account_id: selectedAccountId || accountIdToUse,
+            notes: `[EMI] ${itemName} (Installment ${installmentIndex}) [Bill Period: ${finalMonthKey}]`,
+            receipt_url: null,
+            items: null,
+            emi_id: emiId
+          });
+          
+          setSuccessMsg(`${itemName} Installment logged successfully!`);
+          setTimeout(() => setSuccessMsg(null), 3000);
+          await loadData();
+        } catch (err: any) {
+          setError(err.message || 'Error logging EMI installment');
+        } finally {
+          setSaving(false);
+        }
+      }
+    });
+  };
+
   const getLoggedBillExpense = (categoryId: string, monthKey?: string) => {
     let targetMonthKey = monthKey;
     if (!targetMonthKey) {
@@ -651,6 +769,27 @@ export const Expenses: React.FC = () => {
           });
         }
       }
+
+      // Check EMIs active in this past month key
+      emis.forEach(emi => {
+        const range = getEmiMonthsRange(emi.buy_date, emi.emi_months);
+        if (range.includes(monthKey)) {
+          const idx = range.indexOf(monthKey) + 1;
+          if (!isEmiLogged(emi.id, monthKey)) {
+            unpaidList.push({
+              name: `${emi.item_name} (${idx}/${emi.emi_months})`,
+              cat: emi.id,
+              amount: emi.installment_amount,
+              month: monthKey,
+              preferredAccountId: emi.category_id ? (categories.find(c => c.id === emi.category_id)?.preferred_account_id || null) : null,
+              isEmi: true,
+              emiId: emi.id,
+              installmentIndex: idx,
+              categoryId: emi.category_id || categories.find(c => c.name.toLowerCase() === 'shopping' || c.name.toLowerCase() === 'electronic')?.id || null
+            } as any);
+          }
+        }
+      });
       
       // Increment month
       iterMonth++;
@@ -663,7 +802,17 @@ export const Expenses: React.FC = () => {
     return unpaidList;
   };
 
-  const handlePayMissedBill = async (bill: { name: string; cat: string; amount: number; month: string; preferredAccountId?: string | null }) => {
+  const handlePayMissedBill = async (bill: {
+    name: string;
+    cat: string;
+    amount: number;
+    month: string;
+    preferredAccountId?: string | null;
+    isEmi?: boolean;
+    emiId?: string;
+    installmentIndex?: number;
+    categoryId?: string | null;
+  }) => {
     if (!profile || !paymentAccountId) return;
     
     const accountIdToUse = bill.preferredAccountId || paymentAccountId;
@@ -672,7 +821,7 @@ export const Expenses: React.FC = () => {
     
     setConfirmState({
       isOpen: true,
-      title: `Pay Missed ${bill.name}`,
+      title: bill.isEmi ? `Pay Missed EMI: ${bill.name}` : `Pay Missed ${bill.name}`,
       description: `Log payment for missed ${bill.name} using ${accountName}? It will be logged under today's date. You can verify or adjust the date, payment account, and amount below.`,
       confirmText: 'Pay Missed Bill',
       confirmVariant: 'primary',
@@ -690,14 +839,21 @@ export const Expenses: React.FC = () => {
         setAmount(finalAmount.toString());
         setDate(finalDate);
         setPaymentAccountId(finalAccountId);
-        setNotes(`${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`);
+        
+        const noteText = bill.isEmi
+          ? `[EMI] ${bill.name} - Missed Installment for ${bill.month} [Bill Period: ${bill.month}]`
+          : `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`;
+          
+        setNotes(noteText);
+        
+        const catId = bill.isEmi ? bill.categoryId : bill.cat;
         setItems([{
           id: crypto.randomUUID(),
-          name: `${bill.name} - Missed Bill`,
+          name: bill.isEmi ? `${bill.name} (EMI Installment)` : `${bill.name} - Missed Bill`,
           amount: finalAmount,
-          category_id: bill.cat
+          category_id: catId || null
         }]);
-        setItemCategoryId(bill.cat);
+        if (catId) setItemCategoryId(catId);
 
         setTimeout(() => {
           const formEl = document.querySelector('form');
@@ -709,18 +865,24 @@ export const Expenses: React.FC = () => {
       onConfirm: async (selectedDate, selectedAccountId, selectedAmount) => {
         try {
           setSaving(true);
-          const categoryId = bill.cat;
           const finalAmount = selectedAmount !== undefined ? selectedAmount : bill.amount;
+          const finalDate = selectedDate || date;
           
+          const catId = bill.isEmi ? bill.categoryId : bill.cat;
+          const noteText = bill.isEmi
+            ? `[EMI] ${bill.name} - Missed Installment for ${bill.month} [Bill Period: ${bill.month}]`
+            : `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`;
+
           await db.createExpense(profile.id, {
             amount: finalAmount,
-            date: selectedDate || date,
-            category_id: categoryId,
+            date: finalDate,
+            category_id: catId || null,
             store_id: null,
             payment_account_id: selectedAccountId || accountIdToUse,
-            notes: `${bill.name} - Missed Bill for ${bill.month} [Bill Period: ${bill.month}]`,
+            notes: noteText,
             receipt_url: null,
-            items: null
+            items: null,
+            emi_id: bill.isEmi ? bill.emiId : null
           });
           
           setSuccessMsg(`${bill.name} for ${bill.month} logged successfully!`);
@@ -1196,6 +1358,12 @@ export const Expenses: React.FC = () => {
     return monthKey === selectedMonth;
   });
 
+  const getChecklistMonthKey = () => {
+    if (!date) return '';
+    const dateParts = date.split('-');
+    return `${dateParts[0]}-${dateParts[1]}`;
+  };
+
   const activeBills = categories
     .filter(c => isCategoryBill(c) && isCategoryActive(c))
     .map(c => ({
@@ -1205,7 +1373,31 @@ export const Expenses: React.FC = () => {
       preferredAccountId: c.preferred_account_id
     }));
 
-  const allBillsLogged = activeBills.length > 0 && activeBills.every(bill => isBillLogged(bill.cat));
+  const activeEmiBills = emis.filter(emi => {
+    const mKey = getChecklistMonthKey();
+    const range = getEmiMonthsRange(emi.buy_date, emi.emi_months);
+    return range.includes(mKey);
+  }).map(emi => {
+    const mKey = getChecklistMonthKey();
+    const range = getEmiMonthsRange(emi.buy_date, emi.emi_months);
+    const idx = range.indexOf(mKey) + 1;
+    const shoppingOrElecCat = categories.find(c => c.name.toLowerCase() === 'shopping' || c.name.toLowerCase() === 'electronic') || categories[0];
+    const categoryId = emi.category_id || (shoppingOrElecCat ? shoppingOrElecCat.id : null);
+    return {
+      name: `${emi.item_name} (${idx}/${emi.emi_months})`,
+      cat: emi.id,
+      amount: emi.installment_amount,
+      preferredAccountId: emi.category_id ? (categories.find(c => c.id === emi.category_id)?.preferred_account_id || null) : null,
+      isEmi: true,
+      installmentIndex: idx,
+      emiId: emi.id,
+      categoryId
+    };
+  });
+
+  const allBillsLogged = (activeBills.length > 0 || activeEmiBills.length > 0) &&
+    activeBills.every(bill => isBillLogged(bill.cat)) &&
+    activeEmiBills.every(emi => isEmiLogged(emi.emiId, getChecklistMonthKey()));
 
   if (loading && expenses.length === 0) {
     return <Spinner />;
@@ -1626,6 +1818,53 @@ export const Expenses: React.FC = () => {
                           </>
                         ) : (
                           `€${bill.amount.toFixed(2)}`
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Active EMI Installments Checklist Items */}
+                {activeEmiBills.map(emi => {
+                  const loggedExpense = getLoggedEmiExpense(emi.emiId, getChecklistMonthKey());
+                  const logged = !!loggedExpense;
+                  return (
+                    <button
+                      key={emi.emiId}
+                      type="button"
+                      disabled={logged}
+                      onClick={() => handleQuickLogEmi(emi.emiId, emi.name.split(' (')[0], emi.amount, emi.preferredAccountId, emi.installmentIndex, emi.categoryId)}
+                      className={cn(
+                        "p-4 rounded-2xl border text-xs font-bold transition-all flex flex-col justify-between h-24 text-left shadow-xs w-full relative overflow-hidden",
+                        logged
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 opacity-70 cursor-not-allowed"
+                          : "bg-indigo-500/5 hover:bg-indigo-500/10 border-indigo-500/20 text-foreground cursor-pointer hover:border-indigo-500/40"
+                      )}
+                    >
+                      <div className="flex justify-between items-start w-full gap-2">
+                        <span className="opacity-95 flex items-center gap-1 min-w-0">
+                          <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wide bg-indigo-500/10 px-1 py-0.5 rounded-md shrink-0">EMI</span>
+                          <span className="truncate">{emi.name}</span>
+                        </span>
+                        {logged && (
+                          <span className="bg-emerald-500 dark:bg-emerald-600 text-white rounded-full p-0.5 shrink-0 flex items-center justify-center">
+                            <Check className="h-2.5 w-2.5 stroke-[3]" />
+                          </span>
+                        )}
+                      </div>
+                      <span className={cn(
+                        "font-mono text-[11px] font-black block mt-2",
+                        logged ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"
+                      )}>
+                        {logged && loggedExpense ? (
+                          <>
+                            <div>{new Date(loggedExpense.date).toLocaleDateString('de-DE')}</div>
+                            <div className="text-[10px] font-semibold opacity-85 mt-0.5">
+                              €{loggedExpense.amount.toFixed(2)} By {loggedExpense.account?.name || 'Account'}
+                            </div>
+                          </>
+                        ) : (
+                          `€${emi.amount.toFixed(2)}`
                         )}
                       </span>
                     </button>

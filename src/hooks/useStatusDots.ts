@@ -2,25 +2,29 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { db } from '../services/db';
 import { isCategoryBill, isCategoryActive } from '../utils/category';
+import { getEmiMonthsRange } from '../utils/emi';
 
 export const useStatusDots = () => {
   const { profile } = useAuthStore();
   const [loans, setLoans] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [emis, setEmis] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadStatusData = async () => {
     if (!profile?.id) return;
     try {
-      const [lns, exps, cats] = await Promise.all([
+      const [lns, exps, cats, ems] = await Promise.all([
         db.getLoans(profile.id),
         db.getExpenses(profile.id),
         db.getCategories(profile.id),
+        db.getEmis(profile.id),
       ]);
       setLoans(lns);
       setExpenses(exps);
       setCategories(cats);
+      setEmis(ems);
     } catch (err) {
       console.error('Failed to load status indicator data:', err);
     } finally {
@@ -95,6 +99,24 @@ export const useStatusDots = () => {
           unpaidCount++;
         }
       }
+
+      // Check EMIs active in this past month key
+      emis.forEach(emi => {
+        const range = getEmiMonthsRange(emi.buy_date, emi.emi_months);
+        if (range.includes(monthKey)) {
+          const isLogged = expenses.some(e => {
+            if (!e.date || e.emi_id !== emi.id) return false;
+            const d = new Date(e.date);
+            const eMonthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const isExplicitPeriod = e.notes?.includes(`[Bill Period: ${monthKey}]`);
+            return eMonthKey === monthKey || isExplicitPeriod;
+          });
+
+          if (!isLogged) {
+            unpaidCount++;
+          }
+        }
+      });
       
       iterMonth++;
       if (iterMonth > 11) {

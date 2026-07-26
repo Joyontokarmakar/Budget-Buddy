@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, DepositWithDetails, LoanWithDetails } from '../../types';
+import type { Account, DepositWithDetails, LoanWithDetails, Category, EMIWithDetails } from '../../types';
 import { Button, Input, Select, Card, CardContent, Dialog, Spinner } from '../../components/ui';
-import { Coins, Plus, Trash2, Calendar, Landmark, FileText, CheckCircle, History, TrendingUp, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Coins, Plus, Trash2, Calendar, Landmark, FileText, CheckCircle, History, TrendingUp, ArrowDownLeft, ArrowUpRight, CreditCard, Percent } from 'lucide-react';
 
 export const DepositsLoans: React.FC = () => {
   const { t } = useTranslation();
@@ -14,11 +14,15 @@ export const DepositsLoans: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [deposits, setDeposits] = useState<DepositWithDetails[]>([]);
   const [loans, setLoans] = useState<LoanWithDetails[]>([]);
+  const [emis, setEmis] = useState<EMIWithDetails[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // View states
-  const [activeTab, setActiveTab] = useState<'deposits' | 'loans'>('deposits');
+  const [activeTab, setActiveTab] = useState<'deposits' | 'loans' | 'emis'>('deposits');
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
+  const [expandedEmiId, setExpandedEmiId] = useState<string | null>(null);
 
   // Deposit Dialog & Form states
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -59,20 +63,37 @@ export const DepositsLoans: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, deps, lns] = await Promise.all([
+      const [accs, deps, lns, ems, cats, exps] = await Promise.all([
         db.getAccounts(profile.id),
         db.getDeposits(profile.id),
         db.getLoans(profile.id),
+        db.getEmis(profile.id),
+        db.getCategories(profile.id),
+        db.getExpenses(profile.id),
       ]);
       setAccounts(accs);
       setDeposits(deps);
       setLoans(lns);
+      setExpenses(exps);
+      setCategories(cats);
+      
+      const emsWithDetails = ems.map(e => ({
+        ...e,
+        category: cats.find(c => c.id === e.category_id) || null
+      }));
+      setEmis(emsWithDetails);
       
       // Pre-select default account for forms
       if (accs.length > 0) {
         setDepAccountId(accs[0].id);
         setLoanAccountId(accs[0].id);
         setRepAccountId(accs[0].id);
+      }
+
+      // Pre-select default category for EMI form
+      if (cats.length > 0) {
+        const defaultCat = cats.find(c => c.name.toLowerCase() === 'shopping' || c.name.toLowerCase() === 'electronic') || cats[0];
+        setEmiCategoryId(defaultCat.id);
       }
     } catch (e) {
       console.error('Error loading deposits & loans:', e);
@@ -101,6 +122,25 @@ export const DepositsLoans: React.FC = () => {
     const outstanding = provided.reduce((sum, l) => sum + l.remaining_amount, 0);
     return { original, outstanding, repaid: original - outstanding };
   }, [loans]);
+
+  const emisSummary = useMemo(() => {
+    let totalLiability = 0;
+    let activeCount = 0;
+    
+    emis.forEach(emi => {
+      const paidInstallmentsCount = expenses.filter(e => e.emi_id === emi.id).length;
+      if (paidInstallmentsCount < emi.emi_months) {
+        activeCount++;
+        const remainingMonths = emi.emi_months - paidInstallmentsCount;
+        totalLiability += remainingMonths * emi.installment_amount;
+      }
+    });
+    
+    return {
+      activeCount,
+      totalLiability
+    };
+  }, [emis, expenses]);
 
   // Form Handlers
   const handleAddDeposit = async (e: React.FormEvent) => {
@@ -268,6 +308,122 @@ export const DepositsLoans: React.FC = () => {
     return `€${val.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  // EMI Dialog & Form states
+  const [isEmiOpen, setIsEmiOpen] = useState(false);
+  const [emiItemName, setEmiItemName] = useState('');
+  const [emiBuyDate, setEmiBuyDate] = useState(new Date().toISOString().split('T')[0]);
+  const [emiMonths, setEmiMonths] = useState('6');
+  const [emiTotalAmount, setEmiTotalAmount] = useState('');
+  const [emiInstallmentAmount, setEmiInstallmentAmount] = useState('');
+  const [emiInterestRate, setEmiInterestRate] = useState('0');
+  const [emiActualPrice, setEmiActualPrice] = useState('');
+  const [emiCategoryId, setEmiCategoryId] = useState('');
+  const [emiSaving, setEmiSaving] = useState(false);
+  const [emiError, setEmiError] = useState<string | null>(null);
+
+  // Auto-calculates Total Amount and Actual Price when Installment Amount or Months change
+  useEffect(() => {
+    const months = parseInt(emiMonths) || 0;
+    const installment = parseFloat(emiInstallmentAmount) || 0;
+    if (months > 0 && installment > 0) {
+      const calcTotal = (months * installment).toFixed(2);
+      setEmiTotalAmount(calcTotal);
+      if (!emiActualPrice || emiActualPrice === '0' || emiActualPrice === '') {
+        setEmiActualPrice(calcTotal);
+      }
+    }
+  }, [emiInstallmentAmount, emiMonths]);
+
+  // If total amount changes, initialize actual price if not set
+  useEffect(() => {
+    const total = parseFloat(emiTotalAmount) || 0;
+    if (total > 0 && (!emiActualPrice || emiActualPrice === '0' || emiActualPrice === '')) {
+      setEmiActualPrice(total.toFixed(2));
+    }
+  }, [emiTotalAmount]);
+
+  const handleAddEmi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    setEmiError(null);
+
+    const totalAmt = parseFloat(emiTotalAmount);
+    const instAmt = parseFloat(emiInstallmentAmount);
+    const months = parseInt(emiMonths);
+    const rate = parseFloat(emiInterestRate);
+    const actPrice = parseFloat(emiActualPrice);
+
+    if (!emiItemName.trim()) {
+      setEmiError(t('common.error') + ': Enter item name');
+      return;
+    }
+    if (isNaN(months) || months <= 0) {
+      setEmiError(t('common.error') + ': Enter a valid EMI months');
+      return;
+    }
+    if (isNaN(totalAmt) || totalAmt < 0) {
+      setEmiError(t('common.error') + ': Enter a valid total amount');
+      return;
+    }
+    if (isNaN(instAmt) || instAmt < 0) {
+      setEmiError(t('common.error') + ': Enter a valid installment amount');
+      return;
+    }
+    if (isNaN(rate) || rate < 0) {
+      setEmiError(t('common.error') + ': Enter interest rate');
+      return;
+    }
+    if (isNaN(actPrice) || actPrice < 0) {
+      setEmiError(t('common.error') + ': Enter actual price');
+      return;
+    }
+
+    try {
+      setEmiSaving(true);
+      await db.createEmi(profile.id, {
+        item_name: emiItemName.trim(),
+        buy_date: emiBuyDate,
+        emi_months: months,
+        total_amount: totalAmt,
+        installment_amount: instAmt,
+        interest_rate: rate,
+        actual_price: actPrice,
+        category_id: emiCategoryId || null,
+      });
+
+      // Reset form
+      setEmiItemName('');
+      setEmiBuyDate(new Date().toISOString().split('T')[0]);
+      setEmiMonths('6');
+      setEmiTotalAmount('');
+      setEmiInstallmentAmount('');
+      setEmiInterestRate('0');
+      setEmiActualPrice('');
+      if (categories.length > 0) {
+        const defaultCat = categories.find(c => c.name.toLowerCase() === 'shopping' || c.name.toLowerCase() === 'electronic') || categories[0];
+        setEmiCategoryId(defaultCat.id);
+      }
+      setIsEmiOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setEmiError(err.message || 'Failed to save EMI Facility');
+    } finally {
+      setEmiSaving(false);
+    }
+  };
+
+  const handleDeleteEmi = async (id: string) => {
+    if (!profile) return;
+    if (!window.confirm(t('emis.deleteConfirm'))) return;
+
+    try {
+      await db.deleteEmi(profile.id, id);
+      await loadData();
+    } catch (err) {
+      console.error('Error deleting EMI:', err);
+    }
+  };
+
   const activeLoans = useMemo(() => loans.filter(l => l.status === 'active'), [loans]);
   const settledLoans = useMemo(() => loans.filter(l => l.status === 'settled'), [loans]);
 
@@ -302,11 +458,20 @@ export const DepositsLoans: React.FC = () => {
               {t('depositsLoans.addLoan')}
             </Button>
           )}
+          {activeTab === 'emis' && (
+            <Button 
+              onClick={() => setIsEmiOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/10 border-none transition-all duration-200 active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('emis.addEmi')}
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Overview Cards Block */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in duration-300">
         <Card className="bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -361,6 +526,25 @@ export const DepositsLoans: React.FC = () => {
           </CardContent>
         </Card>
 
+        <Card className="bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                Active EMIs
+              </span>
+              <span className="text-xl font-extrabold text-foreground mt-1 block">
+                {formatCurrency(emisSummary.totalLiability)}
+              </span>
+              <span className="text-[9px] text-muted-foreground/80 mt-0.5 block">
+                Active: {emisSummary.activeCount} ({emis.length} total)
+              </span>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
+              <CreditCard className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Net Debt/Credit Status Card */}
         {(() => {
           const net = loansTakenSummary.outstanding - loansProvidedSummary.outstanding;
@@ -385,8 +569,7 @@ export const DepositsLoans: React.FC = () => {
               </CardContent>
             </Card>
           );
-        })()}
-      </div>
+        })()}</div>
 
       {/* Tabs Controller */}
       <div className="flex border-b border-border/80 gap-6">
@@ -403,6 +586,13 @@ export const DepositsLoans: React.FC = () => {
           className={`pb-3 font-bold text-sm tracking-wide transition-all border-b-2 cursor-pointer ${activeTab === 'loans' ? 'border-primary text-primary font-black scale-102' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
         >
           {t('depositsLoans.loans')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('emis')}
+          className={`pb-3 font-bold text-sm tracking-wide transition-all border-b-2 cursor-pointer ${activeTab === 'emis' ? 'border-primary text-primary font-black scale-102' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+        >
+          {t('emis.title')}
         </button>
       </div>
 
@@ -666,6 +856,147 @@ export const DepositsLoans: React.FC = () => {
         </div>
       )}
 
+      {/* EMIs Panel */}
+      {activeTab === 'emis' && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {emis.length === 0 ? (
+            <Card className="py-12 text-center border-dashed border-border/60 bg-card/65 backdrop-blur-md">
+              <CardContent className="flex flex-col items-center justify-center gap-3.5">
+                <CreditCard className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
+                <p className="text-sm font-semibold text-muted-foreground">{t('emis.noEmis')}</p>
+                <Button variant="outline" size="sm" onClick={() => setIsEmiOpen(true)}>
+                  Log First EMI Facility
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {emis.map((emi) => {
+                const emiExpenses = expenses.filter(e => e.emi_id === emi.id);
+                const paidCount = emiExpenses.length;
+                const remainingMonths = Math.max(0, emi.emi_months - paidCount);
+                const totalPaidAmount = paidCount * emi.installment_amount;
+                const remainingAmount = Math.max(0, emi.total_amount - totalPaidAmount);
+                const percentPaid = emi.emi_months > 0 ? (paidCount / emi.emi_months) * 100 : 0;
+                const isCompleted = remainingMonths === 0;
+                const totalInterest = Math.max(0, emi.total_amount - emi.actual_price);
+
+                const isExpanded = expandedEmiId === emi.id;
+
+                return (
+                  <Card key={emi.id} className={`shadow-sm border-border/60 overflow-hidden bg-card/65 backdrop-blur-md transition-all duration-200 hover:border-border ${isCompleted ? 'opacity-75' : ''}`}>
+                    <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Left: Info */}
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setExpandedEmiId(isExpanded ? null : emi.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-extrabold text-foreground truncate">{emi.item_name}</h4>
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${isCompleted ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'}`}>
+                            {isCompleted ? t('emis.statusCompleted') : t('emis.statusActive')}
+                          </span>
+                          {emi.category && (
+                            <span className="text-[9px] font-semibold text-muted-foreground flex items-center gap-1">
+                              • {emi.category.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground mt-1.5 font-bold">
+                          <span>Buy Date: {new Date(emi.buy_date).toLocaleDateString('de-DE')}</span>
+                          <span>Duration: {emi.emi_months} {t('emis.months')}</span>
+                          {totalInterest > 0 && <span>Interest: {emi.interest_rate}% ({formatCurrency(totalInterest)})</span>}
+                          <span>Cash Price: {formatCurrency(emi.actual_price)}</span>
+                        </div>
+                      </div>
+
+                      {/* Middle: Progress Bar */}
+                      <div className="w-full md:w-64 space-y-1.5">
+                        <div className="flex justify-between text-[10px] font-bold">
+                          <span className="text-muted-foreground">{t('emis.installmentProgress')}</span>
+                          <span className="text-foreground">{paidCount} / {emi.emi_months} paid</span>
+                        </div>
+                        <div className="h-2 w-full bg-muted/60 rounded-full overflow-hidden shadow-inner">
+                          <div 
+                            className={`h-full transition-all duration-300 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-600'}`}
+                            style={{ width: `${Math.min(100, percentPaid)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Right: Amounts & Actions */}
+                      <div className="flex items-center justify-between md:justify-end gap-6 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 border-border/30">
+                        <div className="text-left md:text-right font-black">
+                          <span className="text-[10px] font-bold text-muted-foreground block uppercase tracking-wider">
+                            {t('emis.outstanding')}
+                          </span>
+                          <span className={`text-sm ${isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'}`}>
+                            {formatCurrency(remainingAmount)}
+                          </span>
+                          <span className="text-[9px] font-bold text-muted-foreground/75 block mt-0.5">
+                            Installment: {formatCurrency(emi.installment_amount)} / month
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            className="text-[10px] h-7 font-bold px-2 rounded-lg cursor-pointer bg-primary/5 hover:bg-primary/10 text-primary border border-primary/10"
+                            onClick={() => setExpandedEmiId(isExpanded ? null : emi.id)}
+                          >
+                            {isExpanded ? 'Hide Payments' : 'View Payments'}
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEmi(emi.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expandable payments list */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-1.5 border-t border-border/20 bg-muted/10 animate-in slide-in-from-top-2 duration-200">
+                        <h5 className="text-[10px] font-extrabold uppercase text-muted-foreground tracking-wider mb-2 flex items-center gap-1.5">
+                          <History className="h-3.5 w-3.5 text-indigo-500" />
+                          Logged Repayment History
+                        </h5>
+                        {emiExpenses.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground/60 font-semibold italic p-2 bg-card/30 border border-dashed rounded-xl">
+                            No installments logged as paid yet. Mark them paid in the monthly checklist on the Expenses page!
+                          </p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {emiExpenses.map((exp) => (
+                              <div key={exp.id} className="flex justify-between items-center text-[10px] p-2.5 rounded-xl bg-card border border-border/30 font-semibold text-foreground/80">
+                                <div>
+                                  <div className="text-foreground font-bold">{exp.notes || 'EMI Installment'}</div>
+                                  <div className="text-muted-foreground/75 text-[9px] mt-0.5">
+                                    Date: {new Date(exp.date).toLocaleDateString('de-DE')} • Paid from: {exp.account?.name || 'Account'}
+                                  </div>
+                                </div>
+                                <div className="text-foreground font-black text-right">
+                                  {formatCurrency(exp.amount)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Add Deposit Dialog */}
       <Dialog
         isOpen={isDepositOpen}
@@ -883,6 +1214,117 @@ export const DepositsLoans: React.FC = () => {
             </div>
           </form>
         )}
+      </Dialog>
+
+      {/* Add EMI Facility Dialog */}
+      <Dialog
+        isOpen={isEmiOpen}
+        onClose={() => setIsEmiOpen(false)}
+        title={t('emis.addEmi')}
+      >
+        <form onSubmit={handleAddEmi} className="space-y-4">
+          {emiError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {emiError}
+            </div>
+          )}
+
+          <Input
+            label={t('emis.itemName')}
+            placeholder="e.g. iPhone 17, Study Desk"
+            value={emiItemName}
+            onChange={(e) => setEmiItemName(e.target.value)}
+            required
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="date"
+              label={t('emis.buyDate')}
+              value={emiBuyDate}
+              onChange={(e) => setEmiBuyDate(e.target.value)}
+              required
+            />
+            <Select
+              label={t('emis.category')}
+              value={emiCategoryId}
+              onChange={(e) => setEmiCategoryId(e.target.value)}
+              options={categories.map(c => ({ value: c.id, label: c.name }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="number"
+              label={t('emis.emiMonths')}
+              placeholder="e.g. 6"
+              value={emiMonths}
+              onChange={(e) => setEmiMonths(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              label={t('emis.installmentAmount')}
+              placeholder="0.00"
+              value={emiInstallmentAmount}
+              onChange={(e) => setEmiInstallmentAmount(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="number"
+              step="0.01"
+              label={t('emis.totalAmount')}
+              placeholder="0.00"
+              value={emiTotalAmount}
+              onChange={(e) => setEmiTotalAmount(e.target.value)}
+              required
+            />
+            <Input
+              type="number"
+              step="0.01"
+              label={t('emis.interestRate')}
+              placeholder="0"
+              value={emiInterestRate}
+              onChange={(e) => setEmiInterestRate(e.target.value)}
+              required
+            />
+          </div>
+
+          <Input
+            type="number"
+            step="0.01"
+            label={t('emis.actualPrice')}
+            placeholder="Cash price (e.g. without interest)"
+            value={emiActualPrice}
+            onChange={(e) => setEmiActualPrice(e.target.value)}
+            required
+          />
+
+          {parseFloat(emiTotalAmount) > 0 && parseFloat(emiActualPrice) > 0 && (
+            <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex items-center justify-between text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+              <span className="flex items-center gap-1">
+                <Percent className="h-3.5 w-3.5" />
+                Interest Details:
+              </span>
+              <span>
+                Markup paid: €{(parseFloat(emiTotalAmount) - parseFloat(emiActualPrice)).toFixed(2)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button type="button" variant="outline" onClick={() => setIsEmiOpen(false)} disabled={emiSaving}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" loading={emiSaving}>
+              {t('emis.saveEmi')}
+            </Button>
+          </div>
+        </form>
       </Dialog>
     </div>
   );

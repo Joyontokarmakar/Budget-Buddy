@@ -234,5 +234,27 @@
     "noLoans": "No loans recorded yet.",
     "deleteConfirmDeposit": "Are you sure you want to delete this deposit? This will revert the account balance change.",
     "deleteConfirmLoan": "Are you sure you want to delete this loan? This will revert the initial balance change and all associated repayments."
+  },
+  "emis": {
+    "title": "EMI Facilities",
+    "addEmi": "Add EMI Facility",
+    "itemName": "Item Name",
+    "buyDate": "Buy Date",
+    "emiMonths": "EMI Months",
+    "totalAmount": "Total Amount (€)",
+    "installmentAmount": "Installment Amount (€)",
+    "interestRate": "Interest Rate (%)",
+    "actualPrice": "Actual Price (€)",
+    "saveEmi": "Create EMI Facility",
+    "noEmis": "No EMI facilities recorded yet.",
+    "deleteConfirm": "Are you sure you want to delete this EMI facility? This will unlink it from all logged payment expenses.",
+    "interestPaid": "Interest Paid",
+    "installmentProgress": "Installment Progress",
+    "outstanding": "Remaining Balance",
+    "months": "Months",
+    "totalPaid": "Total Paid",
+    "statusActive": "Active",
+    "statusCompleted": "Completed",
+    "category": "Category"
   }
 }

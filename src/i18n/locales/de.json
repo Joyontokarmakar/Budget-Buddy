@@ -234,5 +234,27 @@
     "noLoans": "Noch keine Kredite erfasst.",
     "deleteConfirmDeposit": "Sind Sie sicher, dass Sie diese Einlage löschen möchten? Dadurch wird die Kontostandsänderung rückgängig gemacht.",
     "deleteConfirmLoan": "Sind Sie sicher, dass Sie diesen Kredit löschen möchten? Dadurch werden die ursprüngliche Kontostandsänderung und alle zugehörigen Rückzahlungen rückgängig gemacht."
+  },
+  "emis": {
+    "title": "Ratenzahlungen (EMI)",
+    "addEmi": "Ratenzahlung hinzufügen",
+    "itemName": "Artikelname",
+    "buyDate": "Kaufdatum",
+    "emiMonths": "Laufzeit (Monate)",
+    "totalAmount": "Gesamtbetrag (€)",
+    "installmentAmount": "Ratenhöhe (€)",
+    "interestRate": "Zinssatz (%)",
+    "actualPrice": "Originalpreis (€)",
+    "saveEmi": "Ratenzahlung erstellen",
+    "noEmis": "Noch keine Ratenzahlungen erfasst.",
+    "deleteConfirm": "Sind Sie sicher, dass Sie diese Ratenzahlung löschen möchten? Dadurch wird die Verknüpfung zu den gebuchten Raten-Ausgaben aufgehoben.",
+    "interestPaid": "Gezahlte Zinsen",
+    "installmentProgress": "Raten-Fortschritt",
+    "outstanding": "Restbetrag",
+    "months": "Monate",
+    "totalPaid": "Gesamt gezahlt",
+    "statusActive": "Aktiv",
+    "statusCompleted": "Abgeschlossen",
+    "category": "Kategorie"
   }
 }

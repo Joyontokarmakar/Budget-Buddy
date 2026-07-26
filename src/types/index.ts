@@ -81,6 +81,7 @@ export interface Expense {
   receipt_url: string | null;
   items?: ExpenseItem[] | null;
   discount?: number | null;
+  emi_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -186,5 +187,24 @@ export interface Loan {
 
 export interface LoanWithDetails extends Loan {
   account?: Account | null;
+}
+
+export interface EMI {
+  id: string;
+  user_id: string;
+  item_name: string;
+  buy_date: string;
+  emi_months: number;
+  total_amount: number;
+  installment_amount: number;
+  interest_rate: number;
+  actual_price: number;
+  category_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EMIWithDetails extends EMI {
+  category?: Category | null;
 }
 
