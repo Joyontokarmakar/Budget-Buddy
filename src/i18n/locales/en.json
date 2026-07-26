@@ -153,7 +153,11 @@
     },
     "security": "Security",
     "passwordPlaceholder": "New password (optional)",
-    "saveSecurity": "Update Password"
+    "saveSecurity": "Update Password",
+    "logoutAll": "Log Out All Devices",
+    "logoutAllDescription": "Log out of all active sessions across all your devices, including this one.",
+    "logoutAllConfirm": "Are you sure you want to log out from all devices? You will be signed out from this device as well.",
+    "logoutAllLoading": "Signing out of all devices..."
   },
   "categories": {
     "Food": "Food",

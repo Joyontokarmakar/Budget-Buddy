@@ -1631,6 +1631,20 @@ Output your response as a raw JSON object matching the requested schema.`;
     if (error) throw error;
   },
 
+  deleteAllUserSessions: async (userId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      const sessions = getLocalItems<UserSession>('bb-sessions');
+      const filtered = sessions.filter(s => s.user_id !== userId);
+      setLocalItems('bb-sessions', filtered);
+      return;
+    }
+    const { error } = await supabase
+      .from('user_sessions')
+      .delete()
+      .eq('user_id', userId);
+    if (error) throw error;
+  },
+
   updateUserSessionActivity: async (userId: string, sessionKey: string): Promise<void> => {
     if (!isSupabaseConfigured) {
       const sessions = getLocalItems<UserSession>('bb-sessions');

@@ -199,3 +199,20 @@ body {
 .react-datepicker-popper {
   z-index: 100 !important;
 }
+
+/* Recharts legend responsiveness & custom styling overrides */
+.recharts-default-legend {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 6px 10px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.recharts-legend-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 0 !important;
+  white-space: nowrap !important;
+}

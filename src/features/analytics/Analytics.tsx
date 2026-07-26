@@ -19,6 +19,7 @@ export const Analytics: React.FC = () => {
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
   const [categoryMonth, setCategoryMonth] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<'3' | '6' | '12' | 'all'>('3');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
   // Activity Calendar selectors state
   const [activityYear, setActivityYear] = useState<number>(new Date().getFullYear());
@@ -45,6 +46,16 @@ export const Analytics: React.FC = () => {
     document.addEventListener('click', handleDocumentClick);
     return () => {
       document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -649,7 +660,7 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="h-64 pt-2 flex flex-col justify-center">
+              <CardContent className="h-[380px] sm:h-64 pt-2 flex flex-col justify-center">
                 {categoryData.length === 0 ? (
                   <div className="text-center text-xs text-muted-foreground font-semibold py-12">
                     No categorized expenses logged for the selected period.
@@ -660,8 +671,8 @@ export const Analytics: React.FC = () => {
                       <Pie
                         data={categoryData}
                         cx="50%"
-                        cy="50%"
-                        outerRadius={80}
+                        cy={isMobile ? "40%" : "50%"}
+                        outerRadius={isMobile ? 65 : 80}
                         dataKey="value"
                         nameKey="name"
                       >
@@ -681,7 +692,7 @@ export const Analytics: React.FC = () => {
                       <Legend 
                         iconSize={8} 
                         iconType="circle" 
-                        wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                        wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold', paddingTop: isMobile ? '12px' : '4px' }} 
                         formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
                       />
                     </PieChart>

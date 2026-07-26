@@ -153,7 +153,11 @@
     },
     "security": "Sicherheit",
     "passwordPlaceholder": "Neues Passwort (optional)",
-    "saveSecurity": "Passwort aktualisieren"
+    "saveSecurity": "Passwort aktualisieren",
+    "logoutAll": "Von allen Geräten abmelden",
+    "logoutAllDescription": "Melde dich von allen aktiven Sitzungen auf all deinen Geräten ab, einschließlich dieses Geräts.",
+    "logoutAllConfirm": "Möchtest du dich wirklich von allen Geräten abmelden? Du wirst auch von diesem Gerät abgemeldet.",
+    "logoutAllLoading": "Abmeldung von allen Geräten..."
   },
   "categories": {
     "Food": "Lebensmittel",

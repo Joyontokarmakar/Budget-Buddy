@@ -17,7 +17,7 @@ import {
 
 export const Settings: React.FC = () => {
   const { t } = useTranslation();
-  const { profile, updateProfile, updatePassword, signOut } = useAuthStore();
+  const { profile, updateProfile, updatePassword, signOut, signOutAllDevices } = useAuthStore();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Profile Form State
@@ -80,6 +80,11 @@ export const Settings: React.FC = () => {
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [currentSessionKey, setCurrentSessionKey] = useState<string | null>(null);
 
+  // Global Logout State
+  const [isLogoutAllDialogOpen, setIsLogoutAllDialogOpen] = useState(false);
+  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
+  const [logoutAllError, setLogoutAllError] = useState<string | null>(null);
+
   const fetchSessions = async () => {
     if (!profile) return;
     try {
@@ -102,6 +107,25 @@ export const Settings: React.FC = () => {
       await fetchSessions();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleLogoutAllDevices = async () => {
+    try {
+      setLogoutAllLoading(true);
+      setLogoutAllError(null);
+      const { error } = await signOutAllDevices();
+      if (error) {
+        setLogoutAllError(error);
+        setLogoutAllLoading(false);
+      } else {
+        setIsLogoutAllDialogOpen(false);
+        setLogoutAllLoading(false);
+        window.location.reload();
+      }
+    } catch (err: any) {
+      setLogoutAllError(err.message || 'An error occurred.');
+      setLogoutAllLoading(false);
     }
   };
 
@@ -1221,7 +1245,7 @@ export const Settings: React.FC = () => {
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                   <LogOut className="h-4 w-4" />
-                  Sign Out
+                  Sign Out Current Device
                 </span>
                 <p className="text-[11px] text-muted-foreground">Log out of your active session on this device</p>
               </div>
@@ -1230,9 +1254,51 @@ export const Settings: React.FC = () => {
               </Button>
             </div>
 
+            {/* Global Logout */}
+            <div className="border-t border-border/50 pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                  <Shield className="h-4 w-4" />
+                  {t('settings.logoutAll')}
+                </span>
+                <p className="text-[11px] text-muted-foreground">{t('settings.logoutAllDescription')}</p>
+              </div>
+              <Button variant="destructive" onClick={() => setIsLogoutAllDialogOpen(true)} className="sm:w-auto w-full px-6 h-10 text-xs font-bold bg-rose-600 hover:bg-rose-700">
+                {t('settings.logoutAll')}
+              </Button>
+            </div>
+
           </CardContent>
         </Card>
       </div>
+
+      {/* GLOBAL LOGOUT CONFIRMATION MODAL */}
+      <Dialog
+        isOpen={isLogoutAllDialogOpen}
+        onClose={() => setIsLogoutAllDialogOpen(false)}
+        title={t('settings.logoutAll')}
+        footer={
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => setIsLogoutAllDialogOpen(false)} disabled={logoutAllLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLogoutAllDevices} loading={logoutAllLoading}>
+              {t('settings.logoutAll')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-2">
+          {logoutAllError && (
+            <div className="p-2.5 bg-destructive/10 border border-destructive/20 text-destructive text-[11px] font-semibold rounded-lg">
+              {logoutAllError}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {t('settings.logoutAllConfirm')}
+          </p>
+        </div>
+      </Dialog>
 
       {/* CATEGORY EDIT MODAL */}
       <Dialog

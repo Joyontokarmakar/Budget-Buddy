@@ -13,6 +13,7 @@ interface AuthState {
   signUp: (email: string, password: string, name: string, country: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
+  signOutAllDevices: () => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (password: string) => Promise<{ error: any }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
@@ -491,6 +492,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      set({ user: null, profile: null, loading: false });
+      return { error: null };
+    } catch (error: any) {
+      set({ loading: false });
+      return { error: error.message || error };
+    }
+  },
+
+  signOutAllDevices: async () => {
+    set({ loading: true });
+
+    const userId = get().profile?.id;
+    if (userId) {
+      try {
+        // Delete all session records for this user from DB
+        await db.deleteAllUserSessions(userId);
+        
+        // Remove from saved profiles
+        const saved = localStorage.getItem('bb_saved_profiles');
+        if (saved) {
+          const profiles = JSON.parse(saved);
+          const filtered = profiles.filter((p: any) => p.id !== userId);
+          localStorage.setItem('bb_saved_profiles', JSON.stringify(filtered));
+        }
+      } catch (err) {
+        console.error('Error clearing sessions:', err);
+      }
+    }
+
+    if (!isSupabaseConfigured) {
+      localStorage.removeItem('bb-mock-user');
+      localStorage.removeItem('bb-mock-profile');
+      set({ user: null, profile: null, loading: false });
+      return { error: null };
+    }
+
+    try {
+      // Sign out globally
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) throw error;
       set({ user: null, profile: null, loading: false });
       return { error: null };
