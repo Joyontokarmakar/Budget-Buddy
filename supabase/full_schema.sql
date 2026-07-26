@@ -58,6 +58,7 @@ create table public.categories (
     monthly_amount numeric(10, 2) default 0.00,
     preferred_account_id uuid references public.accounts(id) on delete set null,
     is_active boolean default true,
+    estimated_pay_day integer,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     unique(user_id, name)
 );
@@ -190,6 +191,7 @@ create table public.loans (
     account_id uuid references public.accounts(id) on delete cascade not null,
     status text default 'active' not null check (status in ('active', 'settled')),
     payments jsonb default '[]'::jsonb,
+    estimated_pay_date date,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -784,8 +786,4 @@ alter default privileges in schema public grant all on functions to postgres, an
 grant all privileges on all tables in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all sequences in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all functions in schema public to postgres, anon, authenticated, service_role;
-
--- Notification settings columns
-ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS estimated_pay_day INTEGER;
-ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS estimated_pay_date DATE;
 
