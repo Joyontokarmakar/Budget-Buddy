@@ -19,7 +19,7 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSettingsOpen, setIsMobileSettingsOpen] = useState(false);
 
   const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -52,27 +52,15 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar on Desktop / Hamburger Drawer on Mobile */}
-      <Navigation isMobileOpen={isMobileMenuOpen} onCloseMobile={() => setIsMobileMenuOpen(false)} />
+      {/* Sidebar on Desktop / Bottom Bar on Mobile */}
+      <Navigation />
 
       {/* Main content area */}
       <div className="md:pl-64 min-h-screen flex flex-col transition-all duration-200">
         
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-40 h-[calc(4rem+env(safe-area-inset-top))] safe-pt border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            {/* Hamburger Menu Trigger for Mobile */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9 cursor-pointer shrink-0"
-              title="Menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-
-            <div className="relative">
+        <header className="sticky top-0 z-40 h-[calc(4rem+env(safe-area-inset-top))] safe-pt border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
+          <div className="relative">
             <button 
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="group flex items-center gap-2.5 hover:bg-muted/50 p-1.5 rounded-xl transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/10 border-none"
@@ -135,7 +123,6 @@ export const Layout: React.FC = () => {
               </>
             )}
           </div>
-        </div>
 
           {/* Desktop Search trigger */}
           <div className="flex-1 max-w-sm mx-8 hidden md:block">
@@ -271,11 +258,66 @@ export const Layout: React.FC = () => {
             >
               <LogOut className="h-4 w-4" />
             </Button>
+
+            {/* Mobile Settings Menu Hamburger */}
+            <div className="relative md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileSettingsOpen(!isMobileSettingsOpen)}
+                className="text-muted-foreground hover:text-foreground h-9 w-9 relative cursor-pointer"
+                title="Settings Menu"
+              >
+                <Menu className="h-4.5 w-4.5" />
+              </Button>
+
+              {isMobileSettingsOpen && (
+                <>
+                  <div className="fixed inset-0 z-45 bg-transparent" onClick={() => setIsMobileSettingsOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card p-1.5 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <button
+                      onClick={() => {
+                        setIsMobileSettingsOpen(false);
+                        toggleLanguage();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors cursor-pointer border-none text-left"
+                    >
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span>Language: {currentLang.toUpperCase()}</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setIsMobileSettingsOpen(false);
+                        toggleTheme();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors cursor-pointer border-none text-left"
+                    >
+                      {getThemeIcon()}
+                      <span className="capitalize">Theme: {currentTheme}</span>
+                    </button>
+                    
+                    <div className="h-px bg-border/60 my-1" />
+                    
+                    <button
+                      onClick={() => {
+                        setIsMobileSettingsOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-none text-left"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Main Content Router Slot */}
-        <main className="flex-1 px-4 py-6 md:p-8 pb-8 max-w-5xl w-full mx-auto">
+        <main className="flex-1 px-4 py-6 md:p-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-8 max-w-5xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
