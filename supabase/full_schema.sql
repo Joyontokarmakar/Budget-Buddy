@@ -2,17 +2,15 @@
 -- BUDGET BUDDY - FULL UNIFIED DATABASE SCHEMA SETUP
 -- =========================================================================
 
--- Clean setup: Wipe any existing public tables and start fresh
-drop schema if exists public cascade;
-create schema public;
-grant all on schema public to postgres;
-grant all on schema public to public;
+-- Safe setup: Enable extensions and build tables if they do not exist
+grant usage on schema public to postgres;
+grant usage on schema public to public;
 
 -- 1. Enable UUID Extension
 create extension if not exists "uuid-ossp";
 
 -- 2. Create Profiles Table
-create table public.profiles (
+create table if not exists public.profiles (
     id uuid references auth.users on delete cascade primary key,
     name text,
     email text,
@@ -34,7 +32,7 @@ create table public.profiles (
 alter table public.profiles enable row level security;
 
 -- 3. Create Accounts Table
-create table public.accounts (
+create table if not exists public.accounts (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     name text not null,
@@ -48,7 +46,7 @@ create table public.accounts (
 alter table public.accounts enable row level security;
 
 -- 4. Create Categories Table
-create table public.categories (
+create table if not exists public.categories (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade, -- null means global system default
     name text not null,
@@ -67,7 +65,7 @@ create table public.categories (
 alter table public.categories enable row level security;
 
 -- 5. Create Stores Table
-create table public.stores (
+create table if not exists public.stores (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade, -- null means global system default
     name text not null,
@@ -81,7 +79,7 @@ create table public.stores (
 alter table public.stores enable row level security;
 
 -- 6. Create Expenses Table
-create table public.expenses (
+create table if not exists public.expenses (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     date date default current_date not null,
@@ -100,7 +98,7 @@ create table public.expenses (
 alter table public.expenses enable row level security;
 
 -- 7. Create Income Table
-create table public.income (
+create table if not exists public.income (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     date date default current_date not null,
@@ -117,7 +115,7 @@ create table public.income (
 alter table public.income enable row level security;
 
 -- 8. Create Receipts Table
-create table public.receipts (
+create table if not exists public.receipts (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     receipt_url text not null,
@@ -132,7 +130,7 @@ create table public.receipts (
 alter table public.receipts enable row level security;
 
 -- 9. Create Permanent Assets Table
-create table public.permanent_assets (
+create table if not exists public.permanent_assets (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     name text not null,
@@ -162,7 +160,7 @@ create table if not exists public.user_sessions (
 alter table public.user_sessions enable row level security;
 
 -- 11. Create Deposits Table
-create table public.deposits (
+create table if not exists public.deposits (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     amount numeric(10, 2) not null check (amount > 0),
@@ -179,7 +177,7 @@ create table public.deposits (
 alter table public.deposits enable row level security;
 
 -- 12. Create Loans Table
-create table public.loans (
+create table if not exists public.loans (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     type text not null check (type in ('taken', 'provided')),
@@ -200,7 +198,7 @@ create table public.loans (
 alter table public.loans enable row level security;
 
 -- 13. Create EMI Facilities Table
-create table public.emis (
+create table if not exists public.emis (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references public.profiles(id) on delete cascade not null,
     item_name text not null,
@@ -786,4 +784,10 @@ alter default privileges in schema public grant all on functions to postgres, an
 grant all privileges on all tables in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all sequences in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all functions in schema public to postgres, anon, authenticated, service_role;
+
+-- Ensure all columns added in migrations are present in existing tables
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS residence_country TEXT;
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS estimated_pay_day INTEGER;
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS estimated_pay_date DATE;
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS emi_id UUID REFERENCES public.emis(id) ON DELETE SET NULL;
 
