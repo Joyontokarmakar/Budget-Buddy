@@ -708,7 +708,7 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="h-[380px] sm:h-64 pt-2 flex flex-col justify-center">
+              <CardContent className="h-[380px] sm:h-80 pt-2 flex flex-col justify-center">
                 {categoryData.length === 0 ? (
                   <div className="text-center text-xs text-muted-foreground font-semibold py-12">
                     No categorized expenses logged for the selected period.
@@ -719,8 +719,8 @@ export const Analytics: React.FC = () => {
                       <Pie
                         data={categoryData}
                         cx="50%"
-                        cy={isMobile ? "40%" : "50%"}
-                        outerRadius={isMobile ? 65 : 80}
+                        cy={isMobile ? "40%" : "45%"}
+                        outerRadius={isMobile ? 65 : 75}
                         dataKey="value"
                         nameKey="name"
                       >
@@ -758,7 +758,7 @@ export const Analytics: React.FC = () => {
                 </CardTitle>
                 <CardDescription>Expense historical tracking totals</CardDescription>
               </CardHeader>
-              <CardContent className="h-64 pt-2">
+              <CardContent className="h-64 sm:h-80 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
