@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
+import { useNotificationStore } from '../stores/notificationStore';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User } from 'lucide-react';
+import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User, Bell } from 'lucide-react';
 import { Button } from './ui';
 import { GlobalSearch } from './GlobalSearch';
+import { ToastContainer } from './ToastContainer';
+import { NotificationChecker } from './NotificationChecker';
+import { cn } from '../utils/cn';
 
 import { StatusDots } from './StatusDots';
 
@@ -14,6 +18,10 @@ export const Layout: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const currentTheme = profile?.theme_preference || 'system';
   const currentLang = profile?.preferred_language || i18n.language || 'de';
@@ -141,6 +149,81 @@ export const Layout: React.FC = () => {
               <Search className="h-4 w-4" />
             </Button>
 
+            {/* Notifications Popover Bell Dropdown */}
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="text-muted-foreground hover:text-foreground h-9 w-9 relative"
+                title="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-4 min-w-[16px] px-1 rounded-full bg-rose-500 text-[9px] font-black text-white flex items-center justify-center border border-background">
+                    {unreadCount}
+                  </span>
+                )}
+              </Button>
+
+              {isNotifOpen && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsNotifOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
+                      <span className="text-xs font-black text-foreground">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => {
+                            markAllAsRead();
+                          }}
+                          className="text-[10px] font-extrabold text-primary hover:underline cursor-pointer border-none bg-transparent"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground text-xs font-semibold">
+                          No notifications
+                        </div>
+                      ) : (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              markAsRead(notif.id);
+                            }}
+                            className={cn(
+                              "p-2.5 rounded-xl border text-left text-xs transition-colors flex items-start gap-2.5 cursor-pointer relative",
+                              notif.is_read
+                                ? "bg-card/50 border-border/45 opacity-70"
+                                : "bg-primary/5 hover:bg-primary/10 border-primary/20"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-2">
+                                <span className="font-extrabold text-foreground truncate block">{notif.title}</span>
+                                {!notif.is_read && (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-1" />
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5 leading-normal">{notif.message}</p>
+                              <span className="text-[8px] text-muted-foreground/60 font-bold block mt-1.5">
+                                {new Date(notif.created_at).toLocaleDateString('de-DE')} {new Date(notif.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Quick Language Toggle */}
             <Button
               variant="ghost"
@@ -185,6 +268,10 @@ export const Layout: React.FC = () => {
 
       {/* Global Search command palette */}
       <GlobalSearch />
+
+      {/* Global Toast stack and notification logic check */}
+      <ToastContainer />
+      {profile && <NotificationChecker />}
     </div>
   );
 };

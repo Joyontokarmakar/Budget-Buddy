@@ -55,6 +55,7 @@ export const Settings: React.FC = () => {
   const [catBillAmtInput, setCatBillAmtInput] = useState('0.00');
   const [catPrefAccInput, setCatPrefAccInput] = useState('');
   const [catIsActiveInput, setCatIsActiveInput] = useState(true);
+  const [catEstPayDayInput, setCatEstPayDayInput] = useState('');
 
   // Accounts state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -309,6 +310,7 @@ export const Settings: React.FC = () => {
           monthly_amount: parseFloat(catBillAmtInput) || 0,
           preferred_account_id: catPrefAccInput || null,
           is_active: catIsActiveInput,
+          estimated_pay_day: catIsBillInput ? (parseInt(catEstPayDayInput) || null) : null
         });
       } else {
         await db.createCategory(
@@ -318,7 +320,8 @@ export const Settings: React.FC = () => {
           catColorInput,
           catIsBillInput,
           parseFloat(catBillAmtInput) || 0,
-          catPrefAccInput || null
+          catPrefAccInput || null,
+          catIsBillInput ? (parseInt(catEstPayDayInput) || null) : null
         );
       }
       
@@ -798,6 +801,7 @@ export const Settings: React.FC = () => {
                       setCatBillAmtInput('0.00');
                       setCatPrefAccInput('');
                       setCatIsActiveInput(true);
+                      setCatEstPayDayInput('');
                       setIsCategoryModalOpen(true);
                     }}
                   >
@@ -905,6 +909,7 @@ export const Settings: React.FC = () => {
                             setCatBillAmtInput(getCategoryMonthlyAmount(cat).toString());
                             setCatPrefAccInput(cat.preferred_account_id || '');
                             setCatIsActiveInput(isCategoryActive(cat));
+                            setCatEstPayDayInput(cat.estimated_pay_day ? cat.estimated_pay_day.toString() : '');
                             setIsCategoryModalOpen(true);
                           }}
                         >
@@ -1323,6 +1328,29 @@ export const Settings: React.FC = () => {
                 <div className="w-8 h-4 bg-muted-foreground/35 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
+
+            {catIsBillInput && (
+              <div className="flex flex-col gap-1.5 border-t border-border/10 pt-3">
+                <Input
+                  type="number"
+                  min="1"
+                  max="31"
+                  label="Estimated Pay Day of Month (1-31)"
+                  value={catEstPayDayInput}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value);
+                    const val = isNaN(parsed) ? '' : Math.min(Math.max(parsed, 1), 31).toString();
+                    setCatEstPayDayInput(val);
+                  }}
+                  className="h-9 text-xs font-mono"
+                  placeholder="e.g. 15"
+                  required
+                />
+                <p className="text-[9.5px] text-muted-foreground leading-normal ml-0.5">
+                  The system will automatically alert you starting 2 days before this day if the bill is unpaid.
+                </p>
+              </div>
+            )}
             
             {/* Target Budget Amount & Preferred Account - ALWAYS VISIBLE */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/20">

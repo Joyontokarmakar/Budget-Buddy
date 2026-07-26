@@ -784,3 +784,8 @@ alter default privileges in schema public grant all on functions to postgres, an
 grant all privileges on all tables in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all sequences in schema public to postgres, anon, authenticated, service_role;
 grant all privileges on all functions in schema public to postgres, anon, authenticated, service_role;
+
+-- Notification settings columns
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS estimated_pay_day INTEGER;
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS estimated_pay_date DATE;
+

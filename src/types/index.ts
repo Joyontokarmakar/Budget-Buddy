@@ -51,6 +51,7 @@ export interface Category {
   monthly_amount?: number;
   preferred_account_id?: string | null;
   is_active?: boolean;
+  estimated_pay_day?: number | null;
   created_at: string;
 }
 
@@ -181,6 +182,7 @@ export interface Loan {
   account_id: string;
   status: 'active' | 'settled';
   payments: LoanPayment[] | null;
+  estimated_pay_date?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -206,5 +208,16 @@ export interface EMI {
 
 export interface EMIWithDetails extends EMI {
   category?: Category | null;
+}
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: 'bill' | 'loan' | 'emi' | 'auth' | 'other';
+  title: string;
+  message: string;
+  is_read: boolean;
+  target_date?: string;
+  created_at: string;
 }
 

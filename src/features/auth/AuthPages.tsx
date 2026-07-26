@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '../../services/supabase';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui';
 import { Mail, Lock, User, CheckCircle, Globe } from 'lucide-react';
 import { COUNTRIES } from '../../utils/countries';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 // =========================================================================
 // SIGN IN PAGE
@@ -18,6 +19,8 @@ export const SignInPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const addToast = useNotificationStore(state => state.addToast);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -29,6 +32,7 @@ export const SignInPage: React.FC = () => {
     if (err) {
       setError(err);
     } else {
+      addToast('Welcome back!', 'Successfully signed in.', 'success');
       navigate('/');
     }
   };
@@ -38,8 +42,11 @@ export const SignInPage: React.FC = () => {
     const { error: err } = await signInWithGoogle();
     if (err) {
       setError(err);
-    } else if (!isSupabaseConfigured) {
-      navigate('/');
+    } else {
+      addToast('Welcome back!', 'Successfully signed in with Google.', 'success');
+      if (!isSupabaseConfigured) {
+        navigate('/');
+      }
     }
   };
 
@@ -167,6 +174,8 @@ export const SignUpPage: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const addToast = useNotificationStore(state => state.addToast);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -186,6 +195,7 @@ export const SignUpPage: React.FC = () => {
     if (err) {
       setError(err);
     } else {
+      addToast('Welcome to Budget Buddy!', 'Account created successfully.', 'success');
       navigate('/');
     }
   };

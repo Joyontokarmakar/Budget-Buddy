@@ -48,6 +48,7 @@ export const DepositsLoans: React.FC = () => {
   const [loanNotes, setLoanNotes] = useState('');
   const [loanSaving, setLoanSaving] = useState(false);
   const [loanError, setLoanError] = useState<string | null>(null);
+  const [loanEstPayDate, setLoanEstPayDate] = useState('');
 
   // Repayment Dialog & Form states
   const [selectedLoan, setSelectedLoan] = useState<LoanWithDetails | null>(null);
@@ -215,6 +216,7 @@ export const DepositsLoans: React.FC = () => {
         date: loanDate,
         account_id: loanAccountId,
         notes: loanNotes.trim() || null,
+        estimated_pay_date: loanEstPayDate || null
       });
 
       // Reset form
@@ -222,6 +224,7 @@ export const DepositsLoans: React.FC = () => {
       setLoanPerson('');
       setLoanNotes('');
       setLoanDate(new Date().toISOString().split('T')[0]);
+      setLoanEstPayDate('');
       setIsLoanOpen(false);
       await loadData();
     } catch (err: any) {
@@ -451,7 +454,10 @@ export const DepositsLoans: React.FC = () => {
           )}
           {activeTab === 'loans' && (
             <Button 
-              onClick={() => setIsLoanOpen(true)}
+              onClick={() => {
+                setLoanEstPayDate('');
+                setIsLoanOpen(true);
+              }}
               className="bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-500/10 border-none transition-all duration-200 active:scale-[0.98]"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -1133,6 +1139,14 @@ export const DepositsLoans: React.FC = () => {
             placeholder={loanType === 'taken' ? "Why did you borrow? e.g. Semester Fee, Laptop purchase" : "Why did you lend? e.g. Shared Rent, Dinner bill"}
             value={loanNotes}
             onChange={(e) => setLoanNotes(e.target.value)}
+          />
+
+          <Input
+            type="date"
+            label="Estimated Repayment Date (Optional)"
+            placeholder="Select expected payment due date"
+            value={loanEstPayDate}
+            onChange={(e) => setLoanEstPayDate(e.target.value)}
           />
 
           <div className="flex gap-3 justify-end pt-2">

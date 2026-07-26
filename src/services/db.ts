@@ -700,7 +700,8 @@ export const db = {
     color: string,
     isMonthlyBill = false,
     monthlyAmount = 0.00,
-    preferredAccountId: string | null = null
+    preferredAccountId: string | null = null,
+    estimatedPayDay: number | null = null
   ): Promise<Category> => {
     if (!isSupabaseConfigured) {
       initLocalStorage(userId);
@@ -715,6 +716,7 @@ export const db = {
         monthly_amount: monthlyAmount,
         preferred_account_id: preferredAccountId,
         is_active: true,
+        estimated_pay_day: estimatedPayDay,
         created_at: new Date().toISOString(),
       };
       categories.push(newCat);
@@ -731,7 +733,8 @@ export const db = {
         color,
         is_monthly_bill: isMonthlyBill,
         monthly_amount: monthlyAmount,
-        preferred_account_id: preferredAccountId
+        preferred_account_id: preferredAccountId,
+        estimated_pay_day: estimatedPayDay
       })
       .select()
       .single();
