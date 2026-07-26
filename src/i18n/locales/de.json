@@ -109,7 +109,10 @@
     "last3Months": "Letzte 3 Monate",
     "last6Months": "Letzte 6 Monate",
     "last12Months": "Letzte 12 Monate",
-    "allTime": "Gesamter Zeitraum"
+    "allTime": "Gesamter Zeitraum",
+    "totalSpendingAllTime": "Gesamtausgaben (Allzeit)",
+    "totalIncomeAllTime": "Gesamteinnahmen (Allzeit)",
+    "netSavingsAllTime": "Netto-Sparquote (Allzeit)"
   },
   "settings": {
     "title": "Einstellungen",

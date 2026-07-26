@@ -7,7 +7,7 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
-import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X } from 'lucide-react';
+import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X, TrendingDown, TrendingUp } from 'lucide-react';
 export const Analytics: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
@@ -594,6 +594,9 @@ export const Analytics: React.FC = () => {
   console.log('[Analytics debug] render activity state:', { activityYear, activityMonth });
 
   const hasData = expenses.length > 0 || incomes.length > 0;
+  const totalSpendingAllTime = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalIncomeAllTime = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const netSavingsAllTime = totalIncomeAllTime - totalSpendingAllTime;
 
   return (
     <div className="space-y-6">
@@ -626,6 +629,51 @@ export const Analytics: React.FC = () => {
         </Card>
       ) : (
         <div className="space-y-6">
+          {/* STATS SUMMARY ROW */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.totalSpendingAllTime')}</p>
+                  <p className="text-xl font-black text-rose-500">
+                    €{totalSpendingAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/10">
+                  <TrendingDown className="h-5 w-5 text-rose-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.totalIncomeAllTime')}</p>
+                  <p className="text-xl font-black text-emerald-500">
+                    €{totalIncomeAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10">
+                  <TrendingUp className="h-5 w-5 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.netSavingsAllTime')}</p>
+                  <p className={cn("text-xl font-black", netSavingsAllTime >= 0 ? "text-primary" : "text-amber-500")}>
+                    €{netSavingsAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/10">
+                  <Coins className="h-5 w-5 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* ROW 1: CATEGORY BREAKDOWN & TREND LINE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             

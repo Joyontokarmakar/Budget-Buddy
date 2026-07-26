@@ -109,7 +109,10 @@
     "last3Months": "Last 3 Months",
     "last6Months": "Last 6 Months",
     "last12Months": "Last 12 Months",
-    "allTime": "All Time"
+    "allTime": "All Time",
+    "totalSpendingAllTime": "Total Spending (All Time)",
+    "totalIncomeAllTime": "Total Income (All Time)",
+    "netSavingsAllTime": "Net Savings (All Time)"
   },
   "settings": {
     "title": "Settings",
