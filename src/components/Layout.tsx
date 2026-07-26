@@ -4,7 +4,7 @@ import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useTranslation } from 'react-i18next';
-import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User, Bell } from 'lucide-react';
+import { Sun, Moon, LogOut, Laptop, Globe, Search, ChevronDown, User, Bell, Menu } from 'lucide-react';
 import { Button } from './ui';
 import { GlobalSearch } from './GlobalSearch';
 import { ToastContainer } from './ToastContainer';
@@ -19,6 +19,7 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -51,15 +52,27 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar on Desktop / Bottom Bar on Mobile */}
-      <Navigation />
+      {/* Sidebar on Desktop / Hamburger Drawer on Mobile */}
+      <Navigation isMobileOpen={isMobileMenuOpen} onCloseMobile={() => setIsMobileMenuOpen(false)} />
 
       {/* Main content area */}
       <div className="md:pl-64 min-h-screen flex flex-col transition-all duration-200">
         
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-40 h-[calc(4rem+env(safe-area-inset-top))] safe-pt border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
-          <div className="relative">
+        <header className="sticky top-0 z-40 h-[calc(4rem+env(safe-area-inset-top))] safe-pt border-b border-border/60 bg-background/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            {/* Hamburger Menu Trigger for Mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9 cursor-pointer shrink-0"
+              title="Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+
+            <div className="relative">
             <button 
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               className="group flex items-center gap-2.5 hover:bg-muted/50 p-1.5 rounded-xl transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/10 border-none"
@@ -122,6 +135,7 @@ export const Layout: React.FC = () => {
               </>
             )}
           </div>
+        </div>
 
           {/* Desktop Search trigger */}
           <div className="flex-1 max-w-sm mx-8 hidden md:block">
@@ -230,7 +244,7 @@ export const Layout: React.FC = () => {
               size="icon"
               onClick={toggleLanguage}
               title={`Switch to ${currentLang === 'de' ? 'English' : 'Deutsch'}`}
-              className="text-muted-foreground hover:text-foreground h-9 w-9"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 hidden md:inline-flex cursor-pointer"
             >
               <Globe className="h-4 w-4 mr-0.5" />
               <span className="text-[10px] font-bold uppercase">{currentLang.slice(0, 2)}</span>
@@ -242,7 +256,7 @@ export const Layout: React.FC = () => {
               size="icon"
               onClick={toggleTheme}
               title={`Theme: ${currentTheme}`}
-              className="text-muted-foreground hover:text-foreground h-9 w-9"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 hidden md:inline-flex cursor-pointer"
             >
               {getThemeIcon()}
             </Button>
@@ -253,7 +267,7 @@ export const Layout: React.FC = () => {
               size="icon"
               onClick={handleLogout}
               title="Logout"
-              className="text-muted-foreground hover:text-destructive h-9 w-9"
+              className="text-muted-foreground hover:text-destructive h-9 w-9 hidden md:inline-flex cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -261,7 +275,7 @@ export const Layout: React.FC = () => {
         </header>
 
         {/* Main Content Router Slot */}
-        <main className="flex-1 px-4 py-6 md:p-8 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-8 max-w-5xl w-full mx-auto">
+        <main className="flex-1 px-4 py-6 md:p-8 pb-8 max-w-5xl w-full mx-auto">
           <Outlet />
         </main>
       </div>
