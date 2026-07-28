@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { ExpenseWithDetails, Category, DepositWithDetails, LoanWithDetails } from '../../types';
-import { Button, Card, CardHeader, CardTitle, CardContent, Spinner } from '../../components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Spinner, Dialog } from '../../components/ui';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
 import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -40,6 +40,12 @@ export const Reports: React.FC = () => {
   // Bill Analyzer state
   const [selectedBillCategory, setSelectedBillCategory] = useState<string | null>('Total Expense');
   const [historyYear, setHistoryYear] = useState<string>('All');
+
+  // Receipt modal state
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    type: 'store' | 'product';
+    name: string;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!profile) return;
@@ -1069,6 +1075,34 @@ export const Reports: React.FC = () => {
     }, 500);
   };
 
+  const matchingReceipts = (() => {
+    if (!selectedReceipt) return [];
+
+    if (selectedReceipt.type === 'store') {
+      return shoppingExpenses.filter(e => {
+        const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
+        return storeName.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim();
+      });
+    }
+
+    if (selectedReceipt.type === 'product') {
+      return shoppingExpenses.filter(e => {
+        const safeItems = getSafeItems(e.items);
+        if (safeItems.length > 0) {
+          return safeItems.some(item => item.name.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim());
+        } else {
+          const cat = categories.find(c => c.id === e.category_id) || e.category;
+          const name = (e.notes || cat?.name || 'Purchase').trim();
+          return name.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim();
+        }
+      });
+    }
+
+    return [];
+  })();
+
+  const selectedMonthLabel = selectedDate.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+
   if (loading && expenses.length === 0) {
     return <Spinner />;
   }
@@ -1529,9 +1563,20 @@ export const Reports: React.FC = () => {
                           </p>
                         )}
                       </div>
-                      <span className="font-mono text-rose-500 font-bold shrink-0 ml-2">
-                        €{store.amount.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="font-mono text-rose-500 font-bold">
+                          €{store.amount.toFixed(2)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                          onClick={() => setSelectedReceipt({ type: 'store', name: store.name })}
+                          title="View details receipt"
+                        >
+                          <Receipt className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1555,9 +1600,20 @@ export const Reports: React.FC = () => {
                   {topProducts.map((prod, idx) => (
                     <div key={idx} className="flex justify-between items-center text-xs font-semibold">
                       <span className="text-muted-foreground truncate max-w-[120px]">{idx + 1}. {prod.name}</span>
-                      <span className="font-mono text-rose-500 font-bold">
-                        €{prod.amount.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="font-mono text-rose-500 font-bold">
+                          €{prod.amount.toFixed(2)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                          onClick={() => setSelectedReceipt({ type: 'product', name: prod.name })}
+                          title="View details receipt"
+                        >
+                          <Receipt className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1685,6 +1741,106 @@ export const Reports: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* SYSTEM MADE DIGITAL RECEIPTS MODAL */}
+      <Dialog
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        title={selectedReceipt ? (selectedReceipt.type === 'store' ? `${selectedReceipt.name} Receipt Details` : `Product Details: ${selectedReceipt.name}`) : ''}
+        description={selectedReceipt ? (selectedReceipt.type === 'store' ? `System-generated receipt(s) for purchases at ${selectedReceipt.name}` : `Purchases for ${selectedReceipt.name} in ${selectedMonthLabel}`) : ''}
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {matchingReceipts.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No receipt details found.</p>
+          ) : (
+            <div className="space-y-4">
+              {matchingReceipts.map((exp, expIdx) => {
+                const safeItems = getSafeItems(exp.items);
+                const storeName = exp.store?.rendering_name || exp.store?.name || 'Other/Unknown';
+                const categoryName = exp.category?.name || 'General';
+                const dateFormatted = exp.date ? new Date(exp.date).toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown Date';
+                const accountName = exp.account?.name || 'Default Account';
+                
+                return (
+                  <div key={expIdx} className="bg-amber-50/30 dark:bg-slate-950/40 border border-amber-200/50 dark:border-slate-800 p-5 rounded-2xl shadow-inner font-mono text-xs text-slate-800 dark:text-slate-300 space-y-3 relative">
+                    {/* Decorative serrated edge top */}
+                    <div className="text-[7px] text-muted-foreground/35 select-none text-center tracking-[0.2em] -mt-2 mb-1">
+                      ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+                    </div>
+                    {/* Receipt header */}
+                    <div className="text-center space-y-1">
+                      <h4 className="font-extrabold text-sm uppercase tracking-widest text-amber-900 dark:text-amber-400">{storeName}</h4>
+                      <p className="text-[10px] text-muted-foreground">{dateFormatted}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase">Method: {accountName}</p>
+                    </div>
+
+                    <div className="border-t border-dashed border-border/70 my-2" />
+
+                    {/* Items list */}
+                    <div className="space-y-1.5">
+                      {safeItems.length > 0 ? (
+                        safeItems.map((item, itemIdx) => {
+                          const isTargetProduct = selectedReceipt?.type === 'product' && 
+                            item.name.toLowerCase().trim() === selectedReceipt?.name.toLowerCase().trim();
+                          return (
+                            <div key={itemIdx} className={cn("flex justify-between items-center gap-4", isTargetProduct ? "bg-amber-100/60 dark:bg-slate-800/80 px-1.5 py-0.5 rounded font-extrabold text-primary" : "")}>
+                              <span className="truncate">{item.name}</span>
+                              <span className="shrink-0 font-bold">€{item.amount.toFixed(2)}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="truncate">{exp.notes || categoryName}</span>
+                          <span className="shrink-0 font-bold">€{exp.amount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="border-t border-dashed border-border/70 my-2" />
+
+                    {/* Financial details */}
+                    <div className="space-y-1 text-right">
+                      {exp.discount ? (
+                        <>
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                            <span>Subtotal:</span>
+                            <span>€{(exp.amount + exp.discount).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-teal-600 dark:text-teal-400">
+                            <span>Discount:</span>
+                            <span>-€{exp.discount.toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : null}
+                      <div className="flex justify-between font-extrabold text-sm text-slate-900 dark:text-white mt-1 pt-1 border-t border-dashed border-border/40">
+                        <span>TOTAL:</span>
+                        <span>€{exp.amount.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {exp.notes && (
+                      <div className="mt-2 pt-2 border-t border-dotted border-border/30 text-[10px] text-muted-foreground italic break-words text-left">
+                        Note: {exp.notes}
+                      </div>
+                    )}
+
+                    {/* Decorative serrated edge at bottom */}
+                    <div className="text-center text-[10px] text-muted-foreground/80 tracking-widest mt-4">
+                      *** THANK YOU ***
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end mt-4 pt-4 border-t border-border/40">
+          <Button variant="outline" size="sm" onClick={() => setSelectedReceipt(null)}>
+            Close
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 };

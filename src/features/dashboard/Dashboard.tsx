@@ -11,7 +11,7 @@ import { getSafeItems } from '../../utils/items';
 import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -35,6 +35,14 @@ export const Dashboard: React.FC = () => {
   const [isSearchThisMonthOpen, setIsSearchThisMonthOpen] = useState(false);
   const [searchAllTimeQuery, setSearchAllTimeQuery] = useState('');
   const [isSearchAllTimeOpen, setIsSearchAllTimeOpen] = useState(false);
+
+  // Receipt modal state
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    type: 'store' | 'product';
+    name: string;
+    month?: string; // used for product month filtering
+    scope?: 'thisMonth' | 'allTime'; // used for store scope filtering
+  } | null>(null);
 
   // Onboarding Wizard State
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -872,6 +880,38 @@ export const Dashboard: React.FC = () => {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
+  const matchingReceipts = (() => {
+    if (!selectedReceipt) return [];
+
+    if (selectedReceipt.type === 'store') {
+      const targetExpenses = selectedReceipt.scope === 'thisMonth' ? nonBillExpenses : expenses;
+      return targetExpenses.filter(e => {
+        const storeName = e.store?.rendering_name || e.store?.name || 'Other/Unknown';
+        return storeName.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim();
+      });
+    }
+
+    if (selectedReceipt.type === 'product') {
+      return expenses.filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date);
+        const monthLabel = d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+        if (monthLabel !== selectedReceipt.month) return false;
+
+        const safeItems = getSafeItems(e.items);
+        if (safeItems.length > 0) {
+          return safeItems.some(item => item.name.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim());
+        } else {
+          const cat = categories.find(c => c.id === e.category_id) || e.category;
+          const name = (e.notes || cat?.name || 'Purchase').trim();
+          return name.toLowerCase().trim() === selectedReceipt.name.toLowerCase().trim();
+        }
+      });
+    }
+
+    return [];
+  })();
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {isInstallable && (
@@ -1506,9 +1546,20 @@ export const Dashboard: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
-                      €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                        €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                        onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'allTime' })}
+                        title="View details receipt"
+                      >
+                        <Receipt className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1585,9 +1636,20 @@ export const Dashboard: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold shrink-0 ml-2">
-                      €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                        €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                        onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'thisMonth' })}
+                        title="View details receipt"
+                      >
+                        <Receipt className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1614,9 +1676,20 @@ export const Dashboard: React.FC = () => {
                       <p className="text-foreground/90 font-bold">{prod.name}</p>
                       <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
                     </div>
-                    <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                      €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                        €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                        onClick={() => setSelectedReceipt({ type: 'product', name: prod.name, month: prod.month })}
+                        title="View details receipt"
+                      >
+                        <Receipt className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2016,6 +2089,106 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      </Dialog>
+
+      {/* SYSTEM MADE DIGITAL RECEIPTS MODAL */}
+      <Dialog
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        title={selectedReceipt ? (selectedReceipt.type === 'store' ? `${selectedReceipt.name} Receipt Details` : `Product Details: ${selectedReceipt.name}`) : ''}
+        description={selectedReceipt ? (selectedReceipt.type === 'store' ? `System-generated receipt(s) for purchases at ${selectedReceipt.name}` : `Purchases for ${selectedReceipt.name} in ${selectedReceipt.month || ''}`) : ''}
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {matchingReceipts.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4 text-center">No receipt details found.</p>
+          ) : (
+            <div className="space-y-4">
+              {matchingReceipts.map((exp, expIdx) => {
+                const safeItems = getSafeItems(exp.items);
+                const storeName = exp.store?.rendering_name || exp.store?.name || 'Other/Unknown';
+                const categoryName = exp.category?.name || 'General';
+                const dateFormatted = exp.date ? new Date(exp.date).toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown Date';
+                const accountName = exp.account?.name || 'Default Account';
+                
+                return (
+                  <div key={expIdx} className="bg-amber-50/30 dark:bg-slate-950/40 border border-amber-200/50 dark:border-slate-800 p-5 rounded-2xl shadow-inner font-mono text-xs text-slate-800 dark:text-slate-300 space-y-3 relative">
+                    {/* Decorative serrated edge top */}
+                    <div className="text-[7px] text-muted-foreground/35 select-none text-center tracking-[0.2em] -mt-2 mb-1">
+                      ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+                    </div>
+                    {/* Receipt header */}
+                    <div className="text-center space-y-1">
+                      <h4 className="font-extrabold text-sm uppercase tracking-widest text-amber-900 dark:text-amber-400">{storeName}</h4>
+                      <p className="text-[10px] text-muted-foreground">{dateFormatted}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase">Method: {accountName}</p>
+                    </div>
+
+                    <div className="border-t border-dashed border-border/70 my-2" />
+
+                    {/* Items list */}
+                    <div className="space-y-1.5">
+                      {safeItems.length > 0 ? (
+                        safeItems.map((item, itemIdx) => {
+                          const isTargetProduct = selectedReceipt?.type === 'product' && 
+                            item.name.toLowerCase().trim() === selectedReceipt?.name.toLowerCase().trim();
+                          return (
+                            <div key={itemIdx} className={cn("flex justify-between items-center gap-4", isTargetProduct ? "bg-amber-100/60 dark:bg-slate-800/80 px-1.5 py-0.5 rounded font-extrabold text-primary" : "")}>
+                              <span className="truncate">{item.name}</span>
+                              <span className="shrink-0 font-bold">€{item.amount.toFixed(2)}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex justify-between items-center gap-4">
+                          <span className="truncate">{exp.notes || categoryName}</span>
+                          <span className="shrink-0 font-bold">€{exp.amount.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="border-t border-dashed border-border/70 my-2" />
+
+                    {/* Financial details */}
+                    <div className="space-y-1 text-right">
+                      {exp.discount ? (
+                        <>
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                            <span>Subtotal:</span>
+                            <span>€{(exp.amount + exp.discount).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-teal-600 dark:text-teal-400">
+                            <span>Discount:</span>
+                            <span>-€{exp.discount.toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : null}
+                      <div className="flex justify-between font-extrabold text-sm text-slate-900 dark:text-white mt-1 pt-1 border-t border-dashed border-border/40">
+                        <span>TOTAL:</span>
+                        <span>€{exp.amount.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {exp.notes && (
+                      <div className="mt-2 pt-2 border-t border-dotted border-border/30 text-[10px] text-muted-foreground italic break-words text-left">
+                        Note: {exp.notes}
+                      </div>
+                    )}
+
+                    {/* Decorative serrated edge at bottom */}
+                    <div className="text-center text-[10px] text-muted-foreground/80 tracking-widest mt-4">
+                      *** THANK YOU ***
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end mt-4 pt-4 border-t border-border/40">
+          <Button variant="outline" size="sm" onClick={() => setSelectedReceipt(null)}>
+            Close
+          </Button>
         </div>
       </Dialog>
     </div>
