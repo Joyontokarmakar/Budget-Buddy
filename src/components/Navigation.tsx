@@ -37,7 +37,7 @@ export const Navigation: React.FC = () => {
   const primaryItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/expenses', label: t('nav.expenses'), icon: TrendingDown },
-    { to: '/income', label: t('nav.income'), icon: TrendingUp },
+    { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
     { to: '/reports', label: t('nav.reports'), icon: FileText },
   ];
 
@@ -45,7 +45,7 @@ export const Navigation: React.FC = () => {
     { to: '/wallet-add', label: t('nav.walletAdd') || 'Add to Wallet', icon: PlusCircle },
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
     { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: Coins },
-    { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
+    { to: '/income', label: t('nav.income'), icon: TrendingUp },
     { to: '/assets', label: t('nav.assets'), icon: Gem },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
@@ -56,7 +56,7 @@ export const Navigation: React.FC = () => {
     if (isSecondaryActive || isMoreOpen) return 4;
     if (location.pathname === '/') return 0;
     if (location.pathname === '/expenses') return 1;
-    if (location.pathname === '/income') return 2;
+    if (location.pathname === '/analytics') return 2;
     if (location.pathname === '/reports') return 3;
     return -1;
   };
