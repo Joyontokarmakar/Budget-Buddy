@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails, EMI } from '../types';
+import type { Account, Category, Store, Expense, ExpenseWithDetails, Income, IncomeWithDetails, EmploymentIncome, EmploymentIncomeWithDetails, Receipt, PermanentAsset, UserSession, Deposit, DepositWithDetails, Loan, LoanPayment, LoanWithDetails, EMI } from '../types';
 import { isCategoryBill, isCategoryActive, getCategoryMonthlyAmount } from '../utils/category';
 
 // =========================================================================
@@ -566,6 +566,9 @@ function initLocalStorage(userId: string) {
   }
   if (!localStorage.getItem('bb-emis')) {
     localStorage.setItem('bb-emis', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('bb-employment-income')) {
+    localStorage.setItem('bb-employment-income', JSON.stringify([]));
   }
 }
 
@@ -1203,6 +1206,161 @@ export const db = {
 
     const { data, error } = await supabase
       .from('income')
+      .update(updates)
+      .eq('id', incomeId)
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  // EMPLOYMENT INCOME
+  getEmploymentIncome: async (userId: string): Promise<EmploymentIncomeWithDetails[]> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const incomes = getLocalItems<EmploymentIncome>('bb-employment-income');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      return incomes
+        .filter(i => i.user_id === userId)
+        .map(i => ({
+          ...i,
+          account: accounts.find(a => a.id === i.destination_account_id) || null,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    const { data, error } = await supabase
+      .from('employment_income')
+      .select('*, account:destination_account_id(*)')
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return (data as any) || [];
+  },
+
+  createEmploymentIncome: async (userId: string, income: Omit<EmploymentIncome, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<EmploymentIncome> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const incomes = getLocalItems<EmploymentIncome>('bb-employment-income');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const newInc: EmploymentIncome = {
+        ...income,
+        id: crypto.randomUUID(),
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      incomes.push(newInc);
+      setLocalItems('bb-employment-income', incomes);
+
+      // Adjust account balance manually
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === income.destination_account_id) {
+          return { ...a, balance: a.balance + income.amount, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+
+      notifyDataChange();
+      return newInc;
+    }
+
+    const { data, error } = await supabase
+      .from('employment_income')
+      .insert({ ...income, user_id: userId })
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  deleteEmploymentIncome: async (userId: string, incomeId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const incomes = getLocalItems<EmploymentIncome>('bb-employment-income');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const inc = incomes.find(i => i.id === incomeId && i.user_id === userId);
+      if (!inc) return;
+
+      setLocalItems('bb-employment-income', incomes.filter(i => i.id !== incomeId));
+
+      // Revert account balance
+      const updatedAccounts = accounts.map(a => {
+        if (a.id === inc.destination_account_id) {
+          return { ...a, balance: a.balance - inc.amount, updated_at: new Date().toISOString() };
+        }
+        return a;
+      });
+      setLocalItems('bb-accounts', updatedAccounts);
+      notifyDataChange();
+      return;
+    }
+
+    const { error } = await supabase
+      .from('employment_income')
+      .delete()
+      .eq('id', incomeId);
+    if (error) throw error;
+    notifyDataChange();
+  },
+
+  updateEmploymentIncome: async (userId: string, incomeId: string, updates: Partial<Omit<EmploymentIncome, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<EmploymentIncome> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const incomes = getLocalItems<EmploymentIncome>('bb-employment-income');
+      const accounts = getLocalItems<Account>('bb-accounts');
+
+      const idx = incomes.findIndex(i => i.id === incomeId && i.user_id === userId);
+      if (idx === -1) throw new Error('Employment Income not found');
+
+      const oldInc = incomes[idx];
+      const newInc = { ...oldInc, ...updates, updated_at: new Date().toISOString() };
+      incomes[idx] = newInc;
+      setLocalItems('bb-employment-income', incomes);
+
+      // Adjust balances manually
+      let updatedAccounts = [...accounts];
+      if (updates.amount !== undefined || updates.destination_account_id !== undefined) {
+        const targetAccountId = updates.destination_account_id || oldInc.destination_account_id;
+        const targetAmount = updates.amount !== undefined ? updates.amount : oldInc.amount;
+
+        if (oldInc.destination_account_id === targetAccountId) {
+          // Adjust single account
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance - oldInc.amount + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        } else {
+          // Revert old account
+          updatedAccounts = updatedAccounts.map(a => {
+            if (a.id === oldInc.destination_account_id) {
+              return { ...a, balance: a.balance - oldInc.amount, updated_at: new Date().toISOString() };
+            }
+            // Add to new account
+            if (a.id === targetAccountId) {
+              return { ...a, balance: a.balance + targetAmount, updated_at: new Date().toISOString() };
+            }
+            return a;
+          });
+        }
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
+
+      notifyDataChange();
+      return newInc;
+    }
+
+    const { data, error } = await supabase
+      .from('employment_income')
       .update(updates)
       .eq('id', incomeId)
       .select()

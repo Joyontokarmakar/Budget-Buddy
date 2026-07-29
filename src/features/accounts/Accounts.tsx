@@ -2,15 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, AccountType, IncomeType, IncomeWithDetails } from '../../types';
+import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
 import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil } from 'lucide-react';
 
 export const Accounts: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -165,12 +166,14 @@ export const Accounts: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, incs] = await Promise.all([
+      const [accs, incs, empIncs] = await Promise.all([
         db.getAccounts(profile.id),
         db.getIncome(profile.id),
+        db.getEmploymentIncome(profile.id),
       ]);
       setAccounts(accs);
       setIncomes(incs);
+      setEmploymentIncomes(empIncs);
     } catch (e) {
       console.error(e);
     } finally {
@@ -332,8 +335,30 @@ export const Accounts: React.FC = () => {
                   </Button>
                 </div>
                 {(() => {
-                  const accountIncomes = incomes.filter(inc => inc.destination_account_id === acc.id);
-                  if (accountIncomes.length === 0) return null;
+                  const accountWalletAdds = incomes.filter(inc => inc.destination_account_id === acc.id).map(inc => ({
+                    id: inc.id,
+                    isEditable: true,
+                    title: inc.source_name || getSourceLabel(inc.type),
+                    date: inc.date,
+                    notes: inc.notes,
+                    amount: inc.amount,
+                    badge: null,
+                    raw: inc
+                  }));
+                  const accountEmpIncomes = employmentIncomes.filter(inc => inc.destination_account_id === acc.id).map(inc => ({
+                    id: inc.id,
+                    isEditable: false,
+                    title: inc.organization_name,
+                    date: inc.date,
+                    notes: inc.notes,
+                    amount: inc.amount,
+                    badge: i18n.language === 'de' ? 'Arbeit' : 'Salary',
+                    raw: inc
+                  }));
+                  const combinedHistory = [...accountWalletAdds, ...accountEmpIncomes]
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                  if (combinedHistory.length === 0) return null;
                   return (
                     <div className="mt-3.5 border-t border-border/50 pt-2.5">
                       <button
@@ -341,34 +366,41 @@ export const Accounts: React.FC = () => {
                         onClick={() => setExpandedAccountId(expandedAccountId === acc.id ? null : acc.id)}
                         className="flex items-center justify-between w-full text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                       >
-                        <span>{expandedAccountId === acc.id ? 'Hide Source History' : 'Show Source History'} ({accountIncomes.length})</span>
+                        <span>{expandedAccountId === acc.id ? 'Hide Inflow History' : 'Show Inflow History'} ({combinedHistory.length})</span>
                         <span className="text-[10px]">{expandedAccountId === acc.id ? '▲' : '▼'}</span>
                       </button>
 
                       {expandedAccountId === acc.id && (
                         <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto pr-1 animate-in slide-in-from-top-2 duration-200">
-                          {accountIncomes.map((inc) => (
-                            <div key={inc.id} className="flex justify-between items-center text-[11px] p-2 rounded-xl bg-secondary/50 dark:bg-muted/30 border border-border/40 font-semibold">
+                          {combinedHistory.map((item) => (
+                            <div key={item.id} className="flex justify-between items-center text-[11px] p-2 rounded-xl bg-secondary/50 dark:bg-muted/30 border border-border/40 font-semibold">
                               <div className="min-w-0 flex-1 pr-2">
-                                <div className="font-bold text-foreground truncate">
-                                  {inc.source_name || getSourceLabel(inc.type)}
+                                <div className="font-bold text-foreground flex items-center gap-1.5 truncate">
+                                  <span>{item.title}</span>
+                                  {item.badge && (
+                                    <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                                      {item.badge}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-[9px] text-muted-foreground">
-                                  {new Date(inc.date).toLocaleDateString('de-DE')} {inc.notes ? `• ${inc.notes}` : ''}
+                                  {new Date(item.date).toLocaleDateString('de-DE')} {item.notes ? `• ${item.notes}` : ''}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <div className="font-black text-emerald-600 dark:text-emerald-400">
-                                  +€{inc.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  +€{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditIncomeDialog(inc)}
-                                  className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
-                                  title="Edit deposit date/details"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </button>
+                                {item.isEditable && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditIncomeDialog(item.raw as IncomeWithDetails)}
+                                    className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
+                                    title="Edit details"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}

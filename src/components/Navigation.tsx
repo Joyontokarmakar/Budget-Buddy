@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Trash2, UserPlus, LogOut, ChevronUp, ChevronDown, Coins } from 'lucide-react';
+import { LayoutDashboard, TrendingDown, TrendingUp, Wallet, PieChart, Settings, FileText, Gem, Menu, X, Trash2, UserPlus, LogOut, ChevronUp, ChevronDown, Coins, PlusCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useAuthStore } from '../stores/authStore';
 
@@ -24,6 +24,7 @@ export const Navigation: React.FC = () => {
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/expenses', label: t('nav.expenses'), icon: TrendingDown },
     { to: '/income', label: t('nav.income'), icon: TrendingUp },
+    { to: '/wallet-add', label: t('nav.walletAdd') || 'Add to Wallet', icon: PlusCircle },
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
     { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: Coins },
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
@@ -41,6 +42,7 @@ export const Navigation: React.FC = () => {
   ];
 
   const secondaryItems = [
+    { to: '/wallet-add', label: t('nav.walletAdd') || 'Add to Wallet', icon: PlusCircle },
     { to: '/accounts', label: t('nav.accounts'), icon: Wallet },
     { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: Coins },
     { to: '/analytics', label: t('nav.analytics'), icon: PieChart },
@@ -64,12 +66,13 @@ export const Navigation: React.FC = () => {
     if (location.pathname === '/') return 0;
     if (location.pathname === '/expenses') return 1;
     if (location.pathname === '/income') return 2;
-    if (location.pathname === '/accounts') return 3;
-    if (location.pathname === '/deposits-loans') return 4;
-    if (location.pathname === '/analytics') return 5;
-    if (location.pathname === '/reports') return 6;
-    if (location.pathname === '/assets') return 7;
-    if (location.pathname === '/settings') return 8;
+    if (location.pathname === '/wallet-add') return 3;
+    if (location.pathname === '/accounts') return 4;
+    if (location.pathname === '/deposits-loans') return 5;
+    if (location.pathname === '/analytics') return 6;
+    if (location.pathname === '/reports') return 7;
+    if (location.pathname === '/assets') return 8;
+    if (location.pathname === '/settings') return 9;
     return -1;
   };
   const desktopActiveIndex = getDesktopActiveIndex();

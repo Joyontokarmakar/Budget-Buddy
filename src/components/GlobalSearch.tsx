@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 import { db } from '../services/db';
-import type { Account, ExpenseWithDetails, IncomeWithDetails, Store, PermanentAsset } from '../types';
+import type { Account, ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails, Store, PermanentAsset } from '../types';
 import { cn } from '../utils/cn';
 import { 
   Search, 
@@ -21,7 +21,8 @@ import {
   LayoutDashboard, 
   ArrowRight,
   Terminal,
-  Coins
+  Coins,
+  PlusCircle
 } from 'lucide-react';
 import { Badge } from './ui';
 
@@ -51,6 +52,7 @@ export const GlobalSearch: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [assets, setAssets] = useState<PermanentAsset[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
 
@@ -62,16 +64,18 @@ export const GlobalSearch: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, exps, incs, asts, strs] = await Promise.all([
+      const [accs, exps, incs, empIncs, asts, strs] = await Promise.all([
         db.getAccounts(profile.id),
         db.getExpenses(profile.id),
         db.getIncome(profile.id),
+        db.getEmploymentIncome(profile.id),
         db.getPermanentAssets(profile.id),
         db.getStores(profile.id),
       ]);
       setAccounts(accs);
       setExpenses(exps);
       setIncomes(incs);
+      setEmploymentIncomes(empIncs);
       setAssets(asts);
       setStores(strs);
     } catch (e) {
@@ -141,7 +145,7 @@ export const GlobalSearch: React.FC = () => {
 
     window.addEventListener('keydown', handleNavigation);
     return () => window.removeEventListener('keydown', handleNavigation);
-  }, [isOpen, selectedIndex, query, expenses, incomes, assets, stores, accounts]);
+  }, [isOpen, selectedIndex, query, expenses, incomes, employmentIncomes, assets, stores, accounts]);
 
   // Scroll active item into view
   useEffect(() => {
@@ -168,6 +172,7 @@ export const GlobalSearch: React.FC = () => {
       { to: '/', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4.5 w-4.5 text-primary" /> },
       { to: '/expenses', label: t('nav.expenses'), icon: <TrendingDown className="h-4.5 w-4.5 text-rose-500" /> },
       { to: '/income', label: t('nav.income'), icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-500" /> },
+      { to: '/wallet-add', label: t('nav.walletAdd') || 'Add to Wallet', icon: <PlusCircle className="h-4.5 w-4.5 text-indigo-500" /> },
       { to: '/accounts', label: t('nav.accounts'), icon: <Wallet className="h-4.5 w-4.5 text-sky-500" /> },
       { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: <Coins className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" /> },
       { to: '/analytics', label: t('nav.analytics'), icon: <PieChart className="h-4.5 w-4.5 text-violet-500" /> },
@@ -229,6 +234,13 @@ export const GlobalSearch: React.FC = () => {
       monthsMap.set(monthKey, cur);
     });
     incomes.forEach(i => {
+      const monthKey = i.date.substring(0, 7); // YYYY-MM
+      const cur = monthsMap.get(monthKey) || { expenses: 0, income: 0, txCount: 0 };
+      cur.income += i.amount;
+      cur.txCount += 1;
+      monthsMap.set(monthKey, cur);
+    });
+    employmentIncomes.forEach(i => {
       const monthKey = i.date.substring(0, 7); // YYYY-MM
       const cur = monthsMap.get(monthKey) || { expenses: 0, income: 0, txCount: 0 };
       cur.income += i.amount;
@@ -384,7 +396,7 @@ export const GlobalSearch: React.FC = () => {
     });
 
     incomes.forEach(i => {
-      const typeName = t(`income.${i.type}`, i.type);
+      const typeName = t(`walletAdd.${i.type}`, i.type);
       const notesMatch = i.notes && i.notes.toLowerCase().includes(lowerQuery);
       const typeMatch = typeName.toLowerCase().includes(lowerQuery);
       const sourceMatch = i.source_name && i.source_name.toLowerCase().includes(lowerQuery);
@@ -396,8 +408,31 @@ export const GlobalSearch: React.FC = () => {
           id: `tx-inc-${i.id}`,
           type: 'transaction' as const,
           category: t('search.transactions'),
-          title: i.notes || `${sourceDisp} Income`,
-          subtitle: `Income: €${i.amount.toFixed(2)} from ${sourceDisp} on ${i.date}`,
+          title: i.notes || `${sourceDisp} Wallet Add`,
+          subtitle: `Wallet Add: €${i.amount.toFixed(2)} from ${sourceDisp} on ${i.date}`,
+          badge: `+€${i.amount.toFixed(2)}`,
+          badgeVariant: 'success',
+          onClick: () => {
+            navigate('/wallet-add');
+            setIsOpen(false);
+          },
+          icon: <TrendingUp className="h-4.5 w-4.5 text-indigo-500" />
+        });
+      }
+    });
+
+    employmentIncomes.forEach(i => {
+      const notesMatch = i.notes && i.notes.toLowerCase().includes(lowerQuery);
+      const orgMatch = i.organization_name.toLowerCase().includes(lowerQuery);
+      const amountMatch = i.amount.toString().includes(lowerQuery);
+      
+      if (notesMatch || orgMatch || amountMatch) {
+        matchedTransactions.push({
+          id: `tx-emp-${i.id}`,
+          type: 'transaction' as const,
+          category: t('search.transactions'),
+          title: i.notes || `${i.organization_name} Income`,
+          subtitle: `Income: €${i.amount.toFixed(2)} from ${i.organization_name} on ${i.date}`,
           badge: `+€${i.amount.toFixed(2)}`,
           badgeVariant: 'success',
           onClick: () => {

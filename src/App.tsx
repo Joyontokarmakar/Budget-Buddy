@@ -10,6 +10,7 @@ import { SignInPage, SignUpPage, ForgotPasswordPage, ResetPasswordPage } from '.
 import { Dashboard } from './features/dashboard/Dashboard';
 import { Expenses } from './features/expenses/Expenses';
 import { Income } from './features/income/Income';
+import { WalletAdd } from './features/wallet-add/WalletAdd';
 import { Accounts } from './features/accounts/Accounts';
 import { Analytics } from './features/analytics/Analytics';
 import { Reports } from './features/reports/Reports';
@@ -72,7 +73,9 @@ function SEOTracker() {
     } else if (path.startsWith('/expenses')) {
       pageTitle = 'Track Expenses & Monthly Bills Checklist | Budget buddy Student';
     } else if (path.startsWith('/income')) {
-      pageTitle = 'Log Income & Werkstudent Salaries | Budget buddy Student';
+      pageTitle = 'Track Employment Income & Salaries | Budget buddy Student';
+    } else if (path.startsWith('/wallet-add')) {
+      pageTitle = 'Add to Wallet & Fund Accounts | Budget buddy Student';
     } else if (path.startsWith('/accounts')) {
       pageTitle = 'Manage Bank Accounts & Asset Balances | Budget buddy Student';
     } else if (path.startsWith('/deposits-loans')) {
@@ -139,6 +142,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="expenses" element={<Expenses />} />
               <Route path="income" element={<Income />} />
+              <Route path="wallet-add" element={<WalletAdd />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="deposits-loans" element={<DepositsLoans />} />
               <Route path="analytics" element={<Analytics />} />

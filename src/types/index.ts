@@ -110,6 +110,23 @@ export interface IncomeWithDetails extends Income {
   account?: Account | null;
 }
 
+export interface EmploymentIncome {
+  id: string;
+  user_id: string;
+  organization_name: string;
+  date: string;
+  notes: string | null;
+  amount: number;
+  destination_account_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmploymentIncomeWithDetails extends EmploymentIncome {
+  account?: Account | null;
+}
+
+
 export interface Receipt {
   id: string;
   user_id: string;

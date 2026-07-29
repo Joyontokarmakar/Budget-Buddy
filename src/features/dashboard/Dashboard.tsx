@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, ExpenseWithDetails, IncomeWithDetails, Category, EMI } from '../../types';
+import type { Account, ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails, Category, EMI } from '../../types';
 import { Button, Card, CardHeader, CardTitle, CardContent, Progress, Spinner, Dialog, Input, Select } from '../../components/ui';
 import { usePWA } from '../../hooks/usePWA';
 import { getCategoryColor } from '../../utils/color';
@@ -11,7 +11,7 @@ import { getSafeItems } from '../../utils/items';
 import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, PlusCircle } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -22,6 +22,7 @@ export const Dashboard: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
   const [emis, setEmis] = useState<EMI[]>([]);
@@ -186,10 +187,11 @@ export const Dashboard: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, exps, incs, cats, lns, ems] = await Promise.all([
+      const [accs, exps, incs, empIncs, cats, lns, ems] = await Promise.all([
         db.getAccounts(profile.id),
         db.getExpenses(profile.id),
         db.getIncome(profile.id),
+        db.getEmploymentIncome(profile.id),
         db.getCategories(profile.id),
         db.getLoans(profile.id),
         db.getEmis(profile.id),
@@ -197,6 +199,7 @@ export const Dashboard: React.FC = () => {
       setAccounts(accs);
       setExpenses(exps);
       setIncomes(incs);
+      setEmploymentIncomes(empIncs);
       setCategories(cats);
       setLoans(lns);
       setEmis(ems);
@@ -554,7 +557,7 @@ export const Dashboard: React.FC = () => {
     return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
   });
 
-  const thisMonthIncomes = incomes.filter(i => {
+  const thisMonthEmploymentIncomes = employmentIncomes.filter(i => {
     const d = new Date(i.date);
     return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
   });
@@ -562,14 +565,15 @@ export const Dashboard: React.FC = () => {
   const totalAssets = accounts.reduce((acc, curr) => acc + curr.balance, 0);
   const monthlyBudget = profile?.monthly_budget || 700.00;
   const monthlySpending = thisMonthExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const thisMonthIncome = thisMonthIncomes.reduce((acc, curr) => acc + curr.amount, 0);
+  const thisMonthIncome = thisMonthEmploymentIncomes.reduce((acc, curr) => acc + curr.amount, 0);
   const remainingBudget = Math.max(monthlyBudget - monthlySpending, 0);
   
   // Savings is total month income minus spending
   const thisMonthSavings = thisMonthIncome - monthlySpending;
 
   // Sum up discounts in the current month
-  const thisMonthDiscounts = thisMonthExpenses.reduce((acc, curr) => acc + (curr.discount || 0), 0);
+  const thisMonthExpensesFiltered = thisMonthExpenses.filter(e => e.amount !== undefined); // safe mapping
+  const thisMonthDiscounts = thisMonthExpensesFiltered.reduce((acc, curr) => acc + (curr.discount || 0), 0);
 
   // Percentage calculations
   const budgetUsedPercent = monthlyBudget > 0 ? (monthlySpending / monthlyBudget) * 100 : 0;
@@ -607,7 +611,15 @@ export const Dashboard: React.FC = () => {
     ...incomes.map(i => ({
       id: i.id,
       type: 'income' as const,
-      title: t(`income.${i.type}`, i.type),
+      title: i.source_name || (i.type ? t(`walletAdd.${i.type}`, i.type) : t('walletAdd.title')),
+      amount: i.amount,
+      date: i.date,
+      accountName: i.account?.name || 'Account',
+    })),
+    ...employmentIncomes.map(i => ({
+      id: i.id,
+      type: 'income' as const,
+      title: i.organization_name,
       amount: i.amount,
       date: i.date,
       accountName: i.account?.name || 'Account',
@@ -1703,7 +1715,7 @@ export const Dashboard: React.FC = () => {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold">{t('dashboard.quickActions')}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-3">
+        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/expenses')}>
             <TrendingDown className="h-5 w-5 text-rose-500" />
             + Expense
@@ -1711,6 +1723,10 @@ export const Dashboard: React.FC = () => {
           <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/income')}>
             <TrendingUp className="h-5 w-5 text-emerald-500" />
             + Income
+          </Button>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/wallet-add')}>
+            <PlusCircle className="h-5 w-5 text-indigo-500" />
+            + Add Wallet
           </Button>
           <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts')}>
             <Plus className="h-5 w-5 text-primary" />

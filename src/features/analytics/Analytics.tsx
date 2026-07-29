@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
 import { getCategoryColor } from '../../utils/color';
 import { db } from '../../services/db';
-import type { ExpenseWithDetails, IncomeWithDetails } from '../../types';
+import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { getSafeItems } from '../../utils/items';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -15,6 +15,7 @@ export const Analytics: React.FC = () => {
 
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
+  const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
@@ -73,12 +74,14 @@ export const Analytics: React.FC = () => {
       if (!profile) return;
       try {
         setLoading(true);
-        const [exps, incs] = await Promise.all([
+        const [exps, incs, empIncs] = await Promise.all([
           db.getExpenses(profile.id),
           db.getIncome(profile.id),
+          db.getEmploymentIncome(profile.id),
         ]);
         setExpenses(exps);
         setIncomes(incs);
+        setEmploymentIncomes(empIncs);
       } catch (e) {
         console.error(e);
       } finally {
@@ -602,10 +605,11 @@ export const Analytics: React.FC = () => {
 
   console.log('[Analytics debug] render activity state:', { activityYear, activityMonth });
 
-  const hasData = expenses.length > 0 || incomes.length > 0;
+  const hasData = expenses.length > 0 || incomes.length > 0 || employmentIncomes.length > 0;
   const totalSpendingAllTime = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalIncomeAllTime = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
-  const netSavingsAllTime = totalIncomeAllTime - totalSpendingAllTime;
+  const totalWalletAddAllTime = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const totalEmploymentIncomeAllTime = employmentIncomes.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const netSavingsAllTime = totalEmploymentIncomeAllTime + totalWalletAddAllTime - totalSpendingAllTime;
 
   const matchingReceipts = (() => {
     if (!selectedReceipt) return [];
@@ -689,7 +693,7 @@ export const Analytics: React.FC = () => {
       ) : (
         <div className="space-y-6">
           {/* STATS SUMMARY ROW */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
@@ -709,11 +713,27 @@ export const Analytics: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.totalIncomeAllTime')}</p>
                   <p className="text-xl font-black text-emerald-500">
-                    €{totalIncomeAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    €{totalWalletAddAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10">
                   <TrendingUp className="h-5 w-5 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    {i18n.language === 'de' ? 'Arbeits-Einnahmen (Allzeit)' : 'Employment Income (All Time)'}
+                  </p>
+                  <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                    €{totalEmploymentIncomeAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-emerald-600/10 dark:bg-emerald-400/10 flex items-center justify-center shrink-0 border border-emerald-600/10">
+                  <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </CardContent>
             </Card>
