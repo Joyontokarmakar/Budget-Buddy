@@ -631,6 +631,13 @@ export const db = {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+
+      if (newAcc.is_default === true) {
+        accounts.forEach(a => {
+          a.is_default = false;
+        });
+      }
+
       accounts.push(newAcc);
       setLocalItems('bb-accounts', accounts);
       notifyDataChange();
@@ -639,6 +646,46 @@ export const db = {
     const { data, error } = await supabase
       .from('accounts')
       .insert({ user_id: userId, ...account })
+      .select()
+      .single();
+    if (error) throw error;
+    notifyDataChange();
+    return data;
+  },
+
+  updateAccount: async (userId: string, accountId: string, updates: Partial<Omit<Account, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<Account> => {
+    if (!isSupabaseConfigured) {
+      initLocalStorage(userId);
+      const accounts = getLocalItems<Account>('bb-accounts');
+      const idx = accounts.findIndex(a => a.id === accountId && a.user_id === userId);
+      if (idx === -1) throw new Error('Account not found');
+
+      const oldAcc = accounts[idx];
+      const updatedAcc = {
+        ...oldAcc,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
+      accounts[idx] = updatedAcc;
+
+      if (updates.is_default === true) {
+        accounts.forEach((acc, index) => {
+          if (index !== idx) {
+            acc.is_default = false;
+          }
+        });
+      }
+
+      setLocalItems('bb-accounts', accounts);
+      notifyDataChange();
+      return updatedAcc;
+    }
+
+    const { data, error } = await supabase
+      .from('accounts')
+      .update(updates)
+      .eq('id', accountId)
       .select()
       .single();
     if (error) throw error;

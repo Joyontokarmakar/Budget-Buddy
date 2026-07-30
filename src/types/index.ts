@@ -27,6 +27,7 @@ export interface Account {
   name: string;
   type: AccountType;
   balance: number;
+  is_default?: boolean;
   created_at: string;
   updated_at: string;
 }

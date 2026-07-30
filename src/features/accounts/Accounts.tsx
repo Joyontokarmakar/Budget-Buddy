@@ -25,6 +25,16 @@ export const Accounts: React.FC = () => {
   const [initialBalanceDate, setInitialBalanceDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDefault, setIsDefault] = useState(false);
+
+  // Edit Account Dialog & Form State
+  const [isEditAccountOpen, setIsEditAccountOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState<AccountType>('bank');
+  const [editIsDefault, setEditIsDefault] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Deposit Form State
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -64,6 +74,7 @@ export const Accounts: React.FC = () => {
     setInitialSourceType('other');
     setInitialSourceName('');
     setInitialBalanceDate(new Date().toISOString().split('T')[0]);
+    setIsDefault(false);
     setError(null);
     setIsDialogOpen(true);
   };
@@ -208,6 +219,7 @@ export const Accounts: React.FC = () => {
         name: name.trim(),
         type,
         balance: 0,
+        is_default: isDefault,
       });
       
       // 2. Log initial balance income if > 0
@@ -228,6 +240,7 @@ export const Accounts: React.FC = () => {
       setBalance('');
       setInitialSourceType('other');
       setInitialSourceName('');
+      setIsDefault(false);
       setIsDialogOpen(false);
       await fetchAccounts();
     } catch (err) {
@@ -235,6 +248,44 @@ export const Accounts: React.FC = () => {
       setError(errMsg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenEditAccountDialog = (account: Account) => {
+    setEditingAccount(account);
+    setEditName(account.name);
+    setEditType(account.type);
+    setEditIsDefault(!!account.is_default);
+    setEditError(null);
+    setIsEditAccountOpen(true);
+  };
+
+  const handleEditAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !editingAccount) return;
+    setEditError(null);
+
+    if (!editName.trim()) {
+      setEditError('Please enter a name');
+      return;
+    }
+
+    try {
+      setEditSaving(true);
+      await db.updateAccount(profile.id, editingAccount.id, {
+        name: editName.trim(),
+        type: editType,
+        is_default: editIsDefault,
+      });
+
+      setIsEditAccountOpen(false);
+      setEditingAccount(null);
+      await fetchAccounts();
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Error updating account';
+      setEditError(errMsg);
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -310,12 +361,27 @@ export const Accounts: React.FC = () => {
                     {getAccountIcon(acc.type)}
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-bold">{acc.name}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-sm font-bold">{acc.name}</CardTitle>
+                      {acc.is_default && (
+                        <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                          {t('accounts.defaultBadge')}
+                        </span>
+                      )}
+                    </div>
                     <CardDescription className="text-[10px] font-semibold uppercase tracking-wider">
                       {getAccountTypeLabel(acc.type)}
                     </CardDescription>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditAccountDialog(acc)}
+                  className="p-1.5 rounded-lg text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  title={t('accounts.editAccount')}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
               </CardHeader>
               <CardContent className="pb-4">
                 <div className="flex justify-between items-baseline mt-2">
@@ -488,6 +554,24 @@ export const Accounts: React.FC = () => {
             </div>
           )}
 
+          <div className="p-3.5 rounded-2xl border border-border/50 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-foreground">{t('accounts.defaultAccount')}</span>
+                <p className="text-[10px] text-muted-foreground">{t('accounts.setAsDefault')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-8 h-4 bg-muted-foreground/35 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+          </div>
+
           <div className="flex gap-3 justify-end pt-2">
             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
               {t('common.cancel')}
@@ -626,6 +710,78 @@ export const Accounts: React.FC = () => {
               {t('common.cancel')}
             </Button>
             <Button type="submit" loading={editIncomeSaving}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Edit Account Dialog */}
+      <Dialog
+        isOpen={isEditAccountOpen}
+        onClose={() => {
+          setIsEditAccountOpen(false);
+          setEditingAccount(null);
+        }}
+        title={t('accounts.editAccount')}
+      >
+        <form onSubmit={handleEditAccount} className="space-y-4">
+          {editError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {editError}
+            </div>
+          )}
+
+          <Input
+            label={t('accounts.name')}
+            placeholder={t('accounts.placeholderName')}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+          />
+
+          <Select
+            label={t('accounts.type')}
+            value={editType}
+            onChange={(e) => setEditType(e.target.value as AccountType)}
+            options={[
+              { value: 'bank', label: t('accounts.bank') },
+              { value: 'savings', label: t('accounts.savings') },
+              { value: 'cash', label: t('accounts.cash') },
+            ]}
+          />
+
+          <div className="p-3.5 rounded-2xl border border-border/50 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-foreground">{t('accounts.defaultAccount')}</span>
+                <p className="text-[10px] text-muted-foreground">{t('accounts.setAsDefault')}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editIsDefault}
+                  onChange={(e) => setEditIsDefault(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-8 h-4 bg-muted-foreground/35 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setIsEditAccountOpen(false);
+                setEditingAccount(null);
+              }} 
+              disabled={editSaving}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" loading={editSaving}>
               Save
             </Button>
           </div>

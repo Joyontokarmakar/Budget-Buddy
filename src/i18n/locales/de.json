@@ -54,7 +54,11 @@
     "placeholderName": "z.B. Sparkasse, Revolut",
     "save": "Konto erstellen",
     "noAccounts": "Keine Konten gefunden. Erstelle eins, um loszulegen!",
-    "totalBalance": "Gesamtvermögen"
+    "totalBalance": "Gesamtvermögen",
+    "editAccount": "Konto bearbeiten",
+    "defaultAccount": "Standardkonto",
+    "defaultBadge": "Standard",
+    "setAsDefault": "Als Standardkonto festlegen"
   },
   "income": {
     "title": "Arbeits-Einnahmen erfassen",

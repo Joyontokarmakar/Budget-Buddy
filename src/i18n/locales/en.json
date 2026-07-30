@@ -54,7 +54,11 @@
     "placeholderName": "e.g., Sparkasse, Revolut",
     "save": "Create Account",
     "noAccounts": "No accounts found. Create one to get started!",
-    "totalBalance": "Total Assets"
+    "totalBalance": "Total Assets",
+    "editAccount": "Edit Account",
+    "defaultAccount": "Default Account",
+    "defaultBadge": "Default",
+    "setAsDefault": "Set as default account"
   },
   "income": {
     "title": "Track Employment Income",

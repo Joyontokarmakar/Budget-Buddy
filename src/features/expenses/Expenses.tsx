@@ -213,9 +213,10 @@ export const Expenses: React.FC = () => {
 
   useEffect(() => {
     if (accounts.length > 0 && !paymentAccountId) {
-      setPaymentAccountId(accounts[0].id);
+      const defaultAcc = accounts.find(a => a.is_default);
+      setPaymentAccountId(defaultAcc ? defaultAcc.id : accounts[0].id);
     }
-  }, [accounts]);
+  }, [accounts, paymentAccountId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
