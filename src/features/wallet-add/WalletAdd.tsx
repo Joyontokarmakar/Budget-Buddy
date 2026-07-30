@@ -35,9 +35,10 @@ export const WalletAdd: React.FC = () => {
       setIncomes(incData);
       setAccounts(accData);
 
-      // Default destination to first account if not set
+      // Default destination to default account if not set
       if (accData.length > 0 && !destinationAccount) {
-        setDestinationAccount(accData[0].id);
+        const defaultAcc = accData.find(a => a.is_default);
+        setDestinationAccount(defaultAcc ? defaultAcc.id : accData[0].id);
       }
     } catch (e) {
       console.error(e);
@@ -53,9 +54,10 @@ export const WalletAdd: React.FC = () => {
   // Set default account when accounts list changes
   useEffect(() => {
     if (accounts.length > 0 && !destinationAccount) {
-      setDestinationAccount(accounts[0].id);
+      const defaultAcc = accounts.find(a => a.is_default);
+      setDestinationAccount(defaultAcc ? defaultAcc.id : accounts[0].id);
     }
-  }, [accounts]);
+  }, [accounts, destinationAccount]);
 
   const handleAddIncome = async (e: React.FormEvent) => {
     e.preventDefault();

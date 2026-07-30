@@ -220,8 +220,8 @@ export const Dashboard: React.FC = () => {
       return;
     }
     
-    // Select first account as default
-    const defaultAccount = accounts[0];
+    // Select default account
+    const defaultAccount = accounts.find(a => a.is_default) || accounts[0];
     
     // Resolve category
     let targetCategory = categories.find(c => c.name.toLowerCase() === type);
@@ -452,8 +452,9 @@ export const Dashboard: React.FC = () => {
       return;
     }
     
-    const accountIdToUse = bill.preferredAccountId || accounts[0].id;
-    const account = accounts.find(a => a.id === accountIdToUse) || accounts[0];
+    const defaultAcc = accounts.find(a => a.is_default);
+    const accountIdToUse = bill.preferredAccountId || (defaultAcc ? defaultAcc.id : accounts[0].id);
+    const account = accounts.find(a => a.id === accountIdToUse) || defaultAcc || accounts[0];
     const accountName = account ? account.name : 'selected account';
     
     setConfirmState({

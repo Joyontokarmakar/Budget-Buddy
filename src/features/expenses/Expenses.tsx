@@ -169,7 +169,8 @@ export const Expenses: React.FC = () => {
 
       // Default payment account
       if (accData.length > 0 && !paymentAccountId) {
-        setPaymentAccountId(accData[0].id);
+        const defaultAcc = accData.find(a => a.is_default);
+        setPaymentAccountId(defaultAcc ? defaultAcc.id : accData[0].id);
       }
       // Default item category (prioritizing Food/Groceries)
       if (catData.length > 0 && !itemCategoryId) {
@@ -1750,11 +1751,15 @@ export const Expenses: React.FC = () => {
                         const firstCat = billCats[0];
                         setAdvCategoryId(firstCat.id);
                         setAdvAmount(getCategoryMonthlyAmount(firstCat).toString());
-                        setAdvAccountId(firstCat.preferred_account_id || paymentAccountId || accounts[0]?.id || '');
+                        const defaultAcc = accounts.find(a => a.is_default);
+                        const fallbackAccId = defaultAcc ? defaultAcc.id : (accounts[0]?.id || '');
+                        setAdvAccountId(firstCat.preferred_account_id || paymentAccountId || fallbackAccId);
                       } else {
                         setAdvCategoryId('');
                         setAdvAmount('');
-                        setAdvAccountId(paymentAccountId || accounts[0]?.id || '');
+                        const defaultAcc = accounts.find(a => a.is_default);
+                        const fallbackAccId = defaultAcc ? defaultAcc.id : (accounts[0]?.id || '');
+                        setAdvAccountId(paymentAccountId || fallbackAccId);
                       }
                       
                       const nextM = new Date();

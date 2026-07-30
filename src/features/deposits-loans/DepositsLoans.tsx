@@ -86,9 +86,10 @@ export const DepositsLoans: React.FC = () => {
       
       // Pre-select default account for forms
       if (accs.length > 0) {
-        setDepAccountId(accs[0].id);
-        setLoanAccountId(accs[0].id);
-        setRepAccountId(accs[0].id);
+        const defaultAcc = accs.find(a => a.is_default) || accs[0];
+        setDepAccountId(defaultAcc.id);
+        setLoanAccountId(defaultAcc.id);
+        setRepAccountId(defaultAcc.id);
       }
 
       // Pre-select default category for EMI form
