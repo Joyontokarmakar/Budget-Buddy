@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 import { useAuthStore } from '../../stores/authStore';
 import { getCategoryColor } from '../../utils/color';
 import { db } from '../../services/db';
-import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails } from '../../types';
+import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails, Category } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { getSafeItems } from '../../utils/items';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -18,10 +18,14 @@ export const Analytics: React.FC = () => {
   const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
-  const [categoryTimeframe, setCategoryTimeframe] = useState<'month' | 'year' | 'all'>('month');
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
-  const [categoryMonth, setCategoryMonth] = useState<string>(new Date().getMonth().toString());
-  const [chartViewMode, setChartViewMode] = useState<'pie' | 'bar'>('bar');
+  const [categoryMonth, setCategoryMonth] = useState<string>('all');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryViewType, setCategoryViewType] = useState<'all' | 'single'>('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [barTimeframe, setBarTimeframe] = useState<'month' | 'year' | 'all'>('month');
+  const [barYear, setBarYear] = useState<number>(new Date().getFullYear());
+  const [barMonth, setBarMonth] = useState<string>(new Date().getMonth().toString());
   const [timeframe, setTimeframe] = useState<'3' | '6' | '12' | 'all'>('3');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
@@ -76,14 +80,19 @@ export const Analytics: React.FC = () => {
       if (!profile) return;
       try {
         setLoading(true);
-        const [exps, incs, empIncs] = await Promise.all([
+        const [exps, incs, empIncs, cats] = await Promise.all([
           db.getExpenses(profile.id),
           db.getIncome(profile.id),
           db.getEmploymentIncome(profile.id),
+          db.getCategories(profile.id),
         ]);
         setExpenses(exps);
         setIncomes(incs);
         setEmploymentIncomes(empIncs);
+        setCategories(cats);
+        if (cats.length > 0) {
+          setSelectedCategoryId(cats[0].id);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -146,15 +155,8 @@ export const Analytics: React.FC = () => {
   const categoryFilteredExpenses = expenses.filter(e => {
     if (!e.date) return false;
     const d = new Date(e.date);
-    if (categoryTimeframe === 'all') {
-      return true;
-    }
-    if (categoryTimeframe === 'year') {
-      return d.getFullYear() === categoryYear;
-    }
-    // month timeframe
     const yMatches = d.getFullYear() === categoryYear;
-    const mMatches = categoryMonth === 'all' ? true : d.getMonth() === parseInt(categoryMonth, 10);
+    const mMatches = categoryMonth === 'all' || d.getMonth() === parseInt(categoryMonth, 10);
     return yMatches && mMatches;
   });
 
@@ -180,6 +182,130 @@ export const Analytics: React.FC = () => {
       ...item,
       color: UNIQUE_COLORS[idx % UNIQUE_COLORS.length]
     }));
+
+  const selectedCategoryObj = categories.find(c => c.id === selectedCategoryId);
+  const selectedCategoryColor = selectedCategoryObj?.color || '#3b82f6';
+
+  const barChartData = (() => {
+    if (categoryViewType === 'all') {
+      const barFilteredExpenses = expenses.filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date);
+        if (barTimeframe === 'all') {
+          return true;
+        }
+        if (barTimeframe === 'year') {
+          return d.getFullYear() === barYear;
+        }
+        // month timeframe
+        const yMatches = d.getFullYear() === barYear;
+        const mMatches = barMonth === 'all' ? true : d.getMonth() === parseInt(barMonth, 10);
+        return yMatches && mMatches;
+      });
+
+      const barDataMap: { [key: string]: { name: string; value: number; color: string } } = {};
+      barFilteredExpenses.forEach(e => {
+        const catName = e.category?.name || 'Other';
+        const catColor = e.category?.color || '#6b7280';
+        const transName = t(`categories.${catName}`, catName);
+        
+        if (barDataMap[catName]) {
+          barDataMap[catName].value += e.amount;
+        } else {
+          barDataMap[catName] = {
+            name: transName,
+            value: e.amount,
+            color: catColor,
+          };
+        }
+      });
+
+      return Object.values(barDataMap)
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({
+          name: item.name,
+          amount: parseFloat(item.value.toFixed(2)),
+          color: item.color
+        }));
+    } else {
+      // Single category trend
+      const singleCategoryExpenses = expenses.filter(e => {
+        return e.category_id === selectedCategoryId && e.date;
+      });
+
+      if (barTimeframe === 'month') {
+        const weeksData = [
+          { name: i18n.language === 'de' ? 'Woche 1' : 'Week 1', amount: 0 },
+          { name: i18n.language === 'de' ? 'Woche 2' : 'Week 2', amount: 0 },
+          { name: i18n.language === 'de' ? 'Woche 3' : 'Week 3', amount: 0 },
+          { name: i18n.language === 'de' ? 'Woche 4' : 'Week 4', amount: 0 },
+          { name: i18n.language === 'de' ? 'Woche 5' : 'Week 5', amount: 0 },
+        ];
+
+        singleCategoryExpenses.forEach(e => {
+          const d = new Date(e.date);
+          if (d.getFullYear() === barYear && d.getMonth() === parseInt(barMonth, 10)) {
+            const day = d.getDate();
+            if (day <= 7) weeksData[0].amount += e.amount;
+            else if (day <= 14) weeksData[1].amount += e.amount;
+            else if (day <= 21) weeksData[2].amount += e.amount;
+            else if (day <= 28) weeksData[3].amount += e.amount;
+            else weeksData[4].amount += e.amount;
+          }
+        });
+
+        return weeksData.map(w => ({ ...w, amount: parseFloat(w.amount.toFixed(2)) }));
+      } else if (barTimeframe === 'year') {
+        const monthLabels = [
+          i18n.language === 'de' ? 'Jan' : 'Jan',
+          i18n.language === 'de' ? 'Feb' : 'Feb',
+          i18n.language === 'de' ? 'Mär' : 'Mar',
+          i18n.language === 'de' ? 'Apr' : 'Apr',
+          i18n.language === 'de' ? 'Mai' : 'May',
+          i18n.language === 'de' ? 'Jun' : 'Jun',
+          i18n.language === 'de' ? 'Jul' : 'Jul',
+          i18n.language === 'de' ? 'Aug' : 'Aug',
+          i18n.language === 'de' ? 'Sep' : 'Sep',
+          i18n.language === 'de' ? 'Okt' : 'Oct',
+          i18n.language === 'de' ? 'Nov' : 'Nov',
+          i18n.language === 'de' ? 'Dez' : 'Dec',
+        ];
+
+        const monthsData = monthLabels.map(label => ({
+          name: label,
+          amount: 0,
+        }));
+
+        singleCategoryExpenses.forEach(e => {
+          const d = new Date(e.date);
+          if (d.getFullYear() === barYear) {
+            const m = d.getMonth();
+            if (m >= 0 && m < 12) {
+              monthsData[m].amount += e.amount;
+            }
+          }
+        });
+
+        return monthsData.map(m => ({ ...m, amount: parseFloat(m.amount.toFixed(2)) }));
+      } else {
+        // All Time (by Year)
+        const yearsData = years
+          .map(y => ({ name: y.toString(), amount: 0 }))
+          .sort((a, b) => parseInt(a.name) - parseInt(b.name));
+
+        singleCategoryExpenses.forEach(e => {
+          const d = new Date(e.date);
+          const yStr = d.getFullYear().toString();
+          const target = yearsData.find(item => item.name === yStr);
+          if (target) {
+            target.amount += e.amount;
+          }
+        });
+
+        return yearsData.map(y => ({ ...y, amount: parseFloat(y.amount.toFixed(2)) }));
+      }
+    }
+  })();
 
   // 2. Weekly Spending Trend (last 4 weeks)
   const getWeekNumber = (d: Date) => {
@@ -767,109 +893,33 @@ export const Analytics: React.FC = () => {
           {/* ROW 1: CATEGORY BREAKDOWN & TREND LINE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* CATEGORY BREAKDOWN SECTION */}
+            {/* CATEGORY BREAKDOWN PIE */}
             <Card className="hover:border-primary/20 transition-all flex flex-col">
               <CardHeader className="pb-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    {chartViewMode === 'pie' ? (
-                      <PieIcon className="h-4.5 w-4.5 text-primary" />
-                    ) : (
-                      <BarChart2 className="h-4.5 w-4.5 text-primary" />
-                    )}
+                    <PieIcon className="h-4.5 w-4.5 text-primary" />
                     {t('analytics.byCategory')}
                   </CardTitle>
-                  
-                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                    {/* Timeframe Type Selector */}
-                    <div className="flex bg-muted p-0.5 rounded-lg border border-border/40">
-                      <button
-                        onClick={() => setCategoryTimeframe('month')}
-                        className={cn(
-                          "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer",
-                          categoryTimeframe === 'month'
-                            ? "bg-background text-foreground shadow-xs border border-border/10"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {t('analytics.month')}
-                      </button>
-                      <button
-                        onClick={() => setCategoryTimeframe('year')}
-                        className={cn(
-                          "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer",
-                          categoryTimeframe === 'year'
-                            ? "bg-background text-foreground shadow-xs border border-border/10"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {t('analytics.year')}
-                      </button>
-                      <button
-                        onClick={() => setCategoryTimeframe('all')}
-                        className={cn(
-                          "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer",
-                          categoryTimeframe === 'all'
-                            ? "bg-background text-foreground shadow-xs border border-border/10"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {t('analytics.allTime')}
-                      </button>
-                    </div>
-
-                    {/* Sub filters */}
-                    {categoryTimeframe === 'month' && (
-                      <select
-                        value={categoryMonth}
-                        onChange={(e) => setCategoryMonth(e.target.value)}
-                        className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
-                      >
-                        {months.map(m => (
-                          <option key={m.value} value={m.value}>{m.label}</option>
-                        ))}
-                      </select>
-                    )}
-
-                    {(categoryTimeframe === 'month' || categoryTimeframe === 'year') && (
-                      <select
-                        value={categoryYear}
-                        onChange={(e) => setCategoryYear(parseInt(e.target.value, 10))}
-                        className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
-                      >
-                        {years.map(y => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
-                    )}
-
-                    {/* Chart Mode Toggle */}
-                    <div className="flex bg-muted p-0.5 rounded-lg border border-border/40">
-                      <button
-                        onClick={() => setChartViewMode('bar')}
-                        className={cn(
-                          "p-1 rounded-md transition-all cursor-pointer",
-                          chartViewMode === 'bar'
-                            ? "bg-background text-foreground shadow-xs border border-border/10"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Bar Chart"
-                      >
-                        <BarChart2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setChartViewMode('pie')}
-                        className={cn(
-                          "p-1 rounded-md transition-all cursor-pointer",
-                          chartViewMode === 'pie'
-                            ? "bg-background text-foreground shadow-xs border border-border/10"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Pie Chart"
-                      >
-                        <PieIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <select
+                      value={categoryMonth}
+                      onChange={(e) => setCategoryMonth(e.target.value)}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+                    >
+                      {months.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={categoryYear}
+                      onChange={(e) => setCategoryYear(parseInt(e.target.value, 10))}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+                    >
+                      {years.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
@@ -879,7 +929,7 @@ export const Analytics: React.FC = () => {
                   <div className="text-center text-xs text-muted-foreground font-semibold py-12">
                     No categorized expenses logged for the selected period.
                   </div>
-                ) : chartViewMode === 'pie' ? (
+                ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -910,44 +960,6 @@ export const Analytics: React.FC = () => {
                         formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
                       />
                     </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={categoryData}
-                      layout="vertical"
-                      margin={{ top: 10, right: 15, left: -10, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} horizontal={false} />
-                      <XAxis 
-                        type="number" 
-                        stroke={textColor} 
-                        style={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                        tickFormatter={(val) => `€${val}`}
-                      />
-                      <YAxis 
-                        type="category" 
-                        dataKey="name" 
-                        stroke={textColor} 
-                        style={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                        width={90}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                          borderColor: isDark ? '#334155' : '#e2e8f0',
-                          borderRadius: '12px',
-                        }}
-                        itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                        formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
-                      />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </CardContent>
@@ -996,6 +1008,178 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* CATEGORY DETAILED BAR ANALYTICS (Full Width) */}
+          <Card className="hover:border-primary/20 transition-all flex flex-col">
+            <CardHeader className="pb-2">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <BarChart2 className="h-4.5 w-4.5 text-primary" />
+                    {i18n.language === 'de' ? 'Kategorie-Vergleich & Trends' : 'Category Spending Analytics & Trends'}
+                  </CardTitle>
+                  <CardDescription>
+                    {i18n.language === 'de'
+                      ? 'Analysiere alle Ausgabenkategorien oder verfolge den Verlauf einer einzelnen Kategorie'
+                      : 'Compare spending across all categories or track the timeline of a single category'}
+                  </CardDescription>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* View Type Toggle: All vs Single Category */}
+                  <div className="flex bg-muted p-0.5 rounded-lg border border-border/40 shrink-0">
+                    <button
+                      onClick={() => setCategoryViewType('all')}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                        categoryViewType === 'all'
+                          ? "bg-background text-foreground shadow-xs border border-border/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {i18n.language === 'de' ? 'Alle' : 'All Categories'}
+                    </button>
+                    <button
+                      onClick={() => setCategoryViewType('single')}
+                      className={cn(
+                        "px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                        categoryViewType === 'single'
+                          ? "bg-background text-foreground shadow-xs border border-border/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {i18n.language === 'de' ? 'Einzelne' : 'Single Category'}
+                    </button>
+                  </div>
+
+                  {/* Category Dropdown */}
+                  {categoryViewType === 'single' && (
+                    <select
+                      value={selectedCategoryId}
+                      onChange={(e) => setSelectedCategoryId(e.target.value)}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {t(`categories.${c.name}`, c.name)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Timeframe selector: Month, Year, All Time */}
+                  <div className="flex bg-muted p-0.5 rounded-lg border border-border/40 shrink-0">
+                    <button
+                      onClick={() => setBarTimeframe('month')}
+                      className={cn(
+                        "px-2 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                        barTimeframe === 'month'
+                          ? "bg-background text-foreground shadow-xs border border-border/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {t('analytics.month')}
+                    </button>
+                    <button
+                      onClick={() => setBarTimeframe('year')}
+                      className={cn(
+                        "px-2 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                        barTimeframe === 'year'
+                          ? "bg-background text-foreground shadow-xs border border-border/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {t('analytics.year')}
+                    </button>
+                    <button
+                      onClick={() => setBarTimeframe('all')}
+                      className={cn(
+                        "px-2 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                        barTimeframe === 'all'
+                          ? "bg-background text-foreground shadow-xs border border-border/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {t('analytics.allTime')}
+                    </button>
+                  </div>
+
+                  {/* Dynamic sub-filters */}
+                  {barTimeframe === 'month' && (
+                    <select
+                      value={barMonth}
+                      onChange={(e) => setBarMonth(e.target.value)}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+                    >
+                      {months.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {(barTimeframe === 'month' || barTimeframe === 'year') && (
+                    <select
+                      value={barYear}
+                      onChange={(e) => setBarYear(parseInt(e.target.value, 10))}
+                      className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
+                    >
+                      {years.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="h-72 sm:h-80 pt-4">
+              {barChartData.length === 0 ? (
+                <div className="text-center text-xs text-muted-foreground font-semibold py-16">
+                  {i18n.language === 'de'
+                    ? 'Keine Ausgabendaten für diesen Zeitraum verfügbar.'
+                    : 'No spending records available for the selected parameters.'}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={barChartData}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                      tickFormatter={(val) => `€${val}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderRadius: '12px',
+                      }}
+                      itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                    />
+                    <Bar 
+                      dataKey="amount" 
+                      radius={[4, 4, 0, 0]}
+                      fill={categoryViewType === 'single' ? selectedCategoryColor : undefined}
+                    >
+                      {categoryViewType === 'all' && barChartData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || '#3b82f6'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
           {/* ROW 2: 3 COLUMNS FOR CASHFLOW, CALENDAR, AND HISTORY */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
