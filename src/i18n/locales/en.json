@@ -236,6 +236,7 @@
     "loanProvided": "Loan Provided (Lent)",
     "person": "Person (From/To Whom)",
     "associatedAccount": "Associated Account",
+    "notPreferToSay": "Not Prefer to say",
     "reason": "Reason / Why (Optional)",
     "dueDate": "Due Date (Optional)",
     "saveLoan": "Log Loan",

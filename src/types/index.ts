@@ -196,7 +196,7 @@ export interface Loan {
   remaining_amount: number;
   date: string;
   notes: string | null;
-  account_id: string;
+  account_id: string | null;
   status: 'active' | 'settled';
   payments: LoanPayment[] | null;
   estimated_pay_date?: string | null;

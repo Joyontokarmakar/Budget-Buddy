@@ -236,6 +236,7 @@
     "loanProvided": "Kredit vergeben (Verliehen an)",
     "person": "Person (Von/An wen)",
     "associatedAccount": "Zugehöriges Konto",
+    "notPreferToSay": "Keine Angabe",
     "reason": "Grund / Warum (Optional)",
     "dueDate": "Fälligkeitsdatum (Optional)",
     "saveLoan": "Kredit buchen",

@@ -202,11 +202,6 @@ export const DepositsLoans: React.FC = () => {
       setLoanError(t('common.error') + ': Enter the person\'s name');
       return;
     }
-    if (!loanAccountId) {
-      setLoanError(t('common.error') + ': Select an account');
-      return;
-    }
-
     try {
       setLoanSaving(true);
       await db.createLoan(profile.id, {
@@ -214,7 +209,7 @@ export const DepositsLoans: React.FC = () => {
         person: loanPerson.trim(),
         amount,
         date: loanDate,
-        account_id: loanAccountId,
+        account_id: loanAccountId === 'none' || !loanAccountId ? null : loanAccountId,
         notes: loanNotes.trim() || null,
         estimated_pay_date: loanEstPayDate || null
       });
@@ -712,7 +707,7 @@ export const DepositsLoans: React.FC = () => {
                                 {new Date(loan.date).toLocaleDateString('de-DE')}
                                 <span>•</span>
                                 <Landmark className="h-3 w-3" />
-                                {loan.account?.name || 'Account'}
+                                {loan.account?.name || t('depositsLoans.notPreferToSay')}
                               </div>
                             </div>
                           </div>
@@ -1130,7 +1125,10 @@ export const DepositsLoans: React.FC = () => {
             label={t('depositsLoans.associatedAccount')}
             value={loanAccountId}
             onChange={(e) => setLoanAccountId(e.target.value)}
-            options={accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${formatCurrency(acc.balance)})` }))}
+            options={[
+              { value: 'none', label: t('depositsLoans.notPreferToSay') },
+              ...accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${formatCurrency(acc.balance)})` }))
+            ]}
             required
           />
 

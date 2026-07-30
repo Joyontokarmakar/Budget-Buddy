@@ -2005,7 +2005,7 @@ Output your response as a raw JSON object matching the requested schema.`;
       setLocalItems('bb-loans', loans);
 
       const updatedAccounts = accounts.map(a => {
-        if (a.id === loan.account_id) {
+        if (loan.account_id && a.id === loan.account_id) {
           const change = loan.type === 'taken' ? loan.amount : -loan.amount;
           return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
         }
@@ -2054,29 +2054,45 @@ Output your response as a raw JSON object matching the requested schema.`;
 
       let updatedAccounts = [...accounts];
       if (updates.amount !== undefined || updates.account_id !== undefined || updates.type !== undefined) {
-        const targetAccountId = updates.account_id || oldLoan.account_id;
+        const targetAccountId = updates.account_id !== undefined ? updates.account_id : oldLoan.account_id;
         const targetType = updates.type || oldLoan.type;
         const targetAmount = updates.amount !== undefined ? updates.amount : oldLoan.amount;
 
         const oldFactor = oldLoan.type === 'taken' ? 1 : -1;
         const newFactor = targetType === 'taken' ? 1 : -1;
 
-        if (oldLoan.account_id === targetAccountId) {
-          updatedAccounts = updatedAccounts.map(a => {
-            if (a.id === targetAccountId) {
-              return { 
-                ...a, 
-                balance: a.balance - (oldLoan.amount * oldFactor) + (targetAmount * newFactor), 
-                updated_at: new Date().toISOString() 
-              };
-            }
-            return a;
-          });
-        } else {
+        if (oldLoan.account_id && targetAccountId) {
+          if (oldLoan.account_id === targetAccountId) {
+            updatedAccounts = updatedAccounts.map(a => {
+              if (a.id === targetAccountId) {
+                return { 
+                  ...a, 
+                  balance: a.balance - (oldLoan.amount * oldFactor) + (targetAmount * newFactor), 
+                  updated_at: new Date().toISOString() 
+                };
+              }
+              return a;
+            });
+          } else {
+            updatedAccounts = updatedAccounts.map(a => {
+              if (a.id === oldLoan.account_id) {
+                return { ...a, balance: a.balance - (oldLoan.amount * oldFactor), updated_at: new Date().toISOString() };
+              }
+              if (a.id === targetAccountId) {
+                return { ...a, balance: a.balance + (targetAmount * newFactor), updated_at: new Date().toISOString() };
+              }
+              return a;
+            });
+          }
+        } else if (oldLoan.account_id) {
           updatedAccounts = updatedAccounts.map(a => {
             if (a.id === oldLoan.account_id) {
               return { ...a, balance: a.balance - (oldLoan.amount * oldFactor), updated_at: new Date().toISOString() };
             }
+            return a;
+          });
+        } else if (targetAccountId) {
+          updatedAccounts = updatedAccounts.map(a => {
             if (a.id === targetAccountId) {
               return { ...a, balance: a.balance + (targetAmount * newFactor), updated_at: new Date().toISOString() };
             }
@@ -2115,7 +2131,7 @@ Output your response as a raw JSON object matching the requested schema.`;
       const factor = loan.type === 'taken' ? 1 : -1;
 
       updatedAccounts = updatedAccounts.map(a => {
-        if (a.id === loan.account_id) {
+        if (loan.account_id && a.id === loan.account_id) {
           return { ...a, balance: a.balance - (loan.amount * factor), updated_at: new Date().toISOString() };
         }
         return a;
