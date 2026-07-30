@@ -26,7 +26,7 @@ export const Dashboard: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
   const [emis, setEmis] = useState<EMI[]>([]);
-  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | 'advBills' | 'emis' | null>(null);
+  const [expandedSection, setExpandedSection] = useState<'bills' | 'loans' | 'lentLoans' | 'advBills' | 'emis' | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [quickLogMsg, setQuickLogMsg] = useState<string | null>(null);
@@ -581,6 +581,9 @@ export const Dashboard: React.FC = () => {
   // Active taken loans
   const activeTakenLoans = loans.filter(l => l.status === 'active' && l.type === 'taken');
 
+  // Active provided loans (lent)
+  const activeProvidedLoans = loans.filter(l => l.status === 'active' && l.type === 'provided');
+
   // Active EMIs
   const activeEmis = emis.filter(emi => {
     const paidCount = expenses.filter(e => e.emi_id === emi.id).length;
@@ -1106,8 +1109,8 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Pending Actions Overview Grid */}
-      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0 || getAdvancedPaidBills().length > 0 || activeEmis.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+      {(getUnpaidPastBills().length > 0 || activeTakenLoans.length > 0 || activeProvidedLoans.length > 0 || getAdvancedPaidBills().length > 0 || activeEmis.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
           
           {/* Unpaid Bills Box */}
           {getUnpaidPastBills().length > 0 && (
@@ -1190,6 +1193,34 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'loans' ? 'rotate-180 text-amber-500' : '')} />
+            </div>
+          )}
+
+          {/* Outstanding Lent Loans Box */}
+          {activeProvidedLoans.length > 0 && (
+            <div
+              onClick={() => setExpandedSection(expandedSection === 'lentLoans' ? null : 'lentLoans')}
+              className={cn(
+                "p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between shadow-xs select-none active:scale-[0.99] bg-card/60 backdrop-blur-xs",
+                expandedSection === 'lentLoans' 
+                  ? "bg-emerald-500/10 border-emerald-500/40 ring-2 ring-emerald-500/20" 
+                  : "hover:bg-muted/40 border-border/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner">
+                  <TrendingUp className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Outstanding Lent Loans
+                  </span>
+                  <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                    {activeProvidedLoans.length} Outstanding
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200", expandedSection === 'lentLoans' ? 'rotate-180 text-emerald-500' : '')} />
             </div>
           )}
 
@@ -1406,6 +1437,65 @@ export const Dashboard: React.FC = () => {
                       className="h-6 text-[9px] font-extrabold w-full bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-xs rounded-xl border border-amber-600/30 mt-1 shrink-0"
                     >
                       Repay Loan
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Expanded Lent Loans Details Panel */}
+      {expandedSection === 'lentLoans' && activeProvidedLoans.length > 0 && (
+        <Card className="bg-emerald-500/5 border-emerald-500/20 border shadow-xs mt-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <TrendingUp className="h-4.5 w-4.5 shrink-0 text-emerald-500" />
+              Outstanding Lent Loans
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-[10px] text-muted-foreground font-semibold leading-normal">
+              You have outstanding loans provided to others. Click "Manage Loans" to view or record repayments.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+              {activeProvidedLoans.map((loan) => {
+                const percentPaid = Math.min(((loan.amount - loan.remaining_amount) / loan.amount) * 100, 100);
+                return (
+                  <div key={loan.id} className="flex flex-col p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs justify-between gap-2.5">
+                    <div className="flex justify-between items-start min-w-0">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-extrabold text-foreground truncate">{loan.person}</span>
+                        <span className="text-[9px] text-muted-foreground font-bold mt-0.5">
+                          Lent: €{loan.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">
+                        To Receive: €{loan.remaining_amount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[8px] font-bold text-muted-foreground">
+                        <span>Repaid Progress</span>
+                        <span>{percentPaid.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-emerald-500 transition-all duration-300" 
+                          style={{ width: `${percentPaid}%` }} 
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => navigate('/deposits-loans')}
+                      className="h-6 text-[9px] font-extrabold w-full bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs rounded-xl border border-emerald-600/30 mt-1 shrink-0"
+                    >
+                      Manage Loans
                     </Button>
                   </div>
                 );
