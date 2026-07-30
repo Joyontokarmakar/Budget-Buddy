@@ -124,6 +124,8 @@
     "last6Months": "Letzte 6 Monate",
     "last12Months": "Letzte 12 Monate",
     "allTime": "Gesamter Zeitraum",
+    "month": "Monat",
+    "year": "Jahr",
     "totalSpendingAllTime": "Gesamtausgaben (Allzeit)",
     "totalIncomeAllTime": "Gesamtes aufgeladenes Guthaben (Allzeit)",
     "netSavingsAllTime": "Netto-Sparquote (Allzeit)"
