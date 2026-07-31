@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails, ExpenseWithDetails } from '../../types';
+import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails, ExpenseWithDetails, DepositWithDetails, LoanWithDetails } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
 import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil } from 'lucide-react';
 
@@ -15,6 +15,8 @@ export const Accounts: React.FC = () => {
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
+  const [deposits, setDeposits] = useState<DepositWithDetails[]>([]);
+  const [loans, setLoans] = useState<LoanWithDetails[]>([]);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -188,16 +190,20 @@ export const Accounts: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, incs, empIncs, exps] = await Promise.all([
+      const [accs, incs, empIncs, exps, deps, lns] = await Promise.all([
         db.getAccounts(profile.id),
         db.getIncome(profile.id),
         db.getEmploymentIncome(profile.id),
         db.getExpenses(profile.id),
+        db.getDeposits(profile.id),
+        db.getLoans(profile.id),
       ]);
       setAccounts(accs);
       setIncomes(incs);
       setEmploymentIncomes(empIncs);
       setExpenses(exps);
+      setDeposits(deps);
+      setLoans(lns);
     } catch (e) {
       console.error(e);
     } finally {
@@ -455,19 +461,98 @@ export const Accounts: React.FC = () => {
                     badge: i18n.language === 'de' ? 'Arbeit' : 'Salary',
                     raw: inc
                   }));
-                  const accountExpenses = expenses.filter(exp => exp.payment_account_id === acc.id).map(exp => ({
-                    id: exp.id,
-                    type: 'outflow',
+                  const accountDeposits = deposits.filter(dep => dep.to_account_id === acc.id).map(dep => ({
+                    id: dep.id,
+                    type: 'inflow',
                     isEditable: false,
-                    title: exp.store?.name || exp.category?.name || 'Expense',
-                    date: exp.date,
-                    notes: exp.notes,
-                    amount: exp.amount,
-                    badge: exp.category?.name || null,
-                    raw: exp
+                    title: dep.source || 'Deposit',
+                    date: dep.date,
+                    time: dep.time || null,
+                    notes: dep.notes,
+                    amount: dep.amount,
+                    badge: i18n.language === 'de' ? 'Einzahlung' : 'Deposit',
+                    raw: dep
                   }));
-                  const combinedHistory = [...accountWalletAdds, ...accountEmpIncomes, ...accountExpenses]
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  const accountLoans = loans.filter(l => l.account_id === acc.id && l.type === 'taken').map(l => ({
+                    id: l.id,
+                    type: 'inflow',
+                    isEditable: false,
+                    title: i18n.language === 'de' ? `Kredit von ${l.person}` : `Loan from ${l.person}`,
+                    date: l.date,
+                    notes: l.notes,
+                    amount: l.amount,
+                    badge: i18n.language === 'de' ? 'Kredit' : 'Loan',
+                    raw: l
+                  }));
+                  const accountLoanPayments = loans.flatMap(l => 
+                    (l.payments || []).filter(p => p.account_id === acc.id && l.type === 'provided').map(p => ({
+                      id: p.id,
+                      type: 'inflow',
+                      isEditable: false,
+                      title: i18n.language === 'de' ? `Kreditrückzahlung von ${l.person}` : `Loan repayment from ${l.person}`,
+                      date: p.date,
+                      notes: p.notes,
+                      amount: p.amount,
+                      badge: i18n.language === 'de' ? 'Kredit Rückzahlung' : 'Loan Repayment',
+                      raw: p
+                    }))
+                  );
+                  // Group expenses by Year-Month
+                  const expenseGroups: { [key: string]: number } = {};
+                  const expenseCounts: { [key: string]: number } = {};
+                  expenses
+                    .filter(exp => exp.payment_account_id === acc.id)
+                    .forEach(exp => {
+                      if (!exp.date) return;
+                      const dateStr = exp.date.includes('T') ? exp.date.split('T')[0] : (exp.date.includes(' ') ? exp.date.split(' ')[0] : exp.date);
+                      const parts = dateStr.split('-');
+                      if (parts.length >= 2) {
+                        const yearMonth = `${parts[0]}-${parts[1]}`; // YYYY-MM
+                        expenseGroups[yearMonth] = (expenseGroups[yearMonth] || 0) + exp.amount;
+                        expenseCounts[yearMonth] = (expenseCounts[yearMonth] || 0) + 1;
+                      }
+                    });
+
+                  const monthlyExpenses = Object.keys(expenseGroups).map(yearMonth => {
+                    const [year, month] = yearMonth.split('-').map(Number);
+                    // Get last day of the month
+                    const lastDayDate = new Date(year, month, 0);
+                    const lastDayStr = `${lastDayDate.getFullYear()}-${String(lastDayDate.getMonth() + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+                    
+                    const monthName = lastDayDate.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+                    
+                    return {
+                      id: `monthly-expense-${yearMonth}-${acc.id}`,
+                      type: 'outflow' as const,
+                      isEditable: false,
+                      title: i18n.language === 'de' 
+                        ? `Monatsausgaben (${monthName})` 
+                        : `Monthly Expenses (${monthName})`,
+                      date: lastDayStr,
+                      time: '23:59', // Put at the end of the day so it appears first when sorted descending
+                      notes: i18n.language === 'de' 
+                        ? `${expenseCounts[yearMonth]} Transaktionen` 
+                        : `${expenseCounts[yearMonth]} transactions`,
+                      amount: expenseGroups[yearMonth],
+                      badge: i18n.language === 'de' ? 'Gesamtausgaben' : 'Total Expenses',
+                      raw: null
+                    };
+                  });
+
+                  const combinedHistory = [
+                    ...accountWalletAdds,
+                    ...accountEmpIncomes,
+                    ...accountDeposits,
+                    ...accountLoans,
+                    ...accountLoanPayments,
+                    ...monthlyExpenses
+                  ].sort((a, b) => {
+                    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+                    if (dateDiff !== 0) return dateDiff;
+                    const timeA = (a as any).time || '';
+                    const timeB = (b as any).time || '';
+                    return timeB.localeCompare(timeA);
+                  });
 
                   if (combinedHistory.length === 0) return null;
                   return (
@@ -499,7 +584,17 @@ export const Accounts: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="text-[9px] text-muted-foreground">
-                                  {new Date(item.date).toLocaleDateString('de-DE')} {item.notes ? `• ${item.notes}` : ''}
+                                  {(() => {
+                                    if (!item.date) return '';
+                                    const dateStr = item.date.includes('T') ? item.date.split('T')[0] : (item.date.includes(' ') ? item.date.split(' ')[0] : item.date);
+                                    const parts = dateStr.split('-');
+                                    if (parts.length === 3) {
+                                      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                      const formattedDate = d.toLocaleDateString(i18n.language || 'de-DE', { day: 'numeric', month: 'numeric', year: 'numeric' });
+                                      return (item as any).time ? `${formattedDate}, ${(item as any).time}` : formattedDate;
+                                    }
+                                    return new Date(item.date).toLocaleDateString(i18n.language || 'de-DE');
+                                  })()} {item.notes ? `• ${item.notes}` : ''}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
