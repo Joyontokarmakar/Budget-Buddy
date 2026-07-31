@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
-import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails } from '../../types';
+import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails, ExpenseWithDetails } from '../../types';
 import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
 import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil } from 'lucide-react';
 
@@ -14,6 +14,7 @@ export const Accounts: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([]);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -187,14 +188,16 @@ export const Accounts: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [accs, incs, empIncs] = await Promise.all([
+      const [accs, incs, empIncs, exps] = await Promise.all([
         db.getAccounts(profile.id),
         db.getIncome(profile.id),
         db.getEmploymentIncome(profile.id),
+        db.getExpenses(profile.id),
       ]);
       setAccounts(accs);
       setIncomes(incs);
       setEmploymentIncomes(empIncs);
+      setExpenses(exps);
     } catch (e) {
       console.error(e);
     } finally {
@@ -432,6 +435,7 @@ export const Accounts: React.FC = () => {
                 {(() => {
                   const accountWalletAdds = incomes.filter(inc => inc.destination_account_id === acc.id).map(inc => ({
                     id: inc.id,
+                    type: 'inflow',
                     isEditable: true,
                     title: inc.source_name || getSourceLabel(inc.type),
                     date: inc.date,
@@ -442,6 +446,7 @@ export const Accounts: React.FC = () => {
                   }));
                   const accountEmpIncomes = employmentIncomes.filter(inc => inc.destination_account_id === acc.id).map(inc => ({
                     id: inc.id,
+                    type: 'inflow',
                     isEditable: false,
                     title: inc.organization_name,
                     date: inc.date,
@@ -450,7 +455,18 @@ export const Accounts: React.FC = () => {
                     badge: i18n.language === 'de' ? 'Arbeit' : 'Salary',
                     raw: inc
                   }));
-                  const combinedHistory = [...accountWalletAdds, ...accountEmpIncomes]
+                  const accountExpenses = expenses.filter(exp => exp.payment_account_id === acc.id).map(exp => ({
+                    id: exp.id,
+                    type: 'outflow',
+                    isEditable: false,
+                    title: exp.store?.name || exp.category?.name || 'Expense',
+                    date: exp.date,
+                    notes: exp.notes,
+                    amount: exp.amount,
+                    badge: exp.category?.name || null,
+                    raw: exp
+                  }));
+                  const combinedHistory = [...accountWalletAdds, ...accountEmpIncomes, ...accountExpenses]
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
                   if (combinedHistory.length === 0) return null;
@@ -461,7 +477,7 @@ export const Accounts: React.FC = () => {
                         onClick={() => setExpandedAccountId(expandedAccountId === acc.id ? null : acc.id)}
                         className="flex items-center justify-between w-full text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
                       >
-                        <span>{expandedAccountId === acc.id ? 'Hide Inflow History' : 'Show Inflow History'} ({combinedHistory.length})</span>
+                        <span>{expandedAccountId === acc.id ? 'Hide Transaction History' : 'Show Transaction History'} ({combinedHistory.length})</span>
                         <span className="text-[10px]">{expandedAccountId === acc.id ? '▲' : '▼'}</span>
                       </button>
 
@@ -473,7 +489,11 @@ export const Accounts: React.FC = () => {
                                 <div className="font-bold text-foreground flex items-center gap-1.5 truncate">
                                   <span>{item.title}</span>
                                   {item.badge && (
-                                    <span className="text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+                                    <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wide ${
+                                      item.type === 'inflow' 
+                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                                        : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                    }`}>
                                       {item.badge}
                                     </span>
                                   )}
@@ -483,8 +503,10 @@ export const Accounts: React.FC = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                <div className="font-black text-emerald-600 dark:text-emerald-400">
-                                  +€{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <div className={`font-black ${
+                                  item.type === 'inflow' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                                }`}>
+                                  {item.type === 'inflow' ? '+' : '-'}€{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
                                 {item.isEditable && (
                                   <button
