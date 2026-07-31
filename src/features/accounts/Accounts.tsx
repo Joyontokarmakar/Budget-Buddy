@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails } from '../../types';
@@ -9,6 +10,7 @@ import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil } from 'lucide-re
 export const Accounts: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomes, setIncomes] = useState<IncomeWithDetails[]>([]);
   const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
@@ -38,7 +40,7 @@ export const Accounts: React.FC = () => {
 
   // Deposit Form State
   const [isDepositOpen, setIsDepositOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [depositAccountId, setDepositAccountId] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositType, setDepositType] = useState<IncomeType>('other');
   const [depositNotes, setDepositNotes] = useState('');
@@ -79,8 +81,9 @@ export const Accounts: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleOpenDepositDialog = (account: Account) => {
-    setSelectedAccount(account);
+  const handleOpenDepositDialog = (account?: Account) => {
+    const acc = account || accounts.find(a => a.is_default) || accounts[0];
+    setDepositAccountId(acc ? acc.id : '');
     setDepositAmount('');
     setDepositType('other');
     setDepositNotes('');
@@ -91,7 +94,14 @@ export const Accounts: React.FC = () => {
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !selectedAccount) return;
+    if (!profile) return;
+    
+    const targetAccount = accounts.find(a => a.id === depositAccountId);
+    if (!targetAccount) {
+      setDepositError('Please select a destination account');
+      return;
+    }
+    
     setDepositError(null);
 
     if (!depositAmount.trim()) {
@@ -111,9 +121,9 @@ export const Accounts: React.FC = () => {
         amount: numAmount,
         type: depositType,
         date: depositDate,
-        notes: depositNotes.trim() || `Deposit to ${selectedAccount.name}`,
+        notes: depositNotes.trim() || `Deposit to ${targetAccount.name}`,
         source_name: getSourceLabel(depositType),
-        destination_account_id: selectedAccount.id,
+        destination_account_id: targetAccount.id,
       });
 
       setIsDepositOpen(false);
@@ -195,6 +205,15 @@ export const Accounts: React.FC = () => {
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'deposit' && !loading && accounts.length > 0) {
+      const defaultAcc = accounts.find(a => a.is_default) || accounts[0];
+      handleOpenDepositDialog(defaultAcc);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, loading, accounts, setSearchParams]);
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,10 +339,21 @@ export const Accounts: React.FC = () => {
           <h1 className="text-2xl font-bold tracking-tight">{t('accounts.title')}</h1>
           <p className="text-xs text-muted-foreground">Keep your cash, bank balances, and savings pools in sync</p>
         </div>
-        <Button onClick={handleOpenAddAccountDialog} className="sm:self-start">
-          <Plus className="h-4 w-4 mr-2" />
-          {t('accounts.addAccount')}
-        </Button>
+        <div className="flex flex-wrap gap-2.5 sm:self-start">
+          {accounts.length > 0 && (
+            <Button
+              onClick={() => handleOpenDepositDialog()}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/10 font-bold rounded-xl"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Balance
+            </Button>
+          )}
+          <Button onClick={handleOpenAddAccountDialog} variant="outline" className="font-bold rounded-xl">
+            <Plus className="h-4 w-4 mr-2" />
+            {t('accounts.addAccount')}
+          </Button>
+        </div>
       </div>
 
       {/* Asset Summary Panel */}
@@ -392,9 +422,8 @@ export const Accounts: React.FC = () => {
                 </div>
                 <div className="mt-4 pt-3 border-t border-border/50">
                   <Button
-                    variant="outline"
-                    className="w-full text-xs py-1.5 h-auto rounded-xl border-primary/20 hover:border-primary/50 text-primary hover:bg-primary/5 font-bold transition-all"
                     onClick={() => handleOpenDepositDialog(acc)}
+                    className="w-full text-xs py-2 h-auto rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm border-0 transition-all active:scale-[0.99] hover:scale-[1.01]"
                   >
                     <Plus className="h-3.5 w-3.5 mr-1" />
                     Add Balance
@@ -587,7 +616,12 @@ export const Accounts: React.FC = () => {
       <Dialog
         isOpen={isDepositOpen}
         onClose={() => setIsDepositOpen(false)}
-        title={selectedAccount ? `Add Balance to ${selectedAccount.name}` : 'Add Balance'}
+        title={
+          (() => {
+            const targetAcc = accounts.find(a => a.id === depositAccountId);
+            return targetAcc ? `Add Balance to ${targetAcc.name}` : 'Add Balance';
+          })()
+        }
       >
         <form onSubmit={handleDeposit} className="space-y-4">
           {depositError && (
@@ -595,6 +629,16 @@ export const Accounts: React.FC = () => {
               {depositError}
             </div>
           )}
+
+          <Select
+            label="Destination Account"
+            value={depositAccountId}
+            onChange={(e) => setDepositAccountId(e.target.value)}
+            options={accounts.map(acc => ({
+              value: acc.id,
+              label: `${acc.name} (€${acc.balance.toFixed(2)})`,
+            }))}
+          />
 
           <Input
             type="number"

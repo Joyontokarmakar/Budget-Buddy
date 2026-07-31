@@ -1815,9 +1815,9 @@ export const Dashboard: React.FC = () => {
             <TrendingUp className="h-5 w-5 text-emerald-500" />
             + Income
           </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/wallet-add')}>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts?action=deposit')}>
             <PlusCircle className="h-5 w-5 text-indigo-500" />
-            + Add Wallet
+            + Add Balance
           </Button>
           <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts')}>
             <Plus className="h-5 w-5 text-primary" />
