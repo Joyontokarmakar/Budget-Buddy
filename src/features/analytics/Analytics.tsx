@@ -18,6 +18,7 @@ export const Analytics: React.FC = () => {
   const [employmentIncomes, setEmploymentIncomes] = useState<EmploymentIncomeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [trendView, setTrendView] = useState<'weekly' | 'daily'>('weekly');
+  const [timelineChartType, setTimelineChartType] = useState<'comparison' | 'trend'>('comparison');
   const [categoryYear, setCategoryYear] = useState<number>(new Date().getFullYear());
   const [categoryMonth, setCategoryMonth] = useState<string>('all');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -890,11 +891,11 @@ export const Analytics: React.FC = () => {
             </Card>
           </div>
 
-          {/* ROW 1: CATEGORY BREAKDOWN & TREND LINE */}
+          {/* ROW 1: CATEGORY ALLOCATION & INCOME/EXPENSE BALANCE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* CATEGORY BREAKDOWN PIE */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col">
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between h-full">
               <CardHeader className="pb-2">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -924,7 +925,7 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="h-[380px] sm:h-80 pt-2 flex flex-col justify-center">
+              <CardContent className="flex-1 min-h-[300px] sm:min-h-0 pt-2 relative w-full min-w-0">
                 {categoryData.length === 0 ? (
                   <div className="text-center text-xs text-muted-foreground font-semibold py-12">
                     No categorized expenses logged for the selected period.
@@ -965,24 +966,18 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* MONTHLY COMPARISON TREND */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
+            {/* INCOME VS EXPENSE CASHFLOW AREA */}
+            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <BarChart2 className="h-4.5 w-4.5 text-primary" />
-                  Spending Comparison
+                  <Coins className="h-4.5 w-4.5 text-emerald-500" />
+                  {t('analytics.cashFlow')}
                 </CardTitle>
-                <CardDescription>Expense historical tracking totals</CardDescription>
+                <CardDescription>Monthly inflows vs outflows</CardDescription>
               </CardHeader>
-              <CardContent className="h-64 sm:h-80 pt-2">
+              <CardContent className="flex-1 min-h-[300px] sm:min-h-0 pt-2 relative w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
+                  <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
                     <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
@@ -992,25 +987,20 @@ export const Analytics: React.FC = () => {
                         borderColor: isDark ? '#334155' : '#e2e8f0',
                         borderRadius: '12px',
                       }}
-                      itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                      formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                      itemStyle={{ fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`]}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="expenses"
-                      stroke="#f43f5e"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorExp)"
-                    />
-                  </AreaChart>
+                    <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                    <Bar dataKey="income" name={t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="expenses" name={t('analytics.expenses')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
 
           {/* CATEGORY DETAILED BAR ANALYTICS (Full Width) */}
-          <Card className="hover:border-primary/20 transition-all flex flex-col">
+          <Card className="hover:border-primary/20 transition-all flex flex-col w-full">
             <CardHeader className="pb-2">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div className="space-y-1">
@@ -1132,7 +1122,7 @@ export const Analytics: React.FC = () => {
               </div>
             </CardHeader>
             
-            <CardContent className="h-72 sm:h-80 pt-4">
+            <CardContent className="flex-1 min-h-[300px] sm:min-h-80 pt-4 relative w-full min-w-0">
               {barChartData.length === 0 ? (
                 <div className="text-center text-xs text-muted-foreground font-semibold py-16">
                   {i18n.language === 'de'
@@ -1181,43 +1171,155 @@ export const Analytics: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* ROW 2: 3 COLUMNS FOR CASHFLOW, CALENDAR, AND HISTORY */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* INCOME VS EXPENSE CASHFLOW AREA */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Coins className="h-4.5 w-4.5 text-emerald-500" />
-                  {t('analytics.cashFlow')}
-                </CardTitle>
-                <CardDescription>Monthly inflows vs outflows</CardDescription>
-              </CardHeader>
-              <CardContent className="h-64 pt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                    <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                        borderColor: isDark ? '#334155' : '#e2e8f0',
-                        borderRadius: '12px',
-                      }}
-                      itemStyle={{ fontWeight: 'bold' }}
-                      formatter={(value) => [`€${Number(value).toFixed(2)}`]}
-                    />
-                    <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                    <Bar dataKey="income" name={t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expenses" name={t('analytics.expenses')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            {/* ROW 3: Spending Timeline & Activity Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* MONTHLY ACTIVITY CALENDAR */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between overflow-visible">
+              {/* HISTORICAL SPENDING TIMELINE */}
+              <Card className="hover:border-primary/20 transition-all flex flex-col h-[400px] sm:h-[420px] lg:col-span-2">
+                <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                  <div>
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <LineIcon className="h-4.5 w-4.5 text-primary" />
+                      {timelineChartType === 'comparison' ? t('analytics.monthlyComparison') : (trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend')}
+                    </CardTitle>
+                    <CardDescription>
+                      {timelineChartType === 'comparison' 
+                        ? 'Expense historical tracking totals compared to budget' 
+                        : (trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days')}
+                    </CardDescription>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Primary Chart Toggle: Comparison vs Trend */}
+                    <div className="flex bg-muted p-0.5 rounded-lg border border-border/40 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setTimelineChartType('comparison')}
+                        className={cn(
+                          "px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                          timelineChartType === 'comparison'
+                            ? "bg-background text-foreground shadow-xs border border-border/10"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {i18n.language === 'de' ? 'Vergleich' : 'Comparison'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTimelineChartType('trend')}
+                        className={cn(
+                          "px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all cursor-pointer",
+                          timelineChartType === 'trend'
+                            ? "bg-background text-foreground shadow-xs border border-border/10"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {i18n.language === 'de' ? 'Verlauf' : 'Timeline'}
+                      </button>
+                    </div>
+
+                    {/* Nested Sub-Toggle: Weekly vs Daily (only when Trend is selected) */}
+                    {timelineChartType === 'trend' && (
+                      <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setTrendView('weekly')}
+                          className={cn(
+                            "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer",
+                            trendView === 'weekly' 
+                              ? "bg-background text-foreground shadow-xs border border-border/30" 
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {i18n.language === 'de' ? 'Wöchentlich' : 'Weekly'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTrendView('daily')}
+                          className={cn(
+                            "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer",
+                            trendView === 'daily' 
+                              ? "bg-background text-foreground shadow-xs border border-border/30" 
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {i18n.language === 'de' ? 'Täglich' : 'Daily'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="flex-1 min-h-0 pt-2 relative w-full min-w-0">
+                  {timelineChartType === 'comparison' ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                        <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderRadius: '12px',
+                          }}
+                          itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                          formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="expenses"
+                          stroke="#f43f5e"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorExp)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart 
+                        data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis 
+                          dataKey={trendView === 'weekly' ? 'week' : 'date'} 
+                          stroke={textColor} 
+                          style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                        />
+                        <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderRadius: '12px',
+                          }}
+                          itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                          formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="amount"
+                          stroke="#f43f5e"
+                          strokeWidth={3}
+                          dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* MONTHLY ACTIVITY CALENDAR */}
+              <Card className="hover:border-primary/20 transition-all flex flex-col h-[400px] sm:h-[420px] lg:col-span-1 overflow-visible">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-1.5">
                   <CardTitle className="text-[13px] font-bold flex items-center gap-1.5 truncate">
@@ -1559,86 +1661,13 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* WEEKLY & DAILY TREND LINE */}
-            <Card className="hover:border-primary/20 transition-all flex flex-col justify-between">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <LineIcon className="h-4.5 w-4.5 text-rose-500" />
-                    {trendView === 'weekly' ? t('analytics.weeklyTrend') : 'Daily Spending Trend'}
-                  </CardTitle>
-                  <CardDescription>
-                    {trendView === 'weekly' ? 'Spending trajectory over the last 4 weeks' : 'Daily spending trajectory over the last 30 days'}
-                  </CardDescription>
-                </div>
-                <div className="flex bg-muted/65 p-0.5 rounded-lg border border-border/40">
-                  <button
-                    type="button"
-                    onClick={() => setTrendView('weekly')}
-                    className={cn(
-                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                      trendView === 'weekly' 
-                        ? "bg-background text-foreground shadow-xs border border-border/30" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Weekly
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTrendView('daily')}
-                    className={cn(
-                      "px-3 py-1 text-[10px] font-black rounded-md transition-all cursor-pointer",
-                      trendView === 'daily' 
-                        ? "bg-background text-foreground shadow-xs border border-border/30" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Daily
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent className="h-64 pt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis 
-                      dataKey={trendView === 'weekly' ? 'week' : 'date'} 
-                      stroke={textColor} 
-                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
-                    />
-                    <YAxis stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                        borderColor: isDark ? '#334155' : '#e2e8f0',
-                        borderRadius: '12px',
-                      }}
-                      itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                      formatter={(value) => [`€${Number(value).toFixed(2)}`, t('analytics.expenses')]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#f43f5e"
-                      strokeWidth={3}
-                      dot={trendView === 'weekly' ? { r: 4, strokeWidth: 2 } : false}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+            </div>
 
-          {/* ROW 3: TOP STORES & PRODUCTS */}
+          {/* TIER 4: TOP STORES & PRODUCTS RANKINGS */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
              {/* TOP STORE OF ALL TIME */}
-             <Card className="hover:border-primary/20 transition-all">
-               <CardHeader className="pb-2">
+             <Card className="hover:border-primary/20 transition-all flex flex-col h-[420px]">
+               <CardHeader className="pb-2 shrink-0">
                  <div className="flex items-center justify-between gap-2">
                    {isSearchAllTimeOpen ? (
                      <div className="flex items-center gap-1.5 w-full">
@@ -1682,52 +1711,54 @@ export const Analytics: React.FC = () => {
                    )}
                  </div>
                </CardHeader>
-               <CardContent className="pt-2">
+               <CardContent className="pt-2 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
                  {displayedStoresAllTime.length === 0 ? (
                    <p className="text-xs text-muted-foreground py-4 text-center font-medium">
                      {searchAllTimeQuery ? "No matching stores found." : "No store purchases logged yet."}
                    </p>
                  ) : (
-                   <div className="space-y-2.5">
-                     {displayedStoresAllTime.map((store, index) => (
-                       <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                         <div className="flex items-center gap-2.5 min-w-0">
-                           <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                             {store.rank}
-                           </span>
-                           <div className="min-w-0">
-                             <p 
-                               className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
-                               onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'allTime' })}
-                             >
-                               {store.name}
-                             </p>
-                             <p className="text-[10px] text-muted-foreground font-medium truncate">
-                               Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                             </p>
+                   <div className="flex flex-col flex-1 min-h-0 justify-between">
+                     <div className="space-y-2.5 flex-1 overflow-y-auto pr-1">
+                       {displayedStoresAllTime.map((store, index) => (
+                         <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                           <div className="flex items-center gap-2.5 min-w-0">
+                             <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                               {store.rank}
+                             </span>
+                             <div className="min-w-0">
+                               <p 
+                                 className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
+                                 onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'allTime' })}
+                               >
+                                 {store.name}
+                               </p>
+                               <p className="text-[10px] text-muted-foreground font-medium truncate">
+                                 Most in {store.maxMonth} (€{store.maxMonthAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                               </p>
+                             </div>
                            </div>
+                           <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                                €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                                onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'allTime' })}
+                                title="View details receipt"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                          </div>
-                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                              €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
-                              onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'allTime' })}
-                              title="View details receipt"
-                            >
-                              <Receipt className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                       </div>
-                     ))}
+                       ))}
+                     </div>
                      {allStoresOfAllTime.length > 5 && (
                        <Button
                          variant="ghost"
                          size="sm"
-                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-3"
+                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-2 shrink-0"
                          onClick={() => setIsShowAllAllTimeOpen(true)}
                        >
                          View All Stores
@@ -1739,8 +1770,8 @@ export const Analytics: React.FC = () => {
              </Card>
 
              {/* TOP STORES THIS MONTH */}
-             <Card className="hover:border-primary/20 transition-all">
-               <CardHeader className="pb-2">
+             <Card className="hover:border-primary/20 transition-all flex flex-col h-[420px]">
+               <CardHeader className="pb-2 shrink-0">
                  <div className="flex items-center justify-between gap-2">
                    {isSearchThisMonthOpen ? (
                      <div className="flex items-center gap-1.5 w-full">
@@ -1784,54 +1815,56 @@ export const Analytics: React.FC = () => {
                    )}
                  </div>
                </CardHeader>
-               <CardContent className="pt-2">
+               <CardContent className="pt-2 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
                  {displayedStoresThisMonth.length === 0 ? (
                    <p className="text-xs text-muted-foreground py-4 text-center font-medium">
                      {searchThisMonthQuery ? "No matching stores found." : "No store purchases logged this month."}
                    </p>
                  ) : (
-                   <div className="space-y-2.5">
-                     {displayedStoresThisMonth.map((store, index) => (
-                       <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
-                         <div className="flex items-center gap-2.5 min-w-0">
-                           <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
-                             {store.rank}
-                           </span>
-                           <div className="min-w-0 font-semibold">
-                             <p 
-                               className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
-                               onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'thisMonth' })}
-                             >
-                               {store.name}
-                             </p>
-                             {store.maxDate && (
-                               <p className="text-[10px] text-muted-foreground font-medium truncate">
-                                 Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                   <div className="flex flex-col flex-1 min-h-0 justify-between">
+                     <div className="space-y-2.5 flex-1 overflow-y-auto pr-1">
+                       {displayedStoresThisMonth.map((store, index) => (
+                         <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 font-semibold text-xs">
+                           <div className="flex items-center gap-2.5 min-w-0">
+                             <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[10px] shrink-0">
+                               {store.rank}
+                             </span>
+                             <div className="min-w-0 font-semibold">
+                               <p 
+                                 className="text-foreground/90 font-bold truncate cursor-pointer hover:underline hover:text-primary transition-colors"
+                                 onClick={() => setSelectedStoreChart({ storeName: store.name, type: 'thisMonth' })}
+                               >
+                                 {store.name}
                                </p>
-                             )}
+                               {store.maxDate && (
+                                 <p className="text-[10px] text-muted-foreground font-medium truncate">
+                                   Most on {store.maxDate} (€{store.maxDateAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                 </p>
+                               )}
+                             </div>
                            </div>
+                           <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                                €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                                onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'thisMonth' })}
+                                title="View details receipt"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                          </div>
-                         <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                              €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
-                              onClick={() => setSelectedReceipt({ type: 'store', name: store.name, scope: 'thisMonth' })}
-                              title="View details receipt"
-                            >
-                              <Receipt className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                       </div>
-                     ))}
+                       ))}
+                     </div>
                      {allStoresThisMonth.length > 5 && (
                        <Button
                          variant="ghost"
                          size="sm"
-                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-3"
+                         className="w-full text-xs text-primary font-semibold hover:bg-muted/50 transition-colors mt-2 shrink-0"
                          onClick={() => setIsShowAllThisMonthOpen(true)}
                        >
                          View All Stores
@@ -1842,46 +1875,46 @@ export const Analytics: React.FC = () => {
                </CardContent>
              </Card>
 
-            {/* TOP BOUGHT PRODUCTS */}
-            <Card className="hover:border-primary/20 transition-all">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <ShoppingBag className="h-4.5 w-4.5 text-violet-500" />
-                  Product Purchases Analysis
-                </CardTitle>
-                <CardDescription>Top products bought by item breakdown</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2">
-                {topProducts.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-4 text-center font-medium">No itemized products logged yet.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {topProducts.map((prod, index) => (
-                      <div key={index} className="flex items-center justify-between p-2.5 rounded-xl border border-border/30 bg-muted/10 font-semibold text-xs">
-                        <div>
-                          <p className="text-foreground/90 font-bold">{prod.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
-                            €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
-                            onClick={() => setSelectedReceipt({ type: 'product', name: prod.name, month: prod.month })}
-                            title="View details receipt"
-                          >
-                            <Receipt className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+             {/* TOP BOUGHT PRODUCTS */}
+             <Card className="hover:border-primary/20 transition-all flex flex-col h-[420px]">
+               <CardHeader className="pb-2 shrink-0">
+                 <CardTitle className="text-sm font-bold flex items-center gap-2">
+                   <ShoppingBag className="h-4.5 w-4.5 text-violet-500" />
+                   Product Purchases Analysis
+                 </CardTitle>
+                 <CardDescription>Top products bought by item breakdown</CardDescription>
+               </CardHeader>
+               <CardContent className="pt-2 flex-1 min-h-0 overflow-y-auto pr-1">
+                 {topProducts.length === 0 ? (
+                   <p className="text-xs text-muted-foreground py-4 text-center font-medium">No itemized products logged yet.</p>
+                 ) : (
+                   <div className="space-y-2">
+                     {topProducts.map((prod, index) => (
+                       <div key={index} className="flex items-center justify-between p-2.5 rounded-xl border border-border/30 bg-muted/10 font-semibold text-xs">
+                         <div>
+                           <p className="text-foreground/90 font-bold">{prod.name}</p>
+                           <p className="text-[10px] text-muted-foreground font-medium">{prod.month}</p>
+                         </div>
+                         <div className="flex items-center gap-2 shrink-0 ml-2">
+                           <span className="font-mono text-rose-600 dark:text-rose-400 font-bold">
+                             €{prod.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </span>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                             onClick={() => setSelectedReceipt({ type: 'product', name: prod.name, month: prod.month })}
+                             title="View details receipt"
+                           >
+                             <Receipt className="h-3.5 w-3.5" />
+                           </Button>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
           </div>
         </div>
       )}
