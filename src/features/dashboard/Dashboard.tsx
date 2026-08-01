@@ -877,7 +877,7 @@ export const Dashboard: React.FC = () => {
     if (e.items && e.items.length > 0) {
       e.items.forEach(item => {
         const name = item.name.trim();
-        if (!name || name.toLowerCase() === 'discount') return;
+        if (!name || name.toLowerCase() === 'discount' || /^[-_*~+=/\\|]+$/.test(name)) return;
         const key = `${name.toLowerCase()}_${monthLabel}`;
         if (productMap[key]) {
           productMap[key].amount += item.amount;

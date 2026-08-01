@@ -708,7 +708,7 @@ export const Analytics: React.FC = () => {
     if (e.items && e.items.length > 0) {
       e.items.forEach(item => {
         const name = item.name.trim();
-        if (!name || name.toLowerCase() === 'discount') return;
+        if (!name || name.toLowerCase() === 'discount' || /^[-_*~+=/\\|]+$/.test(name)) return;
         const key = `${name.toLowerCase()}_${monthLabel}`;
         if (productMap[key]) {
           productMap[key].amount += item.amount;
@@ -1344,7 +1344,7 @@ export const Analytics: React.FC = () => {
               </Card>
 
               {/* MONTHLY ACTIVITY CALENDAR */}
-              <Card className="hover:border-primary/20 transition-all flex flex-col h-[400px] sm:h-[420px] lg:col-span-1 overflow-visible">
+              <Card className="hover:border-primary/20 transition-all flex flex-col min-h-[400px] sm:min-h-[420px] lg:col-span-1 overflow-visible pb-4">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-1.5">
                   <CardTitle className="text-[13px] font-bold flex items-center gap-1.5 truncate">
