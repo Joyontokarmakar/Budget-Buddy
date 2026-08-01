@@ -40,6 +40,10 @@ export const Expenses: React.FC = () => {
   const [itemCategoryId, setItemCategoryId] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
   
+  // Item name suggestion state
+  const [showItemSuggestions, setShowItemSuggestions] = useState(false);
+  const itemSuggestionsRef = useRef<HTMLDivElement>(null);
+  
   // Store autocomplete state
   const [storeQuery, setStoreQuery] = useState('');
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
@@ -81,6 +85,10 @@ export const Expenses: React.FC = () => {
   const [editItemAmount, setEditItemAmount] = useState('');
   const [editItemCategoryId, setEditItemCategoryId] = useState('');
   const [editOtherPurpose, setEditOtherPurpose] = useState('');
+  
+  // Edit Item name suggestion state
+  const [editShowItemSuggestions, setEditShowItemSuggestions] = useState(false);
+  const editItemSuggestionsRef = useRef<HTMLDivElement>(null);
   const [editStoreQuery, setEditStoreQuery] = useState('');
   const [editSelectedStore, setEditSelectedStore] = useState<Store | null>(null);
   const [editShowStoreDropdown, setEditShowStoreDropdown] = useState(false);
@@ -224,6 +232,9 @@ export const Expenses: React.FC = () => {
       if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
         setShowStoreDropdown(false);
       }
+      if (itemSuggestionsRef.current && !itemSuggestionsRef.current.contains(event.target as Node)) {
+        setShowItemSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -239,6 +250,9 @@ export const Expenses: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (editStoreDropdownRef.current && !editStoreDropdownRef.current.contains(event.target as Node)) {
         setEditShowStoreDropdown(false);
+      }
+      if (editItemSuggestionsRef.current && !editItemSuggestionsRef.current.contains(event.target as Node)) {
+        setEditShowItemSuggestions(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -1347,6 +1361,56 @@ export const Expenses: React.FC = () => {
     }
   };
 
+  // Memoized unique products from history
+  const previousProducts = React.useMemo(() => {
+    const productMap = new Map<string, { name: string; category_id: string | null }>();
+    const sortedExpenses = [...expenses].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    sortedExpenses.forEach(e => {
+      const expenseItems = getSafeItems(e.items);
+      expenseItems.forEach(item => {
+        if (item.name && item.name.trim()) {
+          productMap.set(item.name.trim().toLowerCase(), {
+            name: item.name.trim(),
+            category_id: item.category_id || null
+          });
+        }
+      });
+    });
+    return Array.from(productMap.values());
+  }, [expenses]);
+
+  const filteredItemSuggestions = React.useMemo(() => {
+    const query = itemName.trim().toLowerCase();
+    if (!query) return [];
+    return previousProducts
+      .filter(p => p.name.toLowerCase().includes(query))
+      .slice(0, 15);
+  }, [previousProducts, itemName]);
+
+  const filteredEditItemSuggestions = React.useMemo(() => {
+    const query = editItemName.trim().toLowerCase();
+    if (!query) return [];
+    return previousProducts
+      .filter(p => p.name.toLowerCase().includes(query))
+      .slice(0, 15);
+  }, [previousProducts, editItemName]);
+
+  const handleItemSuggestionSelect = (prod: { name: string; category_id: string | null }) => {
+    setItemName(prod.name);
+    if (prod.category_id) {
+      setItemCategoryId(prod.category_id);
+    }
+    setShowItemSuggestions(false);
+  };
+
+  const handleEditItemSuggestionSelect = (prod: { name: string; category_id: string | null }) => {
+    setEditItemName(prod.name);
+    if (prod.category_id) {
+      setEditItemCategoryId(prod.category_id);
+    }
+    setEditShowItemSuggestions(false);
+  };
+
   // Filter stores for autocomplete
   const filteredStores = stores
     .filter(s => s.name.toLowerCase().includes(storeQuery.trim().toLowerCase()))
@@ -1624,13 +1688,48 @@ export const Expenses: React.FC = () => {
                           className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                         />
                       ) : (
-                        <input
-                          type="text"
-                          placeholder="Item Name (e.g. Bread)"
-                          value={itemName}
-                          onChange={(e) => setItemName(e.target.value)}
-                          className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                        />
+                        <div ref={itemSuggestionsRef} className="relative w-full">
+                          <input
+                            type="text"
+                            placeholder="Item Name (e.g. Bread)"
+                            value={itemName}
+                            onChange={(e) => {
+                              setItemName(e.target.value);
+                              setShowItemSuggestions(true);
+                            }}
+                            onFocus={() => setShowItemSuggestions(true)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') {
+                                setShowItemSuggestions(false);
+                              } else if (e.key === 'Enter') {
+                                if (showItemSuggestions && filteredItemSuggestions.length > 0) {
+                                  e.preventDefault();
+                                  handleItemSuggestionSelect(filteredItemSuggestions[0]);
+                                }
+                              }
+                            }}
+                            autoComplete="off"
+                            className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                          />
+                          {showItemSuggestions && filteredItemSuggestions.length > 0 && (
+                            <div className="absolute left-0 right-0 top-10 z-50 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto py-1">
+                              {filteredItemSuggestions.map((prod, idx) => (
+                                <div
+                                  key={idx}
+                                  onClick={() => handleItemSuggestionSelect(prod)}
+                                  className="px-3 py-2 hover:bg-muted text-xs cursor-pointer font-medium transition-colors flex justify-between items-center text-foreground"
+                                >
+                                  <span>{prod.name}</span>
+                                  {prod.category_id && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground font-semibold">
+                                      {t(`categories.${categories.find(c => c.id === prod.category_id)?.name || ''}`, categories.find(c => c.id === prod.category_id)?.name || '')}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )}
                       <input
                         type="number"
@@ -2747,13 +2846,48 @@ export const Expenses: React.FC = () => {
                     className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
                   />
                 ) : (
-                  <input
-                    type="text"
-                    placeholder="Item Name (e.g. Bread)"
-                    value={editItemName}
-                    onChange={(e) => setEditItemName(e.target.value)}
-                    className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
-                  />
+                  <div ref={editItemSuggestionsRef} className="relative w-full">
+                    <input
+                      type="text"
+                      placeholder="Item Name (e.g. Bread)"
+                      value={editItemName}
+                      onChange={(e) => {
+                        setEditItemName(e.target.value);
+                        setEditShowItemSuggestions(true);
+                      }}
+                      onFocus={() => setEditShowItemSuggestions(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setEditShowItemSuggestions(false);
+                        } else if (e.key === 'Enter') {
+                          if (editShowItemSuggestions && filteredEditItemSuggestions.length > 0) {
+                            e.preventDefault();
+                            handleEditItemSuggestionSelect(filteredEditItemSuggestions[0]);
+                          }
+                        }
+                      }}
+                      autoComplete="off"
+                      className="flex h-9 w-full rounded-lg border border-border bg-card px-3 py-1 text-xs transition-all focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+                    />
+                    {editShowItemSuggestions && filteredEditItemSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-10 z-50 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto py-1">
+                        {filteredEditItemSuggestions.map((prod, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleEditItemSuggestionSelect(prod)}
+                            className="px-3 py-2 hover:bg-muted text-xs cursor-pointer font-medium transition-colors flex justify-between items-center text-foreground"
+                          >
+                            <span>{prod.name}</span>
+                            {prod.category_id && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground font-semibold">
+                                {t(`categories.${categories.find(c => c.id === prod.category_id)?.name || ''}`, categories.find(c => c.id === prod.category_id)?.name || '')}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
                 <input
                   type="number"
