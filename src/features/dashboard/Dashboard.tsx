@@ -1539,19 +1539,35 @@ export const Dashboard: React.FC = () => {
             <div className="mt-3 flex items-baseline gap-2">
               <span className={cn(
                 "text-3xl font-extrabold tracking-tight",
-                groceriesDiffPercent > 0 ? "text-rose-600 dark:text-rose-400" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                groceriesLastMonthSum > 0 && groceriesDiffPercent > 0 
+                  ? "text-rose-600 dark:text-rose-400" 
+                  : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 
+                    ? "text-emerald-600 dark:text-emerald-400" 
+                    : "text-foreground"
               )}>
-                {groceriesLastMonthSum > 0 
-                  ? `${groceriesDiffPercent > 0 ? '+' : ''}${groceriesDiffPercent.toFixed(0)}%`
-                  : `€${groceriesThisMonthSum.toFixed(2)}`
-                }
+                €{groceriesThisMonthSum.toFixed(2)}
               </span>
               <span className="text-[10px] font-semibold text-muted-foreground">this month</span>
+              {groceriesLastMonthSum > 0 && (
+                <span className={cn(
+                  "text-[10px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5 ml-1",
+                  groceriesDiffPercent > 0 
+                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400" 
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {groceriesDiffPercent > 0 ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  {groceriesDiffPercent > 0 ? '+' : ''}{groceriesDiffPercent.toFixed(0)}%
+                </span>
+              )}
             </div>
 
             <p className="text-[10px] font-medium text-muted-foreground mt-1.5 leading-normal">
               {groceriesLastMonthSum > 0 
-                ? `You spent ${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'} compared to last month (€${groceriesLastMonthSum.toFixed(0)}).`
+                ? `You spent €${groceriesThisMonthSum.toFixed(2)} this month, compared to €${groceriesLastMonthSum.toFixed(2)} last month (${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'}).`
                 : 'No previous month grocery records available for trend analysis.'
               }
             </p>
