@@ -26,7 +26,7 @@ export const Analytics: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [barTimeframe, setBarTimeframe] = useState<'month' | 'year' | 'all'>('month');
   const [barYear, setBarYear] = useState<number>(new Date().getFullYear());
-  const [barMonth, setBarMonth] = useState<string>(new Date().getMonth().toString());
+  const [barMonth, setBarMonth] = useState<string>('all');
   const [timeframe, setTimeframe] = useState<'3' | '6' | '12' | 'all'>('3');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
@@ -102,6 +102,19 @@ export const Analytics: React.FC = () => {
     };
     fetchData();
   }, [profile]);
+
+  useEffect(() => {
+    if (expenses.length > 0) {
+      const latestExp = expenses[0];
+      if (latestExp && latestExp.date) {
+        const parsedDate = new Date(latestExp.date);
+        if (!isNaN(parsedDate.getTime())) {
+          setActivityYear(parsedDate.getFullYear());
+          setActivityMonth(parsedDate.getMonth());
+        }
+      }
+    }
+  }, [expenses]);
 
   if (loading && expenses.length === 0) {
     return <Spinner />;
@@ -317,12 +330,24 @@ export const Analytics: React.FC = () => {
     return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
   };
 
-  const weeklySpendingMap: { [key: string]: number } = {};
-  const currentYear = new Date().getFullYear();
+  // Determine anchor date for trend analysis (relative to latest expense if available, fallback to today)
+  let anchorDate = new Date();
+  if (expenses.length > 0) {
+    const latestExp = expenses[0];
+    if (latestExp && latestExp.date) {
+      const parsedDate = new Date(latestExp.date);
+      if (!isNaN(parsedDate.getTime())) {
+        anchorDate = parsedDate;
+      }
+    }
+  }
 
-  // Initialize past 4 weeks
+  const weeklySpendingMap: { [key: string]: number } = {};
+  const currentYear = anchorDate.getFullYear();
+
+  // Initialize past 4 weeks relative to the anchor date
   for (let i = 3; i >= 0; i--) {
-    const d = new Date();
+    const d = new Date(anchorDate.getTime());
     d.setDate(d.getDate() - i * 7);
     const wNum = getWeekNumber(d);
     weeklySpendingMap[`W${wNum}`] = 0;
@@ -343,10 +368,10 @@ export const Analytics: React.FC = () => {
     amount: parseFloat(amount.toFixed(2)),
   }));
 
-  // Daily Spending Trend (last 30 days)
+  // Daily Spending Trend (last 30 days relative to the anchor date)
   const dailySpendingMap: { [key: string]: number } = {};
   for (let i = 29; i >= 0; i--) {
-    const d = new Date();
+    const d = new Date(anchorDate.getTime());
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
     dailySpendingMap[dateStr] = 0;
@@ -925,7 +950,7 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 min-h-[300px] sm:min-h-0 pt-2 relative w-full min-w-0">
+              <CardContent className="h-[340px] pt-2 relative w-full min-w-0">
                 {categoryData.length === 0 ? (
                   <div className="text-center text-xs text-muted-foreground font-semibold py-12">
                     No categorized expenses logged for the selected period.
@@ -975,7 +1000,7 @@ export const Analytics: React.FC = () => {
                 </CardTitle>
                 <CardDescription>Monthly inflows vs outflows</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 min-h-[300px] sm:min-h-0 pt-2 relative w-full min-w-0">
+              <CardContent className="h-[340px] pt-2 relative w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -1122,7 +1147,7 @@ export const Analytics: React.FC = () => {
               </div>
             </CardHeader>
             
-            <CardContent className="flex-1 min-h-[300px] sm:min-h-80 pt-4 relative w-full min-w-0">
+            <CardContent className="h-[340px] pt-4 relative w-full min-w-0">
               {barChartData.length === 0 ? (
                 <div className="text-center text-xs text-muted-foreground font-semibold py-16">
                   {i18n.language === 'de'
@@ -1250,7 +1275,7 @@ export const Analytics: React.FC = () => {
                   </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 min-h-0 pt-2 relative w-full min-w-0">
+                <CardContent className="h-[320px] pt-2 relative w-full min-w-0">
                   {timelineChartType === 'comparison' ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
