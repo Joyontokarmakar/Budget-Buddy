@@ -2239,14 +2239,16 @@ Output your response as a raw JSON object matching the requested schema.`;
       loans[idx] = updatedLoan;
       setLocalItems('bb-loans', loans);
 
-      const updatedAccounts = accounts.map(a => {
-        if (a.id === payment.account_id) {
-          const change = loan.type === 'taken' ? -payment.amount : payment.amount;
-          return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
-        }
-        return a;
-      });
-      setLocalItems('bb-accounts', updatedAccounts);
+      if (payment.account_id && payment.account_id !== 'none' && payment.account_id !== 'not-prefer-to-say') {
+        const updatedAccounts = accounts.map(a => {
+          if (a.id === payment.account_id) {
+            const change = loan.type === 'taken' ? -payment.amount : payment.amount;
+            return { ...a, balance: a.balance + change, updated_at: new Date().toISOString() };
+          }
+          return a;
+        });
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
       notifyDataChange();
       return updatedLoan;
     }
@@ -2277,19 +2279,21 @@ Output your response as a raw JSON object matching the requested schema.`;
       .single();
     if (updateError) throw updateError;
 
-    const change = loan.type === 'taken' ? -payment.amount : payment.amount;
-    const { data: account, error: accGetError } = await supabase
-      .from('accounts')
-      .select('balance')
-      .eq('id', payment.account_id)
-      .single();
-    if (accGetError) throw accGetError;
+    if (payment.account_id && payment.account_id !== 'none' && payment.account_id !== 'not-prefer-to-say') {
+      const change = loan.type === 'taken' ? -payment.amount : payment.amount;
+      const { data: account, error: accGetError } = await supabase
+        .from('accounts')
+        .select('balance')
+        .eq('id', payment.account_id)
+        .single();
+      if (accGetError) throw accGetError;
 
-    const { error: accUpdateError } = await supabase
-      .from('accounts')
-      .update({ balance: (account.balance || 0) + change })
-      .eq('id', payment.account_id);
-    if (accUpdateError) throw accUpdateError;
+      const { error: accUpdateError } = await supabase
+        .from('accounts')
+        .update({ balance: (account.balance || 0) + change })
+        .eq('id', payment.account_id);
+      if (accUpdateError) throw accUpdateError;
+    }
 
     notifyDataChange();
     return updatedLoan;

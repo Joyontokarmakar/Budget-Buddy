@@ -485,11 +485,13 @@ export const Accounts: React.FC = () => {
                     raw: l
                   }));
                   const accountLoanPayments = loans.flatMap(l => 
-                    (l.payments || []).filter(p => p.account_id === acc.id && l.type === 'provided').map(p => ({
+                    (l.payments || []).filter(p => p.account_id === acc.id).map(p => ({
                       id: p.id,
-                      type: 'inflow',
+                      type: l.type === 'taken' ? 'outflow' as const : 'inflow' as const,
                       isEditable: false,
-                      title: i18n.language === 'de' ? `Kreditrückzahlung von ${l.person}` : `Loan repayment from ${l.person}`,
+                      title: l.type === 'taken'
+                        ? (i18n.language === 'de' ? `Kreditrückzahlung an ${l.person}` : `Loan repayment to ${l.person}`)
+                        : (i18n.language === 'de' ? `Kreditrückzahlung von ${l.person}` : `Loan repayment from ${l.person}`),
                       date: p.date,
                       notes: p.notes,
                       amount: p.amount,

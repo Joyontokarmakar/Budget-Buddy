@@ -254,7 +254,7 @@ export const DepositsLoans: React.FC = () => {
       await db.createLoanPayment(profile.id, selectedLoan.id, {
         amount,
         date: repDate,
-        account_id: repAccountId,
+        account_id: repAccountId === 'none' ? null : repAccountId,
         notes: repNotes.trim() || null,
       });
 
@@ -299,6 +299,7 @@ export const DepositsLoans: React.FC = () => {
   const openRepaymentModal = (loan: LoanWithDetails) => {
     setSelectedLoan(loan);
     setRepAmount(loan.remaining_amount.toString());
+    setRepAccountId(loan.account_id || 'none');
     setRepNotes(`Repayment for ${loan.person}`);
     setRepError(null);
   };
@@ -786,17 +787,24 @@ export const DepositsLoans: React.FC = () => {
                               <p className="text-[10px] text-muted-foreground py-1">No repayment payments recorded yet.</p>
                             ) : (
                               <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                                {loan.payments.map((p, idx) => (
-                                  <div key={p.id || idx} className="flex justify-between items-center text-[11px] p-2 rounded-xl bg-muted/60 dark:bg-muted/20 border border-border/40 font-semibold">
-                                    <div>
-                                      <div className="text-foreground">{formatCurrency(p.amount)}</div>
-                                      <div className="text-[9px] text-muted-foreground">
-                                        {new Date(p.date).toLocaleDateString('de-DE')} {p.notes ? `• ${p.notes}` : ''}
+                                {loan.payments.map((p, idx) => {
+                                  const accountName = p.account_id 
+                                    ? accounts.find(a => a.id === p.account_id)?.name 
+                                    : null;
+                                  return (
+                                    <div key={p.id || idx} className="flex justify-between items-center text-[11px] p-2 rounded-xl bg-muted/60 dark:bg-muted/20 border border-border/40 font-semibold">
+                                      <div>
+                                        <div className="text-foreground">{formatCurrency(p.amount)}</div>
+                                        <div className="text-[9px] text-muted-foreground">
+                                          {new Date(p.date).toLocaleDateString('de-DE')} 
+                                          {accountName ? ` • ${accountName}` : ` • ${t('depositsLoans.notPreferToSay')}`}
+                                          {p.notes ? ` • ${p.notes}` : ''}
+                                        </div>
                                       </div>
+                                      <span className="text-[9px] text-muted-foreground font-medium uppercase">repaid</span>
                                     </div>
-                                    <span className="text-[9px] text-muted-foreground font-medium uppercase">repaid</span>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -1206,7 +1214,10 @@ export const DepositsLoans: React.FC = () => {
               label={selectedLoan.type === 'taken' ? "Paid From Account" : "Received Into Account"}
               value={repAccountId}
               onChange={(e) => setRepAccountId(e.target.value)}
-              options={accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${formatCurrency(acc.balance)})` }))}
+              options={[
+                ...accounts.map(acc => ({ value: acc.id, label: `${acc.name} (${formatCurrency(acc.balance)})` })),
+                { value: 'none', label: t('depositsLoans.notPreferToSay') }
+              ]}
               required
             />
 

@@ -184,7 +184,7 @@ export interface LoanPayment {
   id: string;
   date: string;
   amount: number;
-  account_id: string;
+  account_id: string | null;
   notes: string | null;
 }
 
