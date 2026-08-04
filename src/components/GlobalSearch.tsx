@@ -171,7 +171,7 @@ export const GlobalSearch: React.FC = () => {
     const pageItems = [
       { to: '/', label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4.5 w-4.5 text-primary" /> },
       { to: '/expenses', label: t('nav.expenses'), icon: <TrendingDown className="h-4.5 w-4.5 text-rose-500" /> },
-      { to: '/income', label: t('nav.income'), icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-500" /> },
+      { to: '/accounts?tab=income', label: t('nav.income'), icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-500" /> },
       { to: '/accounts?action=deposit', label: t('nav.walletAdd') || 'Add to Wallet', icon: <PlusCircle className="h-4.5 w-4.5 text-indigo-500" /> },
       { to: '/accounts', label: t('nav.accounts'), icon: <Wallet className="h-4.5 w-4.5 text-sky-500" /> },
       { to: '/deposits-loans', label: t('nav.depositsLoans') || 'Deposits & Loans', icon: <Coins className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" /> },
@@ -436,7 +436,7 @@ export const GlobalSearch: React.FC = () => {
           badge: `+€${i.amount.toFixed(2)}`,
           badgeVariant: 'success',
           onClick: () => {
-            navigate('/income');
+            navigate('/accounts?tab=income');
             setIsOpen(false);
           },
           icon: <TrendingUp className="h-4.5 w-4.5 text-emerald-500" />

@@ -54,7 +54,13 @@ export const Layout: React.FC = () => {
     if (path.startsWith('/expenses')) return t('nav.expenses');
     if (path.startsWith('/income')) return t('nav.income');
     if (path.startsWith('/wallet-add')) return t('nav.walletAdd') || 'Add to Wallet';
-    if (path.startsWith('/accounts')) return t('nav.accounts');
+    if (path.startsWith('/accounts')) {
+      const searchParams = new URLSearchParams(location.search);
+      if (searchParams.get('tab') === 'income') {
+        return t('nav.income') || 'Employment Income';
+      }
+      return t('accounts.title') || t('nav.accounts');
+    }
     if (path.startsWith('/deposits-loans')) return t('nav.depositsLoans') || 'Deposits & Loans';
     if (path.startsWith('/analytics')) return t('nav.analytics');
     if (path.startsWith('/reports')) return t('nav.reports');

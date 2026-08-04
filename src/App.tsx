@@ -9,7 +9,6 @@ import { Layout } from './components/Layout';
 import { SignInPage, SignUpPage, ForgotPasswordPage, ResetPasswordPage } from './features/auth/AuthPages';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { Expenses } from './features/expenses/Expenses';
-import { Income } from './features/income/Income';
 import { WalletAdd } from './features/wallet-add/WalletAdd';
 import { Accounts } from './features/accounts/Accounts';
 import { Analytics } from './features/analytics/Analytics';
@@ -72,12 +71,15 @@ function SEOTracker() {
       pageTitle = 'Dashboard | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/expenses')) {
       pageTitle = 'Track Expenses & Monthly Bills Checklist | Budget buddy Student';
-    } else if (path.startsWith('/income')) {
-      pageTitle = 'Track Employment Income & Salaries | Budget buddy Student';
+    } else if (path.startsWith('/accounts')) {
+      const searchParams = new URLSearchParams(location.search);
+      if (searchParams.get('tab') === 'income') {
+        pageTitle = 'Track Employment Income & Salaries | Budget buddy Student';
+      } else {
+        pageTitle = 'Manage Bank Accounts & Asset Balances | Budget buddy Student';
+      }
     } else if (path.startsWith('/wallet-add')) {
       pageTitle = 'Add to Wallet & Fund Accounts | Budget buddy Student';
-    } else if (path.startsWith('/accounts')) {
-      pageTitle = 'Manage Bank Accounts & Asset Balances | Budget buddy Student';
     } else if (path.startsWith('/deposits-loans')) {
       pageTitle = 'Student Debt Tracker - Loans & Repayments | Budget buddy Student';
     } else if (path.startsWith('/analytics')) {
@@ -141,7 +143,7 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="expenses" element={<Expenses />} />
-              <Route path="income" element={<Income />} />
+              <Route path="income" element={<Navigate to="/accounts?tab=income" replace />} />
               <Route path="wallet-add" element={<WalletAdd />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="deposits-loans" element={<DepositsLoans />} />

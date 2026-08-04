@@ -1827,7 +1827,7 @@ export const Dashboard: React.FC = () => {
             <TrendingDown className="h-5 w-5 text-rose-500" />
             + Expense
           </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/income')}>
+          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts?tab=income')}>
             <TrendingUp className="h-5 w-5 text-emerald-500" />
             + Income
           </Button>
