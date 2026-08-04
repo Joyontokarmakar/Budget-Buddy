@@ -388,7 +388,7 @@ export const Layout: React.FC = () => {
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-none text-left"
                       >
                         <LogOut className="h-4 w-4" />
-                        Sign Out Active
+                        Sign Out
                       </button>
                     </div>
                   </>

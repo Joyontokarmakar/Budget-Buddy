@@ -235,7 +235,7 @@ export const Navigation: React.FC = () => {
                   <div className="h-7 w-7 rounded-full border border-dashed border-destructive/40 flex items-center justify-center shrink-0">
                     <LogOut className="h-3.5 w-3.5" />
                   </div>
-                  <span>Sign Out Active</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             )}
