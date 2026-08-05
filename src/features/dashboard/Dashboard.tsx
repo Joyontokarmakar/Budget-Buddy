@@ -569,8 +569,14 @@ export const Dashboard: React.FC = () => {
   const thisMonthIncome = thisMonthEmploymentIncomes.reduce((acc, curr) => acc + curr.amount, 0);
   const remainingBudget = Math.max(monthlyBudget - monthlySpending, 0);
   
-  // Savings is total month income minus spending
-  const thisMonthSavings = thisMonthIncome - monthlySpending;
+  const thisMonthWalletAdd = incomes.filter(i => {
+    const d = new Date(i.date);
+    return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+  });
+  const totalWalletAddThisMonth = thisMonthWalletAdd.reduce((acc, curr) => acc + curr.amount, 0);
+
+  // Savings is total month wallet add minus spending
+  const thisMonthSavings = totalWalletAddThisMonth - monthlySpending;
 
   // Sum up discounts in the current month
   const thisMonthExpensesFiltered = thisMonthExpenses.filter(e => e.amount !== undefined); // safe mapping

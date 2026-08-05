@@ -772,7 +772,27 @@ export const Analytics: React.FC = () => {
   const totalSpendingAllTime = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalWalletAddAllTime = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
   const totalEmploymentIncomeAllTime = employmentIncomes.reduce((sum, i) => sum + (i.amount || 0), 0);
-  const netSavingsAllTime = totalEmploymentIncomeAllTime + totalWalletAddAllTime - totalSpendingAllTime;
+  const now = new Date();
+  const currentCalYear = now.getFullYear();
+  const currentCalMonth = now.getMonth(); // 0-indexed
+
+  const closedExpensesSpending = expenses
+    .filter(e => {
+      if (!e.date) return false;
+      const d = new Date(e.date);
+      return d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth);
+    })
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  const closedWalletAdd = incomes
+    .filter(i => {
+      if (!i.date) return false;
+      const d = new Date(i.date);
+      return d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth);
+    })
+    .reduce((sum, i) => sum + (i.amount || 0), 0);
+
+  const netSavingsAllTime = closedWalletAdd - closedExpensesSpending;
 
   const matchingReceipts = (() => {
     if (!selectedReceipt) return [];

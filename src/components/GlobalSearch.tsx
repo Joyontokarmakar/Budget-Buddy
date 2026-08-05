@@ -225,25 +225,25 @@ export const GlobalSearch: React.FC = () => {
     results.push(...matchedAccounts);
 
     // 2. Monthly summaries search match
-    const monthsMap = new Map<string, { expenses: number; income: number; txCount: number }>();
+    const monthsMap = new Map<string, { expenses: number; walletAdd: number; employmentIncome: number; txCount: number }>();
     expenses.forEach(e => {
       const monthKey = e.date.substring(0, 7); // YYYY-MM
-      const cur = monthsMap.get(monthKey) || { expenses: 0, income: 0, txCount: 0 };
+      const cur = monthsMap.get(monthKey) || { expenses: 0, walletAdd: 0, employmentIncome: 0, txCount: 0 };
       cur.expenses += e.amount;
       cur.txCount += 1;
       monthsMap.set(monthKey, cur);
     });
     incomes.forEach(i => {
       const monthKey = i.date.substring(0, 7); // YYYY-MM
-      const cur = monthsMap.get(monthKey) || { expenses: 0, income: 0, txCount: 0 };
-      cur.income += i.amount;
+      const cur = monthsMap.get(monthKey) || { expenses: 0, walletAdd: 0, employmentIncome: 0, txCount: 0 };
+      cur.walletAdd += i.amount;
       cur.txCount += 1;
       monthsMap.set(monthKey, cur);
     });
     employmentIncomes.forEach(i => {
       const monthKey = i.date.substring(0, 7); // YYYY-MM
-      const cur = monthsMap.get(monthKey) || { expenses: 0, income: 0, txCount: 0 };
-      cur.income += i.amount;
+      const cur = monthsMap.get(monthKey) || { expenses: 0, walletAdd: 0, employmentIncome: 0, txCount: 0 };
+      cur.employmentIncome += i.amount;
       cur.txCount += 1;
       monthsMap.set(monthKey, cur);
     });
@@ -265,7 +265,7 @@ export const GlobalSearch: React.FC = () => {
           type: 'month' as const,
           category: t('search.monthlySummaries'),
           title: localizedMonthYear,
-          subtitle: `${t('search.income')}: +€${stats.income.toFixed(2)} | ${t('search.expenses')}: -€${stats.expenses.toFixed(2)} | ${t('search.savings')}: €${(stats.income - stats.expenses).toFixed(2)}`,
+          subtitle: `${t('search.income')}: +€${(stats.walletAdd + stats.employmentIncome).toFixed(2)} | ${t('search.expenses')}: -€${stats.expenses.toFixed(2)} | ${t('search.savings')}: €${(stats.walletAdd - stats.expenses).toFixed(2)}`,
           badge: `${stats.txCount} txs`,
           badgeVariant: 'outline',
           onClick: () => {
