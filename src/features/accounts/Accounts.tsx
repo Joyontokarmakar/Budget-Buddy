@@ -438,28 +438,28 @@ export const Accounts: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Apple Pill Segment Control Tab Switcher */}
-      <div className="flex p-1 bg-muted/60 dark:bg-muted/40 rounded-xl max-w-[280px]">
+      <div className="flex p-1 bg-muted/60 dark:bg-zinc-900/60 rounded-xl max-w-[280px] border border-border/40">
         <button
           onClick={() => handleTabChange('accounts')}
           className={cn(
             "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
             activeTab === 'accounts'
-              ? "bg-card text-foreground shadow-xs"
+              ? "bg-white dark:bg-white/10 text-foreground dark:text-white shadow-xs"
               : "text-muted-foreground hover:text-foreground bg-transparent"
           )}
         >
-          {t('accounts.title') || 'Accounts & Assets'}
+          {t('nav.accounts') || 'Accounts'}
         </button>
         <button
           onClick={() => handleTabChange('income')}
           className={cn(
             "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
             activeTab === 'income'
-              ? "bg-card text-foreground shadow-xs"
+              ? "bg-white dark:bg-white/10 text-foreground dark:text-white shadow-xs"
               : "text-muted-foreground hover:text-foreground bg-transparent"
           )}
         >
-          {t('nav.income') || 'Employment Income'}
+          {t('nav.income') || 'Income'}
         </button>
       </div>
 
