@@ -444,7 +444,7 @@ export const Accounts: React.FC = () => {
           className={cn(
             "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
             activeTab === 'accounts'
-              ? "bg-white dark:bg-white/10 text-foreground dark:text-white shadow-xs"
+              ? "bg-primary text-white shadow-xs"
               : "text-muted-foreground hover:text-foreground bg-transparent"
           )}
         >
@@ -455,7 +455,7 @@ export const Accounts: React.FC = () => {
           className={cn(
             "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
             activeTab === 'income'
-              ? "bg-white dark:bg-white/10 text-foreground dark:text-white shadow-xs"
+              ? "bg-primary text-white shadow-xs"
               : "text-muted-foreground hover:text-foreground bg-transparent"
           )}
         >
