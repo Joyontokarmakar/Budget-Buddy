@@ -11,7 +11,7 @@ import { getSafeItems } from '../../utils/items';
 import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, PlusCircle, Percent } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, Percent } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -1851,30 +1851,7 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Actions Panel */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold">{t('dashboard.quickActions')}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/expenses')}>
-            <TrendingDown className="h-5 w-5 text-rose-500" />
-            + Expense
-          </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts?tab=income')}>
-            <TrendingUp className="h-5 w-5 text-emerald-500" />
-            + Income
-          </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts?action=deposit')}>
-            <PlusCircle className="h-5 w-5 text-indigo-500" />
-            + Add Balance
-          </Button>
-          <Button variant="outline" className="flex flex-col items-center justify-center h-20 rounded-2xl gap-1 text-[10px] sm:text-xs font-semibold" onClick={() => navigate('/accounts')}>
-            <Plus className="h-5 w-5 text-primary" />
-            + Account
-          </Button>
-        </CardContent>
-      </Card>
+
 
       {/* Recent Transactions List */}
       <div className="space-y-3">
