@@ -151,7 +151,7 @@ Select.displayName = 'Select';
 // CARD COMPONENTS
 // =========================================================================
 export const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => (
-  <div className={cn('rounded-2xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md', className)} {...props} />
+  <div className={cn('rounded-2xl border border-border/60 bg-card/75 backdrop-blur-md text-card-foreground shadow-xs overflow-hidden transition-all duration-300 hover:shadow-md hover:scale-[1.005]', className)} {...props} />
 );
 
 export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => (

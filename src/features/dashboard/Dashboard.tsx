@@ -11,7 +11,7 @@ import { getSafeItems } from '../../utils/items';
 import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, PlusCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, PlusCircle, Percent } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -994,103 +994,131 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Assets (Span 2) */}
-        <Card className="col-span-2 bg-gradient-to-tr from-primary to-violet-600 border-none text-white shadow-xl shadow-primary/10">
-          <CardContent className="p-4 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
+        <Card className="col-span-2 bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.currentMoney')}
               </span>
-              <Wallet className="h-5 w-5 text-white/80" />
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-inner shrink-0">
+                <Wallet className="h-5 w-5" />
+              </div>
             </div>
             <div className="mt-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{totalAssets.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
-              <span className="text-[10px] text-white/60 font-semibold mt-1">Across all synced assets</span>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Across all synced assets</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Monthly Spending */}
-        <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[9px] font-bold uppercase tracking-wider">
+        <Card className="bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.monthlySpending')}
               </span>
-              <TrendingDown className="h-4.5 w-4.5 text-rose-500" />
+              <div className="h-10 w-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner shrink-0">
+                <TrendingDown className="h-5 w-5" />
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg sm:text-xl font-bold">
+            <div className="mt-2">
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{monthlySpending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </h3>
-              <p className="text-[9px] text-muted-foreground mt-0.5">This Month</p>
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">This Month</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Remaining Budget */}
-        <Card className="hover:border-primary/20 transition-all">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[9px] font-bold uppercase tracking-wider">
+        <Card className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.remainingBudget')}
               </span>
-              <Coins className="h-4.5 w-4.5 text-emerald-500" />
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+                <Coins className="h-5 w-5" />
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg sm:text-xl font-bold">
+            <div className="mt-2">
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{remainingBudget.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </h3>
-              <p className="text-[9px] text-muted-foreground mt-0.5">Of €{monthlyBudget.toFixed(0)} limit</p>
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Of €{monthlyBudget.toFixed(0)} limit</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Secondary Financial Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         
         {/* Income, Savings & Discounts */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="bg-emerald-500/5 dark:bg-emerald-500/[0.02] border-emerald-500/10">
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                {t('dashboard.thisMonthIncome')}
-              </span>
-              <div>
-                <span className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:col-span-2">
+          <Card className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+            <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {t('dashboard.thisMonthIncome')}
+                </span>
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+                  <ArrowUpRight className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                   +€{thisMonthIncome.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <p className="text-[9px] text-muted-foreground mt-0.5">Werkstudent + Support</p>
+                </h3>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block">Werkstudent + Support</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={thisMonthSavings >= 0 ? "bg-blue-500/5 dark:bg-blue-500/[0.02] border-blue-500/10" : "bg-rose-500/5 dark:bg-rose-500/[0.02] border-rose-500/10"}>
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                {t('dashboard.thisMonthSavings')}
-              </span>
-              <div>
-                <span className={`text-base sm:text-lg font-extrabold ${thisMonthSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-500'}`}>
+          <Card className={thisMonthSavings >= 0 
+            ? "bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300"
+            : "bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300"
+          }>
+            <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {t('dashboard.thisMonthSavings')}
+                </span>
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-inner shrink-0 ${
+                  thisMonthSavings >= 0 
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    : 'bg-rose-500/10 text-rose-500'
+                }`}>
+                  {thisMonthSavings >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                </div>
+              </div>
+              <div className="mt-2">
+                <h3 className={`text-base sm:text-lg font-extrabold whitespace-nowrap ${thisMonthSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-500'}`}>
                   {thisMonthSavings >= 0 ? '+' : ''}€{thisMonthSavings.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <p className="text-[9px] text-muted-foreground mt-0.5">Net Cash Flow</p>
+                </h3>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block">Net Cash Flow</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-violet-500/5 dark:bg-violet-500/[0.02] border-violet-500/10">
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between min-h-[96px] sm:min-h-[112px]">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-                Monthly Discounts
-              </span>
-              <div>
-                <span className="text-base sm:text-lg font-extrabold text-violet-600 dark:text-violet-400">
-                  +€{thisMonthDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <Card className="bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+            <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Monthly Discounts
                 </span>
-                <p className="text-[9px] text-muted-foreground mt-0.5">Total Saved</p>
+                <div className="h-8 w-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-inner shrink-0">
+                  <Percent className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="mt-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-violet-600 dark:text-violet-400 whitespace-nowrap">
+                  +€{thisMonthDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block">Total Saved</span>
               </div>
             </CardContent>
           </Card>

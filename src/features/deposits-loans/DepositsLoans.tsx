@@ -475,7 +475,7 @@ export const DepositsLoans: React.FC = () => {
 
       {/* Overview Cards Block */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in duration-300">
-        <Card className="bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
+        <Card className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -490,8 +490,8 @@ export const DepositsLoans: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-tr from-blue-500/10 to-sky-500/10 border-blue-500/20">
+ 
+        <Card className="bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -509,8 +509,8 @@ export const DepositsLoans: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-tr from-violet-500/10 to-purple-500/10 border-violet-500/20">
+ 
+        <Card className="bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -528,8 +528,8 @@ export const DepositsLoans: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+ 
+        <Card className="bg-gradient-to-tr from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -547,13 +547,13 @@ export const DepositsLoans: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
+ 
         {/* Net Debt/Credit Status Card */}
         {(() => {
           const net = loansTakenSummary.outstanding - loansProvidedSummary.outstanding;
           const isDebt = net > 0;
           return (
-            <Card className={`bg-gradient-to-tr border/20 ${isDebt ? 'from-amber-500/10 to-orange-500/10 border-amber-500/20' : 'from-indigo-500/10 to-teal-500/10 border-indigo-500/20'}`}>
+            <Card className={`bg-gradient-to-tr border/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 ${isDebt ? 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20' : 'from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20'}`}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">

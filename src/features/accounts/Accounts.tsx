@@ -489,7 +489,7 @@ export const Accounts: React.FC = () => {
           </div>
 
           {/* Asset Summary Panel */}
-          <Card className="bg-gradient-to-tr from-primary/10 to-violet-500/10 border-primary/20">
+          <Card className="bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
             <CardContent className="p-6 flex items-center justify-between">
               <div className="space-y-1">
                 <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
