@@ -37,7 +37,10 @@ export const Reports: React.FC = () => {
     setSelectedMonth(`${year}-${month}`);
   };
 
-
+  const getCatColorByName = (name: string) => {
+    const cat = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+    return getCategoryColor(cat?.color || '#6b7280');
+  };
 
   // Receipt modal state
   const [selectedReceipt, setSelectedReceipt] = useState<{
@@ -1142,14 +1145,36 @@ export const Reports: React.FC = () => {
         {/* Tab 1: Detailed Google Sheet (Double Width) */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg border-border/80 overflow-hidden bg-card/65 backdrop-blur-md">
-            <CardHeader className="bg-muted/30 border-b border-border/50 flex flex-row items-center justify-between py-4 px-5">
+            <CardHeader className="bg-muted/30 border-b border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 px-5 gap-3">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <Table className="h-5 w-5 text-primary" />
                 Detailed Shopping Sheet - {formatMonthKey(selectedMonth)}
               </CardTitle>
-              <div className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1 bg-muted/65 px-2 py-0.5 rounded-lg border border-border/30">
-                <Info className="h-3 w-3 text-primary" />
-                <span>Pills: Food (F), Kitchen (K), Shopping (S), Restaurant (R), Other (O)</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-muted-foreground font-semibold bg-muted/40 dark:bg-muted/15 px-3 py-1.5 rounded-xl border border-border/40">
+                <span className="flex items-center gap-1.5 font-bold uppercase text-[9px] text-primary tracking-wider border-r border-border/50 pr-2.5 mr-0.5 shrink-0">
+                  <Info className="h-3 w-3" />
+                  Pills
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Food') }}>F</span>
+                  <span>Food</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Kitchen ware') }}>K</span>
+                  <span>Kitchen</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Shopping') }}>S</span>
+                  <span>Shopping</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Restaurant') }}>R</span>
+                  <span>Restaurant</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Other') }}>O</span>
+                  <span>Other</span>
+                </span>
               </div>
             </CardHeader>
             <CardContent className="p-0">
