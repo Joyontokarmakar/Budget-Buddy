@@ -1145,44 +1145,44 @@ export const Reports: React.FC = () => {
         {/* Tab 1: Detailed Google Sheet (Double Width) */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg border-border/80 overflow-hidden bg-card/65 backdrop-blur-md">
-            <CardHeader className="bg-muted/30 border-b border-border/50 flex flex-col md:flex-row md:items-center md:justify-between py-4 px-5 gap-4">
+            <CardHeader className="bg-muted/30 border-b border-border/50 py-4 px-5 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0 shadow-xs border border-primary/10">
                   <Table className="h-5 w-5" />
                 </div>
-                <div className="space-y-0.5">
-                  <CardTitle className="text-base font-extrabold tracking-tight text-foreground">
+                <div>
+                  <CardTitle className="text-base font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     Detailed Shopping Sheet
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground font-semibold">
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">
                     Showing entries for <span className="text-foreground font-bold">{formatMonthKey(selectedMonth)}</span>
                   </p>
                 </div>
               </div>
               
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mr-1 flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/30">
+                <span className="text-[10px] uppercase font-extrabold text-muted-foreground tracking-wider mr-1 flex items-center gap-1">
                   <Info className="h-3.5 w-3.5 text-primary" />
                   Category Keys:
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <div className="flex items-center gap-1 bg-muted/65 dark:bg-muted/15 border border-border/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/10 border border-border/30 px-2.5 py-0.5 rounded-full shadow-2xs">
                     <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Food') }}>F</span>
                     <span className="text-[10px] font-bold text-foreground/80">Food</span>
                   </div>
-                  <div className="flex items-center gap-1 bg-muted/65 dark:bg-muted/15 border border-border/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/10 border border-border/30 px-2.5 py-0.5 rounded-full shadow-2xs">
                     <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Kitchen ware') }}>K</span>
                     <span className="text-[10px] font-bold text-foreground/80">Kitchen</span>
                   </div>
-                  <div className="flex items-center gap-1 bg-muted/65 dark:bg-muted/15 border border-border/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/10 border border-border/30 px-2.5 py-0.5 rounded-full shadow-2xs">
                     <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Shopping') }}>S</span>
                     <span className="text-[10px] font-bold text-foreground/80">Shopping</span>
                   </div>
-                  <div className="flex items-center gap-1 bg-muted/65 dark:bg-muted/15 border border-border/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/10 border border-border/30 px-2.5 py-0.5 rounded-full shadow-2xs">
                     <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Restaurant') }}>R</span>
                     <span className="text-[10px] font-bold text-foreground/80">Restaurant</span>
                   </div>
-                  <div className="flex items-center gap-1 bg-muted/65 dark:bg-muted/15 border border-border/30 px-2 py-0.5 rounded-full shadow-2xs">
+                  <div className="flex items-center gap-1 bg-muted/60 dark:bg-muted/10 border border-border/30 px-2.5 py-0.5 rounded-full shadow-2xs">
                     <span className="w-4 h-4 rounded-full text-[9px] font-black text-white flex items-center justify-center shadow-xs" style={{ backgroundColor: getCatColorByName('Other') }}>O</span>
                     <span className="text-[10px] font-bold text-foreground/80">Other</span>
                   </div>
