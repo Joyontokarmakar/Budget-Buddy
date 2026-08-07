@@ -10,7 +10,7 @@ import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Table, Calendar, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
+import { Table, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -37,9 +37,7 @@ export const Reports: React.FC = () => {
     setSelectedMonth(`${year}-${month}`);
   };
 
-  // Bill Analyzer state
-  const [selectedBillCategory, setSelectedBillCategory] = useState<string | null>('Total Expense');
-  const [historyYear, setHistoryYear] = useState<string>('All');
+
 
   // Receipt modal state
   const [selectedReceipt, setSelectedReceipt] = useState<{
@@ -459,108 +457,7 @@ export const Reports: React.FC = () => {
       .slice(0, 5);
   }, [shoppingExpenses, categories]);
 
-  const billHistory = useMemo(() => {
-    if (!selectedBillCategory) return [];
 
-    const normCategory = selectedBillCategory.toLowerCase().trim();
-
-    if (normCategory === 'total expense') {
-      const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
-      
-      expenses.forEach(e => {
-        if (!e.date) return;
-        const [yearStr, monthStr] = e.date.split('-');
-        const monthKey = `${yearStr}-${monthStr}`;
-        const year = parseInt(yearStr);
-        const month = parseInt(monthStr);
-        
-        if (!monthlySums[monthKey]) {
-          const localDate = new Date(year, month - 1, 1);
-          monthlySums[monthKey] = {
-            timestamp: localDate.getTime(),
-            monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-            date: 'Full Month',
-            amount: 0,
-            notes: 'Combined monthly total'
-          };
-        }
-        monthlySums[monthKey].amount += e.amount;
-      });
-      
-      return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
-    }
-
-    if (normCategory === 'total discounts') {
-      const monthlySums: { [monthKey: string]: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null } } = {};
-      
-      expenses.forEach(e => {
-        if (!e.date || !e.discount || Number(e.discount) <= 0) return;
-        const [yearStr, monthStr] = e.date.split('-');
-        const monthKey = `${yearStr}-${monthStr}`;
-        const year = parseInt(yearStr);
-        const month = parseInt(monthStr);
-        
-        if (!monthlySums[monthKey]) {
-          const localDate = new Date(year, month - 1, 1);
-          monthlySums[monthKey] = {
-            timestamp: localDate.getTime(),
-            monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-            date: 'Full Month',
-            amount: 0,
-            notes: 'Combined discounts'
-          };
-        }
-        monthlySums[monthKey].amount += Number(e.discount);
-      });
-      
-      return Object.values(monthlySums).sort((a, b) => b.timestamp - a.timestamp);
-    }
-
-    const history: { timestamp: number; monthLabel: string; date: string; amount: number; notes: string | null }[] = [];
-    expenses.forEach(e => {
-      const cat = categories.find(c => c.id === e.category_id) || e.category;
-      if (cat && cat.name.toLowerCase().trim() === normCategory) {
-        if (!e.date) return;
-        const [yearStr, monthStr, dayStr] = e.date.split('-');
-        const year = parseInt(yearStr);
-        const month = parseInt(monthStr);
-        const day = parseInt(dayStr);
-        const localDate = new Date(year, month - 1, day);
-        
-        history.push({
-          timestamp: localDate.getTime(),
-          monthLabel: localDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-          date: localDate.toLocaleDateString('de-DE'),
-          amount: e.amount,
-          notes: e.notes
-        });
-      }
-    });
-
-    return history.sort((a, b) => b.timestamp - a.timestamp);
-  }, [expenses, selectedBillCategory, categories]);
-
-  const availableYears = useMemo(() => {
-    const yearsSet = new Set<string>();
-    expenses.forEach(e => {
-      if (e.date) {
-        const year = e.date.substring(0, 4);
-        if (year && year.length === 4 && !isNaN(Number(year))) {
-          yearsSet.add(year);
-        }
-      }
-    });
-    yearsSet.add(new Date().getFullYear().toString());
-    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
-  }, [expenses]);
-
-  const filteredBillHistory = useMemo(() => {
-    if (historyYear === 'All') return billHistory;
-    return billHistory.filter(item => {
-      const date = new Date(item.timestamp);
-      return date.getFullYear().toString() === historyYear;
-    });
-  }, [billHistory, historyYear]);
 
   const handleExportExcel = () => {
     // Generate CSV data for Detailed Shopping Sheet
@@ -1238,158 +1135,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* TOP SECTION: Bill & Expense History Analyzer (Full Width) */}
-      <Card className="shadow-lg border-border/80 bg-card/65 backdrop-blur-md">
-        <CardHeader className="bg-muted/30 border-b border-border/50 py-4 px-5">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Monthly Bill & Expense History Analyzer
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-4">
-          <p className="text-xs text-muted-foreground font-semibold">
-            Click on a button below to analyze all past payments, invoices, and total monthly expenses.
-          </p>
 
-          {/* Bill Buttons Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-            {/* Total Expense Button First */}
-            <button
-              type="button"
-              onClick={() => setSelectedBillCategory('Total Expense')}
-              className={cn(
-                "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
-                selectedBillCategory?.toLowerCase() === 'total expense'
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
-                  : "bg-card hover:bg-muted border-border/80 text-foreground"
-              )}
-            >
-              <span className="opacity-90">Total Expense</span>
-              <span className={cn(
-                "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                selectedBillCategory?.toLowerCase() === 'total expense' ? "text-primary-foreground/90" : "text-muted-foreground"
-              )}>
-                Current: €{totalExpenses.toFixed(2)}
-              </span>
-            </button>
-
-            {/* Total Discounts Button Second */}
-            <button
-              type="button"
-              onClick={() => setSelectedBillCategory('Total Discounts')}
-              className={cn(
-                "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
-                selectedBillCategory?.toLowerCase() === 'total discounts'
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
-                  : "bg-card hover:bg-muted border-border/80 text-foreground"
-              )}
-            >
-              <span className="opacity-90">Total Discounts</span>
-              <span className={cn(
-                "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                selectedBillCategory?.toLowerCase() === 'total discounts' ? "text-primary-foreground/90" : "text-muted-foreground"
-              )}>
-                Current: €{currentMonthDiscounts.toFixed(2)}
-              </span>
-            </button>
-
-            {dynamicFixedBillsList.map((bill) => {
-              const isActive = selectedBillCategory?.toLowerCase().trim() === bill.name.toLowerCase().trim();
-              return (
-                <button
-                  key={bill.id}
-                  type="button"
-                  onClick={() => setSelectedBillCategory(bill.name)}
-                  className={cn(
-                    "p-3 rounded-xl border text-[10px] sm:text-xs font-bold text-left transition-all duration-200 shadow-xs flex flex-col justify-between h-20",
-                    isActive
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/10"
-                      : "bg-card hover:bg-muted border-border/80 text-foreground"
-                  )}
-                >
-                  <span className="opacity-90">{bill.name}</span>
-                  {/* Show current month value under the button */}
-                  <div>
-                    <span className={cn(
-                      "text-[9px] sm:text-[10px] font-black font-mono block mt-1",
-                      isActive ? "text-primary-foreground/90" : "text-muted-foreground"
-                    )}>
-                      Current: €{bill.amount.toFixed(2)}
-                    </span>
-                    {bill.amount > 0 && bill.accountName && (
-                      <span className={cn(
-                        "text-[8px] font-semibold opacity-75 block mt-0.5",
-                        isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-                      )}>
-                        By {bill.accountName}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* History Table */}
-          {selectedBillCategory ? (
-            <div className="space-y-3.5 pt-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  History for {selectedBillCategory}
-                </span>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={historyYear}
-                    onChange={(e) => setHistoryYear(e.target.value)}
-                    className="text-[10px] font-bold bg-muted hover:bg-muted/80 border border-border/80 rounded-lg px-2.5 py-1 outline-none cursor-pointer text-foreground transition-colors"
-                  >
-                    <option value="All">All Years</option>
-                    {availableYears.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                  <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-1 rounded-lg">
-                    {filteredBillHistory.length} logs
-                  </span>
-                </div>
-              </div>
-
-              {filteredBillHistory.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-                  No records found for this category and year.
-                </div>
-              ) : (
-                <div className="border border-border/50 rounded-xl max-h-72 overflow-auto bg-card/40 scrollbar-thin">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="sticky top-0 bg-muted/95 backdrop-blur-xs z-10 border-b border-border">
-                      <tr className="text-muted-foreground font-bold text-[9px] uppercase">
-                        <th className="py-2.5 px-3">Billing Month</th>
-                        <th className="py-2.5 px-3">{selectedBillCategory === 'Total Expense' ? 'Period' : 'Date Paid'}</th>
-                        <th className="py-2.5 px-3 text-right w-36">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/20 font-semibold text-foreground/90">
-                      {filteredBillHistory.map((item, index) => (
-                        <tr key={index} className="hover:bg-muted/20">
-                          <td className="py-2.5 px-3 text-foreground font-bold">{item.monthLabel}</td>
-                          <td className="py-2.5 px-3 text-muted-foreground/80 font-medium">{item.date}</td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-foreground">
-                            €{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-              Select a category or total expense above to view past invoices/totals list.
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* BOTTOM SECTION: Detailed sheet and stacked summaries */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
