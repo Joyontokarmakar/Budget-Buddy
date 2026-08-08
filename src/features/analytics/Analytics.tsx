@@ -1983,6 +1983,7 @@ export const Analytics: React.FC = () => {
                 <th className="py-2 w-12 text-center">Rank</th>
                 <th className="py-2">Store Name</th>
                 <th className="py-2 text-right">Total Spent</th>
+                <th className="py-2 w-16 text-center">Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -2007,6 +2008,20 @@ export const Analytics: React.FC = () => {
                   </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        setIsShowAllThisMonthOpen(false);
+                        setSelectedReceipt({ type: 'store', name: store.name, scope: 'thisMonth' });
+                      }}
+                      title="View details receipt"
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -2033,6 +2048,7 @@ export const Analytics: React.FC = () => {
                 <th className="py-2 w-12 text-center">Rank</th>
                 <th className="py-2">Store Name</th>
                 <th className="py-2 text-right">Total Spent</th>
+                <th className="py-2 w-16 text-center">Receipt</th>
               </tr>
             </thead>
             <tbody>
@@ -2055,6 +2071,20 @@ export const Analytics: React.FC = () => {
                   </td>
                   <td className="py-2.5 text-right font-mono text-rose-500 font-bold">
                     €{store.totalAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        setIsShowAllAllTimeOpen(false);
+                        setSelectedReceipt({ type: 'store', name: store.name, scope: 'allTime' });
+                      }}
+                      title="View details receipt"
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                    </Button>
                   </td>
                 </tr>
               ))}
