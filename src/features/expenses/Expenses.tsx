@@ -2412,6 +2412,19 @@ export const Expenses: React.FC = () => {
                                                   <span className="text-xs font-extrabold text-foreground">
                                                     Total: €{exp.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                   </span>
+                                                  {exp.receipt_url && (
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedReceiptUrl(exp.receipt_url);
+                                                      }}
+                                                      className="text-primary hover:text-primary/80 flex items-center justify-center p-0.5 rounded bg-primary/10 transition-colors"
+                                                      title="View Receipt"
+                                                    >
+                                                      <FileText className="h-3.5 w-3.5" />
+                                                    </button>
+                                                  )}
                                                   <button
                                                     type="button"
                                                     onClick={(e) => {
