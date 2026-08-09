@@ -118,7 +118,7 @@ export interface EmploymentIncome {
   date: string;
   notes: string | null;
   amount: number;
-  destination_account_id: string;
+  destination_account_id: string | null;
   created_at: string;
   updated_at: string;
 }

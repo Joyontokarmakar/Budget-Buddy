@@ -348,9 +348,13 @@ export const Accounts: React.FC = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    if (accounts.length > 0 && !empDestinationAccount) {
-      const defaultAcc = accounts.find(a => a.is_default);
-      setEmpDestinationAccount(defaultAcc ? defaultAcc.id : accounts[0].id);
+    if (!empDestinationAccount) {
+      if (accounts.length > 0) {
+        const defaultAcc = accounts.find(a => a.is_default);
+        setEmpDestinationAccount(defaultAcc ? defaultAcc.id : accounts[0].id);
+      } else {
+        setEmpDestinationAccount('not-prefer-to-say');
+      }
     }
   }, [accounts, empDestinationAccount]);
 
@@ -377,7 +381,7 @@ export const Accounts: React.FC = () => {
         amount: numericAmount,
         date: empDate,
         organization_name: empOrgName.trim(),
-        destination_account_id: empDestinationAccount,
+        destination_account_id: empDestinationAccount === 'not-prefer-to-say' ? null : empDestinationAccount,
         notes: empNotes.trim() || null,
       });
 
@@ -825,10 +829,13 @@ export const Accounts: React.FC = () => {
                         label={t('income.destination') || 'Destination Account'}
                         value={empDestinationAccount}
                         onChange={(e) => setEmpDestinationAccount(e.target.value)}
-                        options={accounts.map(acc => ({
-                          value: acc.id,
-                          label: `${acc.name} (€${acc.balance.toFixed(2)})`,
-                        }))}
+                        options={[
+                          { value: 'not-prefer-to-say', label: t('income.notPreferToSay') || 'Not prefer to say' },
+                          ...accounts.map(acc => ({
+                            value: acc.id,
+                            label: `${acc.name} (€${acc.balance.toFixed(2)})`,
+                          }))
+                        ]}
                       />
 
                       <Input
@@ -872,7 +879,7 @@ export const Accounts: React.FC = () => {
                           <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-2">
                             <span>{new Date(inc.date).toLocaleDateString('de-DE')}</span>
                             <span>•</span>
-                            <span>To: {inc.account?.name || 'Unknown Account'}</span>
+                            <span>To: {inc.destination_account_id ? (inc.account?.name || 'Unknown Account') : (t('income.notPreferToSay') || 'Not prefer to say')}</span>
                           </p>
                           {inc.notes && <p className="text-[11px] text-muted-foreground/80 mt-0.5">{inc.notes}</p>}
                         </div>

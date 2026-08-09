@@ -66,6 +66,7 @@
     "date": "Date",
     "orgName": "Organization Name (e.g., Apple GmbH)",
     "destination": "Destination Account",
+    "notPreferToSay": "Not prefer to say",
     "notes": "Notes (Optional)",
     "save": "Log Income"
   },

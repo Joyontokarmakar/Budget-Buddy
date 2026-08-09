@@ -799,7 +799,7 @@ CREATE TABLE IF NOT EXISTS public.employment_income (
     date DATE NOT NULL DEFAULT CURRENT_DATE,
     notes TEXT,
     amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
-    destination_account_id UUID REFERENCES public.accounts(id) ON DELETE CASCADE NOT NULL,
+    destination_account_id UUID REFERENCES public.accounts(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

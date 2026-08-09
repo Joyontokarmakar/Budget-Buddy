@@ -66,6 +66,7 @@
     "date": "Datum",
     "orgName": "Unternehmen / Organisation (z. B. Apple GmbH)",
     "destination": "Zielkonto",
+    "notPreferToSay": "Lieber nicht sagen",
     "notes": "Notizen (Optional)",
     "save": "Einnahme buchen"
   },

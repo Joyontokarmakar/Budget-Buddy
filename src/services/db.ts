@@ -1305,13 +1305,15 @@ export const db = {
       setLocalItems('bb-employment-income', incomes);
 
       // Adjust account balance manually
-      const updatedAccounts = accounts.map(a => {
-        if (a.id === income.destination_account_id) {
-          return { ...a, balance: a.balance + income.amount, updated_at: new Date().toISOString() };
-        }
-        return a;
-      });
-      setLocalItems('bb-accounts', updatedAccounts);
+      if (income.destination_account_id) {
+        const updatedAccounts = accounts.map(a => {
+          if (a.id === income.destination_account_id) {
+            return { ...a, balance: a.balance + income.amount, updated_at: new Date().toISOString() };
+          }
+          return a;
+        });
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
 
       notifyDataChange();
       return newInc;
@@ -1339,13 +1341,15 @@ export const db = {
       setLocalItems('bb-employment-income', incomes.filter(i => i.id !== incomeId));
 
       // Revert account balance
-      const updatedAccounts = accounts.map(a => {
-        if (a.id === inc.destination_account_id) {
-          return { ...a, balance: a.balance - inc.amount, updated_at: new Date().toISOString() };
-        }
-        return a;
-      });
-      setLocalItems('bb-accounts', updatedAccounts);
+      if (inc.destination_account_id) {
+        const updatedAccounts = accounts.map(a => {
+          if (a.id === inc.destination_account_id) {
+            return { ...a, balance: a.balance - inc.amount, updated_at: new Date().toISOString() };
+          }
+          return a;
+        });
+        setLocalItems('bb-accounts', updatedAccounts);
+      }
       notifyDataChange();
       return;
     }
@@ -1375,29 +1379,38 @@ export const db = {
       // Adjust balances manually
       let updatedAccounts = [...accounts];
       if (updates.amount !== undefined || updates.destination_account_id !== undefined) {
-        const targetAccountId = updates.destination_account_id || oldInc.destination_account_id;
+        const targetAccountId = updates.destination_account_id !== undefined ? updates.destination_account_id : oldInc.destination_account_id;
         const targetAmount = updates.amount !== undefined ? updates.amount : oldInc.amount;
 
         if (oldInc.destination_account_id === targetAccountId) {
-          // Adjust single account
-          updatedAccounts = updatedAccounts.map(a => {
-            if (a.id === targetAccountId) {
-              return { ...a, balance: a.balance - oldInc.amount + targetAmount, updated_at: new Date().toISOString() };
-            }
-            return a;
-          });
+          // Adjust single account if it exists
+          if (targetAccountId) {
+            updatedAccounts = updatedAccounts.map(a => {
+              if (a.id === targetAccountId) {
+                return { ...a, balance: a.balance - oldInc.amount + targetAmount, updated_at: new Date().toISOString() };
+              }
+              return a;
+            });
+          }
         } else {
-          // Revert old account
-          updatedAccounts = updatedAccounts.map(a => {
-            if (a.id === oldInc.destination_account_id) {
-              return { ...a, balance: a.balance - oldInc.amount, updated_at: new Date().toISOString() };
-            }
-            // Add to new account
-            if (a.id === targetAccountId) {
-              return { ...a, balance: a.balance + targetAmount, updated_at: new Date().toISOString() };
-            }
-            return a;
-          });
+          // Revert old account if it exists
+          if (oldInc.destination_account_id) {
+            updatedAccounts = updatedAccounts.map(a => {
+              if (a.id === oldInc.destination_account_id) {
+                return { ...a, balance: a.balance - oldInc.amount, updated_at: new Date().toISOString() };
+              }
+              return a;
+            });
+          }
+          // Add to new account if it exists
+          if (targetAccountId) {
+            updatedAccounts = updatedAccounts.map(a => {
+              if (a.id === targetAccountId) {
+                return { ...a, balance: a.balance + targetAmount, updated_at: new Date().toISOString() };
+              }
+              return a;
+            });
+          }
         }
         setLocalItems('bb-accounts', updatedAccounts);
       }
