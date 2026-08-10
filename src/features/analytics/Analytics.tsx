@@ -56,6 +56,9 @@ export const Analytics: React.FC = () => {
     scope?: 'thisMonth' | 'allTime';
   } | null>(null);
 
+  // Top card details modal state
+  const [selectedDetailCard, setSelectedDetailCard] = useState<'spending' | 'income' | 'employment' | 'savings' | null>(null);
+
   useEffect(() => {
     const handleDocumentClick = () => {
       setActiveTooltipDate(null);
@@ -844,6 +847,112 @@ export const Analytics: React.FC = () => {
     return [];
   })();
 
+  const getSourceLabel = (srcType: string) => {
+    if (i18n.language === 'de') {
+      switch (srcType) {
+        case 'werkstudent': return 'Gehalt (Job)';
+        case 'scholarship': return 'Stipendium';
+        case 'family': return 'Familie / Geschenk';
+        case 'freelance': return 'Freiberuflich';
+        default: return 'Sonstige Einzahlung';
+      }
+    } else {
+      switch (srcType) {
+        case 'werkstudent': return 'Salary (Job)';
+        case 'scholarship': return 'Scholarship';
+        case 'family': return 'Family / Gift';
+        case 'freelance': return 'Freelance';
+        default: return 'Other Deposit';
+      }
+    }
+  };
+
+  // 1. Spending Details Calculations
+  const averageSpending = expenses.length > 0 ? totalSpendingAllTime / expenses.length : 0;
+  const totalDiscounts = expenses.reduce((sum, e) => sum + (e.discount || 0), 0);
+  const spendingCount = expenses.length;
+  const topSpendingCategory = categoryData.length > 0 ? categoryData[0] : null;
+
+  // 2. Income Details Calculations
+  const averageIncome = incomes.length > 0 ? totalWalletAddAllTime / incomes.length : 0;
+  const incomeCount = incomes.length;
+  const incomeTypeBreakdown = incomes.reduce((acc: { [key: string]: number }, inc) => {
+    const label = inc.source_name || getSourceLabel(inc.type);
+    acc[label] = (acc[label] || 0) + inc.amount;
+    return acc;
+  }, {});
+  const sortedIncomeTypes = Object.entries(incomeTypeBreakdown)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount);
+  const topIncomeSource = sortedIncomeTypes.length > 0 ? sortedIncomeTypes[0] : null;
+
+  // 3. Employment Details Calculations
+  const averageEmploymentIncome = employmentIncomes.length > 0 ? totalEmploymentIncomeAllTime / employmentIncomes.length : 0;
+  const employmentIncomeCount = employmentIncomes.length;
+  const employerBreakdown = employmentIncomes.reduce((acc: { [key: string]: number }, inc) => {
+    const key = inc.organization_name || 'Other';
+    acc[key] = (acc[key] || 0) + inc.amount;
+    return acc;
+  }, {});
+  const sortedEmployers = Object.entries(employerBreakdown)
+    .map(([name, amount]) => ({ name, amount }))
+    .sort((a, b) => b.amount - a.amount);
+  const topEmployer = sortedEmployers.length > 0 ? sortedEmployers[0] : null;
+
+  // 4. Net Savings Details Calculations
+  const closedWalletAddAll = closedWalletAdd;
+  const closedExpensesSpendingAll = closedExpensesSpending;
+  const savingsRateAll = closedWalletAddAll > 0 ? (netSavingsAllTime / closedWalletAddAll) * 100 : 0;
+
+  const closedMonthsBreakdown = (() => {
+    const monthsData: { [key: string]: { monthKey: string; income: number; expenses: number } } = {};
+
+    incomes.forEach(inc => {
+      if (!inc.date) return;
+      const d = new Date(inc.date);
+      if (d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth)) {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthsData[monthKey]) {
+          monthsData[monthKey] = { monthKey, income: 0, expenses: 0 };
+        }
+        monthsData[monthKey].income += inc.amount;
+      }
+    });
+
+    employmentIncomes.forEach(inc => {
+      if (!inc.date) return;
+      const d = new Date(inc.date);
+      if (d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth)) {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthsData[monthKey]) {
+          monthsData[monthKey] = { monthKey, income: 0, expenses: 0 };
+        }
+        monthsData[monthKey].income += inc.amount;
+      }
+    });
+
+    expenses.forEach(exp => {
+      if (!exp.date) return;
+      const d = new Date(exp.date);
+      if (d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth)) {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!monthsData[monthKey]) {
+          monthsData[monthKey] = { monthKey, income: 0, expenses: 0 };
+        }
+        monthsData[monthKey].expenses += exp.amount;
+      }
+    });
+
+    return Object.values(monthsData)
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  })();
+
+  const formatMonthKey = (monthKey: string) => {
+    const [year, month] = monthKey.split('-');
+    const dateObj = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+    return dateObj.toLocaleDateString(i18n.language || 'en-US', { month: 'long', year: 'numeric' });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -877,7 +986,10 @@ export const Analytics: React.FC = () => {
         <div className="space-y-6">
           {/* STATS SUMMARY ROW */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+            <Card 
+              onClick={() => setSelectedDetailCard('spending')}
+              className="hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/5 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 bg-card/75 backdrop-blur-md cursor-pointer border border-border/80"
+            >
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.totalSpendingAllTime')}</p>
@@ -891,7 +1003,10 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+            <Card 
+              onClick={() => setSelectedDetailCard('income')}
+              className="hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 bg-card/75 backdrop-blur-md cursor-pointer border border-border/80"
+            >
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.totalIncomeAllTime')}</p>
@@ -905,7 +1020,10 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+            <Card 
+              onClick={() => setSelectedDetailCard('employment')}
+              className="hover:border-emerald-600/40 hover:shadow-lg hover:shadow-emerald-600/5 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 bg-card/75 backdrop-blur-md cursor-pointer border border-border/80"
+            >
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -921,7 +1039,10 @@ export const Analytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:border-primary/20 transition-all bg-card/75 backdrop-blur-md">
+            <Card 
+              onClick={() => setSelectedDetailCard('savings')}
+              className="hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 bg-card/75 backdrop-blur-md cursor-pointer border border-border/80"
+            >
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('analytics.netSavingsAllTime')}</p>
@@ -2232,6 +2353,384 @@ export const Analytics: React.FC = () => {
         </div>
         <div className="flex justify-end mt-4 pt-4 border-t border-border/40">
           <Button variant="outline" size="sm" onClick={() => setSelectedReceipt(null)}>
+            Close
+          </Button>
+        </div>
+      </Dialog>
+
+      {/* Top Cards Details Modal */}
+      <Dialog
+        isOpen={selectedDetailCard !== null}
+        onClose={() => setSelectedDetailCard(null)}
+        title={(() => {
+          if (selectedDetailCard === 'spending') return i18n.language === 'de' ? 'Ausgaben-Details' : 'Spending Details';
+          if (selectedDetailCard === 'income') return i18n.language === 'de' ? 'Einnahmen-Details' : 'Income Details';
+          if (selectedDetailCard === 'employment') return i18n.language === 'de' ? 'Arbeits-Einnahmen' : 'Employment Income Details';
+          if (selectedDetailCard === 'savings') return i18n.language === 'de' ? 'Spar-Details' : 'Net Savings Details';
+          return '';
+        })()}
+        description={(() => {
+          if (selectedDetailCard === 'spending') return i18n.language === 'de' ? 'Detaillierte Analyse Ihrer Ausgaben über alle Kategorien.' : 'Detailed breakdown of your expenses across all categories.';
+          if (selectedDetailCard === 'income') return i18n.language === 'de' ? 'Detaillierte Analyse Ihrer Wallet-Einzahlungen.' : 'Detailed breakdown of your wallet deposit inflows.';
+          if (selectedDetailCard === 'employment') return i18n.language === 'de' ? 'Detaillierte Analyse Ihrer vertraglichen Beschäftigungseinnahmen.' : 'Detailed breakdown of your contract employment paychecks.';
+          if (selectedDetailCard === 'savings') return i18n.language === 'de' ? 'Netto-Ersparnisse für geschlossene Monate (ohne den aktuellen Monat).' : 'Net savings calculation based on closed months (excluding the current month).';
+          return '';
+        })()}
+      >
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
+          {/* Content rendered dynamically */}
+          {selectedDetailCard === 'spending' && (
+            <div className="space-y-5">
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Durchschnitt/Transaktion' : 'Avg / Transaction'}</p>
+                  <p className="text-lg font-black text-rose-500 mt-1">€{averageSpending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Anzahl Transaktionen' : 'Total Transactions'}</p>
+                  <p className="text-lg font-black text-rose-500 mt-1">{spendingCount}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Top-Kategorie' : 'Top Category'}</p>
+                  <p className="text-sm font-bold text-rose-500 mt-1 truncate" title={topSpendingCategory?.name || 'N/A'}>
+                    {topSpendingCategory ? `${topSpendingCategory.name} (€${topSpendingCategory.value.toLocaleString('de-DE', { maximumFractionDigits: 0 })})` : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Gesparte Rabatte' : 'Total Discounts'}</p>
+                  <p className="text-lg font-black text-emerald-500 mt-1">€{totalDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+
+              {/* Category breakdown progress list */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Kategorienübersicht' : 'Category Breakdown'}</h4>
+                <div className="space-y-2 bg-muted/20 p-4 rounded-2xl border border-border/50">
+                  {categoryData.length === 0 ? (
+                    <p className="text-xs text-muted-foreground font-medium py-2 text-center">No categories recorded yet.</p>
+                  ) : (
+                    categoryData.map((cat, index) => {
+                      const percentage = totalSpendingAllTime > 0 ? (cat.value / totalSpendingAllTime) * 100 : 0;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs font-medium">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                              <span>{cat.name}</span>
+                            </div>
+                            <div className="font-mono text-muted-foreground">
+                              €{cat.value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
+                            </div>
+                          </div>
+                          <div className="h-1.5 w-full bg-secondary/55 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${percentage}%`, backgroundColor: cat.color }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Full Transaction list */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Transaktionsliste' : 'Transaction History'}</h4>
+                <div className="max-h-[250px] overflow-y-auto border border-border/40 rounded-xl bg-card">
+                  {expenses.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6 font-medium">No transactions found.</p>
+                  ) : (
+                    <table className="w-full text-xs text-left border-collapse font-sans">
+                      <thead>
+                        <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-semibold sticky top-0 backdrop-blur-xs">
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Description / Category</th>
+                          <th className="py-2.5 px-3">Account</th>
+                          <th className="py-2.5 px-3 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {expenses.map((exp) => {
+                          const dateObj = exp.date ? new Date(exp.date) : null;
+                          const dateStr = dateObj ? dateObj.toLocaleDateString(i18n.language || 'en-US', { day: '2-digit', month: '2-digit' }) : 'N/A';
+                          const catName = exp.category?.name || 'Other';
+                          const displayName = exp.store?.name || exp.notes || catName;
+                          return (
+                            <tr key={exp.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-3 font-mono text-muted-foreground">{dateStr}</td>
+                              <td className="py-2.5 px-3 font-medium">
+                                <div>
+                                  <p className="font-bold truncate max-w-[150px] text-foreground">{displayName}</p>
+                                  <p className="text-[10px] text-muted-foreground">{t(`categories.${catName}`, catName)}</p>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[80px]" title={exp.account?.name || 'Default'}>{exp.account?.name || 'Default'}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-rose-500 font-bold">€{exp.amount.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedDetailCard === 'income' && (
+            <div className="space-y-5">
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Durchschnitt/Einzahlung' : 'Avg / Wallet Add'}</p>
+                  <p className="text-lg font-black text-emerald-500 mt-1">€{averageIncome.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Anzahl Einzahlungen' : 'Total Deposits'}</p>
+                  <p className="text-lg font-black text-emerald-500 mt-1">{incomeCount}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 col-span-2">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Häufigste Quelle' : 'Top Source'}</p>
+                  <p className="text-base font-bold text-emerald-500 mt-1">
+                    {topIncomeSource ? `${topIncomeSource.name} (€${topIncomeSource.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })})` : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Source breakdown progress list */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Quellenübersicht' : 'Source Breakdown'}</h4>
+                <div className="space-y-2 bg-muted/20 p-4 rounded-2xl border border-border/50">
+                  {sortedIncomeTypes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground font-medium py-2 text-center">No deposit income recorded yet.</p>
+                  ) : (
+                    sortedIncomeTypes.map((item, index) => {
+                      const percentage = totalWalletAddAllTime > 0 ? (item.amount / totalWalletAddAllTime) * 100 : 0;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs font-medium">
+                            <span className="font-bold">{item.name}</span>
+                            <span className="font-mono text-muted-foreground">
+                              €{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-secondary/55 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${percentage}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Incomes table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Transaktionsliste (Einnahmen)' : 'Income History'}</h4>
+                <div className="max-h-[250px] overflow-y-auto border border-border/40 rounded-xl bg-card">
+                  {incomes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6 font-medium">No income transactions found.</p>
+                  ) : (
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-semibold sticky top-0 backdrop-blur-xs">
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Source / Notes</th>
+                          <th className="py-2.5 px-3">Destination Account</th>
+                          <th className="py-2.5 px-3 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incomes.map((inc) => {
+                          const dateObj = inc.date ? new Date(inc.date) : null;
+                          const dateStr = dateObj ? dateObj.toLocaleDateString(i18n.language || 'en-US', { day: '2-digit', month: '2-digit' }) : 'N/A';
+                          const sourceLabel = inc.source_name || getSourceLabel(inc.type);
+                          return (
+                            <tr key={inc.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-3 font-mono text-muted-foreground">{dateStr}</td>
+                              <td className="py-2.5 px-3 font-medium">
+                                <div>
+                                  <p className="font-bold truncate max-w-[150px] text-foreground">{sourceLabel}</p>
+                                  {inc.notes && <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{inc.notes}</p>}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[80px]" title={inc.account?.name || 'Default'}>{inc.account?.name || 'Default'}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-emerald-500 font-bold">€{inc.amount.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedDetailCard === 'employment' && (
+            <div className="space-y-5">
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-emerald-600/5 dark:bg-emerald-400/5 border border-emerald-600/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Durchschnittsgehalt' : 'Avg Paycheck'}</p>
+                  <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">€{averageEmploymentIncome.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-600/5 dark:bg-emerald-400/5 border border-emerald-600/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Ausgezahlte Monate' : 'Total Paychecks'}</p>
+                  <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">{employmentIncomeCount}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-emerald-600/5 dark:bg-emerald-400/5 border border-emerald-600/10 col-span-2">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Haupt-Arbeitgeber' : 'Primary Employer'}</p>
+                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                    {topEmployer ? `${topEmployer.name} (€${topEmployer.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })})` : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Employer breakdown progress list */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Arbeitgeberübersicht' : 'Employer Breakdown'}</h4>
+                <div className="space-y-2 bg-muted/20 p-4 rounded-2xl border border-border/50">
+                  {sortedEmployers.length === 0 ? (
+                    <p className="text-xs text-muted-foreground font-medium py-2 text-center">No employment income recorded yet.</p>
+                  ) : (
+                    sortedEmployers.map((item, index) => {
+                      const percentage = totalEmploymentIncomeAllTime > 0 ? (item.amount / totalEmploymentIncomeAllTime) * 100 : 0;
+                      return (
+                        <div key={index} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs font-medium">
+                            <span className="font-bold">{item.name}</span>
+                            <span className="font-mono text-muted-foreground">
+                              €{item.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-secondary/55 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-600 dark:bg-emerald-400 transition-all duration-500" style={{ width: `${percentage}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Paychecks table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Gehaltsabrechnungsliste' : 'Paycheck History'}</h4>
+                <div className="max-h-[250px] overflow-y-auto border border-border/40 rounded-xl bg-card">
+                  {employmentIncomes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6 font-medium">No paychecks found.</p>
+                  ) : (
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-semibold sticky top-0 backdrop-blur-xs">
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Employer</th>
+                          <th className="py-2.5 px-3">Destination Account</th>
+                          <th className="py-2.5 px-3 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {employmentIncomes.map((inc) => {
+                          const dateObj = inc.date ? new Date(inc.date) : null;
+                          const dateStr = dateObj ? dateObj.toLocaleDateString(i18n.language || 'en-US', { day: '2-digit', month: '2-digit' }) : 'N/A';
+                          return (
+                            <tr key={inc.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-3 font-mono text-muted-foreground">{dateStr}</td>
+                              <td className="py-2.5 px-3 font-bold text-foreground">{inc.organization_name}</td>
+                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[100px]" title={inc.account?.name || 'Default'}>{inc.account?.name || 'Default'}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">€{inc.amount.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedDetailCard === 'savings' && (
+            <div className="space-y-5">
+              {/* Explanation note */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-xs leading-relaxed text-muted-foreground">
+                <span className="font-bold text-foreground">{i18n.language === 'de' ? 'Berechnungs-Hinweis:' : 'Calculation Notice:'}</span>{' '}
+                {i18n.language === 'de' 
+                  ? 'Netto-Ersparnisse basieren ausschließlich auf geschlossenen Monaten (der laufende Monat wird ausgeschlossen, da die Einnahmen und Ausgaben noch nicht finalisiert sind).'
+                  : 'Net savings are based strictly on completed (closed) months. The ongoing month is excluded since its income and expense cycles are not yet finalized.'}
+              </div>
+
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Geschlossene Einnahmen' : 'Inflow (Closed Months)'}</p>
+                  <p className="text-lg font-black text-emerald-500 mt-1">€{closedWalletAddAll.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Geschlossene Ausgaben' : 'Outflow (Closed Months)'}</p>
+                  <p className="text-lg font-black text-rose-500 mt-1">€{closedExpensesSpendingAll.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Netto-Ersparnisse' : 'Net Savings'}</p>
+                  <p className={cn("text-lg font-black mt-1", netSavingsAllTime >= 0 ? "text-primary" : "text-amber-500")}>
+                    €{netSavingsAllTime.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Sparquote' : 'Savings Rate'}</p>
+                  <p className={cn("text-lg font-black mt-1", savingsRateAll >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                    {savingsRateAll.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Monthly Breakdown Table */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">{i18n.language === 'de' ? 'Monatliche Aufteilung (Geschlossene Monate)' : 'Monthly Performance'}</h4>
+                <div className="max-h-[250px] overflow-y-auto border border-border/40 rounded-xl bg-card">
+                  {closedMonthsBreakdown.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6 font-medium">No closed months data recorded yet.</p>
+                  ) : (
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-semibold sticky top-0 backdrop-blur-xs">
+                          <th className="py-2.5 px-3">Month</th>
+                          <th className="py-2.5 px-3 text-right">Inflow</th>
+                          <th className="py-2.5 px-3 text-right">Outflow</th>
+                          <th className="py-2.5 px-3 text-right">Net Savings</th>
+                          <th className="py-2.5 px-3 text-right">Savings Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {closedMonthsBreakdown.map((m) => {
+                          const savings = m.income - m.expenses;
+                          const rate = m.income > 0 ? (savings / m.income) * 100 : 0;
+                          return (
+                            <tr key={m.monthKey} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-3 font-bold text-foreground">{formatMonthKey(m.monthKey)}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-emerald-500">€{m.income.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-rose-500">€{m.expenses.toFixed(2)}</td>
+                              <td className={cn("py-2.5 px-3 text-right font-mono font-bold", savings >= 0 ? "text-primary" : "text-amber-500")}>
+                                €{savings.toFixed(2)}
+                              </td>
+                              <td className={cn("py-2.5 px-3 text-right font-mono font-bold", rate >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                {rate.toFixed(1)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end mt-4 pt-4 border-t border-border/40">
+          <Button variant="outline" size="sm" onClick={() => setSelectedDetailCard(null)}>
             Close
           </Button>
         </div>
