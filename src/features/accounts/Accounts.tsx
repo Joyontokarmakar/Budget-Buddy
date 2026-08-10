@@ -476,15 +476,6 @@ export const Accounts: React.FC = () => {
               <p className="text-xs text-muted-foreground">Keep your cash, bank balances, and savings pools in sync</p>
             </div>
             <div className="flex flex-wrap gap-2.5 sm:self-start">
-              {accounts.length > 0 && (
-                <Button
-                  onClick={() => handleOpenDepositDialog()}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/10 font-bold rounded-xl"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Balance
-                </Button>
-              )}
               <Button onClick={handleOpenAddAccountDialog} variant="outline" className="font-bold rounded-xl">
                 <Plus className="h-4 w-4 mr-2" />
                 {t('accounts.addAccount')}
