@@ -988,16 +988,18 @@ export const Analytics: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card 
               onClick={() => setSelectedDetailCard('spending')}
-              className="bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
+              className="bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
             >
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">{t('analytics.totalSpendingAllTime')}</p>
-                  <p className="text-3xl font-extrabold tracking-tight text-rose-500">
+              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
+                <div>
+                  <div className="min-h-[32px] flex items-start pr-14">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.totalSpendingAllTime')}</p>
+                  </div>
+                  <p className="text-3xl font-extrabold tracking-tight text-rose-500 mt-2 block">
                     €{totalSpendingAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner shrink-0">
+                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingDown className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1005,16 +1007,18 @@ export const Analytics: React.FC = () => {
 
             <Card 
               onClick={() => setSelectedDetailCard('income')}
-              className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
+              className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
             >
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">{t('analytics.totalIncomeAllTime')}</p>
-                  <p className="text-3xl font-extrabold tracking-tight text-emerald-500">
+              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
+                <div>
+                  <div className="min-h-[32px] flex items-start pr-14">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.totalIncomeAllTime')}</p>
+                  </div>
+                  <p className="text-3xl font-extrabold tracking-tight text-emerald-500 mt-2 block">
                     €{totalWalletAddAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner shrink-0">
+                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingUp className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1022,18 +1026,20 @@ export const Analytics: React.FC = () => {
 
             <Card 
               onClick={() => setSelectedDetailCard('employment')}
-              className="bg-gradient-to-tr from-teal-500/10 via-teal-500/5 to-transparent border-teal-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
+              className="bg-gradient-to-tr from-teal-500/10 via-teal-500/5 to-transparent border-teal-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
             >
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                    {i18n.language === 'de' ? 'Arbeits-Einnahmen (Allzeit)' : 'Employment Income (All Time)'}
-                  </p>
-                  <p className="text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
+              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
+                <div>
+                  <div className="min-h-[32px] flex items-start pr-14">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">
+                      {i18n.language === 'de' ? 'Arbeits-Einnahmen (Allzeit)' : 'Employment Income (All Time)'}
+                    </p>
+                  </div>
+                  <p className="text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400 mt-2 block">
                     €{totalEmploymentIncomeAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-inner shrink-0">
+                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingUp className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1042,21 +1048,23 @@ export const Analytics: React.FC = () => {
             <Card 
               onClick={() => setSelectedDetailCard('savings')}
               className={cn(
-                "hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer",
+                "hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col",
                 netSavingsAllTime >= 0
                   ? "bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20"
                   : "bg-gradient-to-tr from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20"
               )}
             >
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">{t('analytics.netSavingsAllTime')}</p>
-                  <p className={cn("text-3xl font-extrabold tracking-tight", netSavingsAllTime >= 0 ? "text-primary" : "text-amber-500")}>
+              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
+                <div>
+                  <div className="min-h-[32px] flex items-start pr-14">
+                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.netSavingsAllTime')}</p>
+                  </div>
+                  <p className={cn("text-3xl font-extrabold tracking-tight mt-2 block", netSavingsAllTime >= 0 ? "text-primary" : "text-amber-500")}>
                     €{netSavingsAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className={cn(
-                  "h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0",
+                  "absolute top-6 right-6 h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0",
                   netSavingsAllTime >= 0 ? "bg-primary/10 text-primary" : "bg-amber-500/10 text-amber-500"
                 )}>
                   <Coins className="h-6 w-6" />

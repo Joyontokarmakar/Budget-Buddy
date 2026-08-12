@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useAuthStore } from '../stores/authStore';
@@ -20,6 +20,31 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+      if (
+        notifDropdownRef.current &&
+        !notifDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsNotifOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -124,7 +149,7 @@ export const Layout: React.FC = () => {
             </Button>
 
             {/* Notifications Popover Bell Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={notifDropdownRef}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -141,9 +166,7 @@ export const Layout: React.FC = () => {
               </Button>
 
               {isNotifOpen && (
-                <>
-                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsNotifOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-card p-4 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
                       <span className="text-xs font-black text-foreground">Notifications</span>
                       {unreadCount > 0 && (
@@ -194,7 +217,6 @@ export const Layout: React.FC = () => {
                       )}
                     </div>
                   </div>
-                </>
               )}
             </div>
 
@@ -223,7 +245,7 @@ export const Layout: React.FC = () => {
 
             {/* Unified User Profile Dropdown at the Right */}
             {profile && (
-              <div className="relative">
+              <div className="relative" ref={profileDropdownRef}>
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="group flex items-center gap-2.5 hover:bg-muted/50 p-1.5 rounded-xl transition-all cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-primary/10 border-none"
@@ -253,14 +275,7 @@ export const Layout: React.FC = () => {
 
                 {/* Profile Dropdown Menu */}
                 {isProfileDropdownOpen && (
-                  <>
-                    {/* Backdrop overlay */}
-                    <div 
-                      className="fixed inset-0 z-40 bg-transparent" 
-                      onClick={() => setIsProfileDropdownOpen(false)} 
-                    />
-                    
-                    <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-border/80 bg-card p-3 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-border/80 bg-card p-3 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                       {/* Active profile name & email info */}
                       <div className="flex items-center gap-3 px-2 py-1.5 mb-2.5 border-b border-border/50 pb-2.5">
                         <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
@@ -391,7 +406,6 @@ export const Layout: React.FC = () => {
                         Sign Out
                       </button>
                     </div>
-                  </>
                 )}
               </div>
             )}
