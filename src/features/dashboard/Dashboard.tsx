@@ -994,61 +994,55 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Assets (Span 2) */}
-        <Card className="col-span-2 bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
-          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
-            <div className="flex items-center justify-between">
+        <Card className="col-span-2 h-full bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex items-center justify-between h-full">
+            <div className="space-y-1">
               <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.currentMoney')}
               </span>
-              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-inner shrink-0">
-                <Wallet className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="mt-2">
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{totalAssets.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
               <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Across all synced assets</span>
             </div>
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner shrink-0">
+              <Wallet className="h-6 w-6" />
+            </div>
           </CardContent>
         </Card>
 
         {/* Monthly Spending */}
-        <Card className="bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
-          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
-            <div className="flex items-center justify-between">
+        <Card className="h-full bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex items-center justify-between h-full">
+            <div className="space-y-1">
               <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.monthlySpending')}
               </span>
-              <div className="h-10 w-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner shrink-0">
-                <TrendingDown className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="mt-2">
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{monthlySpending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
               <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">This Month</span>
             </div>
+            <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner shrink-0">
+              <TrendingDown className="h-6 w-6" />
+            </div>
           </CardContent>
         </Card>
 
         {/* Remaining Budget */}
-        <Card className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
-          <CardContent className="p-5 sm:p-6 flex flex-col justify-between min-h-[120px] sm:min-h-[144px]">
-            <div className="flex items-center justify-between">
+        <Card className="h-full bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5 sm:p-6 flex items-center justify-between h-full">
+            <div className="space-y-1">
               <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                 {t('dashboard.remainingBudget')}
               </span>
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
-                <Coins className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="mt-2">
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{remainingBudget.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
               <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Of €{monthlyBudget.toFixed(0)} limit</span>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+              <Coins className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>

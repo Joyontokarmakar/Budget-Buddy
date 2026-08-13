@@ -1,7 +1,8 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card } from '../../components/ui';
-import { Code2, Globe, Mail, Phone, MapPin, Compass, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { Card, Button } from '../../components/ui';
+import { Globe, Mail, Phone, MapPin, Compass, ExternalLink, Database } from 'lucide-react';
+import { db } from '../../services/db';
+import { useAuthStore } from '../../stores/authStore';
 
 const GithubIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
@@ -37,22 +38,170 @@ const LinkedinIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 export const Developer: React.FC = () => {
-  const { t } = useTranslation();
+  const { profile } = useAuthStore();
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState('');
+
+  const handleSeedData = async () => {
+    if (!profile) {
+      setSeedMessage('No profile found. Please register or login first.');
+      return;
+    }
+    setSeeding(true);
+    setSeedMessage('Seeding realistic student transactions...');
+    try {
+      // 1. Get or create default accounts
+      let accounts = await db.getAccounts(profile.id);
+      if (accounts.length === 0) {
+        await db.createAccount(profile.id, {
+          name: 'Sparkasse Giro',
+          type: 'bank',
+          balance: 450.00
+        });
+        await db.createAccount(profile.id, {
+          name: 'Cash Wallet',
+          type: 'cash',
+          balance: 45.00
+        });
+        accounts = await db.getAccounts(profile.id);
+      }
+      
+      const sparkasseAcc = accounts.find(a => a.name.includes('Sparkasse')) || accounts[0];
+      const cashAcc = accounts.find(a => a.type === 'cash') || accounts[0];
+
+      // 2. Get categories
+      const categories = await db.getCategories(profile.id);
+      const foodCat = categories.find(c => c.name.toLowerCase() === 'food' || c.name.toLowerCase() === 'groceries') || categories[0];
+      const rentCat = categories.find(c => c.name.toLowerCase() === 'house rent' || c.name.toLowerCase() === 'rent') || categories[0];
+      const insuranceCat = categories.find(c => c.name.toLowerCase() === 'health insurance' || c.name.toLowerCase() === 'insurance') || categories[0];
+      const shoppingCat = categories.find(c => c.name.toLowerCase() === 'shopping') || categories[0];
+      
+      const now = new Date();
+      const formatOffsetDate = (daysAgo: number) => {
+        const d = new Date();
+        d.setDate(now.getDate() - daysAgo);
+        return d.toISOString().split('T')[0];
+      };
+
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // 3. Clear existing expenses/incomes first to make seeding clean and repeatable
+      const currentExpenses = await db.getExpenses(profile.id);
+      const currentIncomes = await db.getIncome(profile.id);
+      const currentEmpIncomes = await db.getEmploymentIncome(profile.id);
+      
+      for (const e of currentExpenses) {
+        await db.deleteExpense(profile.id, e.id);
+      }
+      for (const i of currentIncomes) {
+        await db.deleteIncome(profile.id, i.id);
+      }
+      for (const ei of currentEmpIncomes) {
+        await db.deleteEmploymentIncome(profile.id, ei.id);
+      }
+
+      // 4. Create Incomes (Support & Job)
+      await db.createIncome(profile.id, {
+        amount: 850.00,
+        date: formatOffsetDate(10),
+        type: 'family',
+        source_name: 'Eltern Unterhalt',
+        destination_account_id: sparkasseAcc.id,
+        notes: 'Monthly support'
+      });
+
+      await db.createIncome(profile.id, {
+        amount: 250.00,
+        date: formatOffsetDate(3),
+        type: 'scholarship',
+        source_name: 'DAAD Scholarship',
+        destination_account_id: sparkasseAcc.id,
+        notes: 'Partial scholarship payout'
+      });
+
+      // 5. Create Employment Income
+      await db.createEmploymentIncome(profile.id, {
+        amount: 450.00,
+        date: formatOffsetDate(5),
+        organization_name: 'TU Chemnitz - HiWi',
+        destination_account_id: sparkasseAcc.id,
+        notes: 'Research Assistant Salary'
+      });
+
+      // 6. Create Rent Expense
+      await db.createExpense(profile.id, {
+        amount: 320.00,
+        date: formatOffsetDate(12),
+        category_id: rentCat.id,
+        payment_account_id: sparkasseAcc.id,
+        notes: `Wohnheim Rent [Bill Period: ${monthKey}]`,
+        receipt_url: null,
+        store_id: null,
+        items: null
+      });
+
+      // Health Insurance Expense
+      await db.createExpense(profile.id, {
+        amount: 120.00,
+        date: formatOffsetDate(11),
+        category_id: insuranceCat.id,
+        payment_account_id: sparkasseAcc.id,
+        notes: `Techniker Krankenkasse [Bill Period: ${monthKey}]`,
+        receipt_url: null,
+        store_id: null,
+        items: null
+      });
+
+      // 7. Create Groceries Expenses
+      await db.createExpense(profile.id, {
+        amount: 45.30,
+        date: formatOffsetDate(7),
+        category_id: foodCat.id,
+        payment_account_id: sparkasseAcc.id,
+        notes: 'Weekly groceries',
+        receipt_url: null,
+        store_id: 's1', // Lidl
+        items: null
+      });
+
+      await db.createExpense(profile.id, {
+        amount: 28.90,
+        date: formatOffsetDate(2),
+        category_id: foodCat.id,
+        payment_account_id: cashAcc.id,
+        notes: 'Vegetables and snacks',
+        receipt_url: null,
+        store_id: 's2', // Aldi Süd
+        items: null
+      });
+
+      // 8. Create Shopping Expense
+      await db.createExpense(profile.id, {
+        amount: 65.00,
+        date: formatOffsetDate(8),
+        category_id: shoppingCat.id,
+        payment_account_id: sparkasseAcc.id,
+        notes: 'Textbooks and stationary',
+        receipt_url: null,
+        store_id: 's50', // Amazon
+        items: null
+      });
+
+      // 9. Trigger global data change event to sync navigation and dashboards
+      window.dispatchEvent(new Event('budget-buddy-data-change'));
+      setSeedMessage('Success! Seeded: 1 Job, 2 Incomes, and 5 Expenses. Check out the Dashboard & Analytics now.');
+    } catch (err: any) {
+      console.error(err);
+      setSeedMessage('Error seeding database: ' + err.message);
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
-    <div className="space-y-6 flex flex-col items-center justify-center min-h-[75vh]">
-      {/* Page Title Header */}
-      <div className="text-center">
-        <h1 className="text-xl font-bold tracking-tight flex items-center justify-center gap-2">
-          <Code2 className="h-5.5 w-5.5 text-primary" />
-          {t('nav.developer')}
-        </h1>
-        <p className="text-[11px] text-muted-foreground mt-1">Creator of Your <span className="font-bold text-primary">Budget buddy</span></p>
-      </div>
-
-      {/* Main Developer Info Card */}
-      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border border-border/60 p-6 flex flex-col items-center shadow-xl relative overflow-hidden">
-        
+    <div className="space-y-6 flex flex-col md:flex-row items-stretch justify-center max-w-4xl mx-auto min-h-[75vh] gap-6 p-4">
+      {/* Developer Profile Card */}
+      <Card className="flex-1 bg-card/70 backdrop-blur-md border border-border/60 p-6 flex flex-col items-center shadow-xl relative overflow-hidden">
         {/* Watermark Logo Background */}
         <img
           src="/budget-buddy.svg"
@@ -61,21 +210,18 @@ export const Developer: React.FC = () => {
         />
 
         <div className="relative z-10 flex flex-col items-center w-full">
-          {/* Avatar Image with pulse backdrop */}
           <div className="relative mb-5 group">
             <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-violet-500 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
             <img
               src="/developer.jpg"
               alt="Joyonto Karmakar"
-              className="relative h-28 w-28 rounded-full object-cover border-4 border-card shadow-lg transition-transform duration-300 group-hover:scale-[1.03]"
+              className="relative h-24 w-24 rounded-full object-cover border-4 border-card shadow-lg transition-transform duration-300 group-hover:scale-[1.03]"
             />
           </div>
 
-          {/* Name and Designation */}
           <h2 className="text-lg font-bold tracking-tight">Joyonto Karmakar</h2>
           <p className="text-xs font-semibold text-primary mt-1 uppercase tracking-wider">Full-Stack Web Developer</p>
           
-          {/* Meta Stats */}
           <div className="flex gap-4 mt-3 text-[10px] text-muted-foreground font-semibold">
             <span className="flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> Chemnitz, Germany
@@ -87,17 +233,15 @@ export const Developer: React.FC = () => {
 
           <hr className="w-full border-border/40 my-4.5" />
 
-          {/* Short Bio */}
           <div className="text-center text-xs leading-relaxed text-muted-foreground/90 space-y-2.5 px-2">
             <p>
               Full-Stack Web Developer with 5+ years of experience building high-performance web applications. Specializing in JavaScript, TypeScript, Vue.js, and React.js.
             </p>
             <p>
-              Currently pursuing an MSc in Automotive Software Engineering at Technische Universität Chemnitz, Germany.
+              Pursuing MSc in Automotive Software Engineering at TU Chemnitz, Germany.
             </p>
           </div>
 
-          {/* Call to action (Portfolio website) */}
           <a
             href="https://joyontokarmakar.netlify.app"
             target="_blank"
@@ -109,7 +253,6 @@ export const Developer: React.FC = () => {
             <ExternalLink className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
 
-          {/* Buy Me A Coffee Button */}
           <a
             href="https://www.buymeacoffee.com/joyontokarmakar"
             target="_blank"
@@ -123,7 +266,6 @@ export const Developer: React.FC = () => {
             />
           </a>
 
-          {/* Secondary Compact Quick Contact Links */}
           <div className="flex items-center justify-center gap-2 mt-4.5 w-full">
             <a
               href="mailto:joyonto.karmakar.cse@gmail.com"
@@ -163,6 +305,44 @@ export const Developer: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Developer Tools Card */}
+      <Card className="flex-1 bg-card/70 backdrop-blur-md border border-border/60 p-6 flex flex-col justify-between shadow-xl relative overflow-hidden">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+            <Database className="h-5.5 w-5.5 text-primary" />
+            Developer Tools
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">Utility functions for development and testing.</p>
+
+          <hr className="w-full border-border/40 my-4.5" />
+
+          <div className="space-y-4">
+            <div className="bg-secondary/40 p-4 rounded-2xl border border-border/55">
+              <h3 className="text-xs font-bold text-foreground">Seed Mock Database</h3>
+              <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed">
+                Clears all transactions (expenses, incomes, and jobs) for your active account and inserts 1 job, 2 incomes, and 5 mock student expenses (rent, food, books, health insurance) spanning the current month.
+              </p>
+              
+              <Button
+                onClick={handleSeedData}
+                loading={seeding}
+                className="w-full mt-4 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                Seed Student Demo Data
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {seedMessage && (
+          <div className="mt-4 p-3 bg-primary/10 border border-primary/20 text-primary rounded-xl text-xs font-semibold leading-relaxed">
+            {seedMessage}
+          </div>
+        )}
+      </Card>
     </div>
   );
 };
+

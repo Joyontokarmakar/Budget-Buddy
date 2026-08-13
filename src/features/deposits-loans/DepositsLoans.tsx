@@ -474,87 +474,77 @@ export const DepositsLoans: React.FC = () => {
       </div>
 
       {/* Overview Cards Block */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in fade-in duration-300">
-        <Card className="h-full flex flex-col bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 relative overflow-hidden">
-          <CardContent className="p-4 flex-1 flex flex-col justify-between relative">
-            <div>
-              <div className="h-8 flex items-start pr-9">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-tight block">
-                  {t('depositsLoans.deposits')}
-                </span>
-              </div>
-              <span className="text-xl font-extrabold text-foreground mt-1.5 block">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 animate-in fade-in duration-300">
+        <Card className="h-full bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between h-full">
+            <div className="space-y-1">
+              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground tracking-wider uppercase block">
+                {t('depositsLoans.deposits')}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 {formatCurrency(totalDeposited)}
-              </span>
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">&nbsp;</span>
             </div>
-            <div className="text-[9px] text-muted-foreground/80 mt-1 block min-h-[14px]">
-              &nbsp;
-            </div>
-            <div className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner">
-              <Coins className="h-4 w-4" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+              <Coins className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </CardContent>
         </Card>
  
-        <Card className="h-full flex flex-col bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 relative overflow-hidden">
-          <CardContent className="p-4 flex-1 flex flex-col justify-between relative">
-            <div>
-              <div className="h-8 flex items-start pr-9">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-tight block">
-                  {t('depositsLoans.loanTaken')}
-                </span>
-              </div>
-              <span className="text-xl font-extrabold text-foreground mt-1.5 block">
+        <Card className="h-full bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between h-full">
+            <div className="space-y-1">
+              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground tracking-wider uppercase block">
+                {t('depositsLoans.loanTaken')}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 {formatCurrency(loansTakenSummary.outstanding)}
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">
+                {t('depositsLoans.repaid')}: {formatCurrency(loansTakenSummary.repaid)}
               </span>
             </div>
-            <div className="text-[9px] text-muted-foreground/80 mt-1 block min-h-[14px]">
-              {t('depositsLoans.repaid')}: {formatCurrency(loansTakenSummary.repaid)}
-            </div>
-            <div className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner">
-              <ArrowDownLeft className="h-4 w-4" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner shrink-0">
+              <ArrowDownLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </CardContent>
         </Card>
  
-        <Card className="h-full flex flex-col bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 relative overflow-hidden">
-          <CardContent className="p-4 flex-1 flex flex-col justify-between relative">
-            <div>
-              <div className="h-8 flex items-start pr-9">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-tight block">
-                  {t('depositsLoans.loanProvided')}
-                </span>
-              </div>
-              <span className="text-xl font-extrabold text-foreground mt-1.5 block">
+        <Card className="h-full bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between h-full">
+            <div className="space-y-1">
+              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground tracking-wider uppercase block">
+                {t('depositsLoans.loanProvided')}
+              </span>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 {formatCurrency(loansProvidedSummary.outstanding)}
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">
+                {t('depositsLoans.repaid')}: {formatCurrency(loansProvidedSummary.repaid)}
               </span>
             </div>
-            <div className="text-[9px] text-muted-foreground/80 mt-1 block min-h-[14px]">
-              {t('depositsLoans.repaid')}: {formatCurrency(loansProvidedSummary.repaid)}
-            </div>
-            <div className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-inner">
-              <ArrowUpRight className="h-4 w-4" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-inner shrink-0">
+              <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </CardContent>
         </Card>
  
-        <Card className="h-full flex flex-col bg-gradient-to-tr from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 relative overflow-hidden">
-          <CardContent className="p-4 flex-1 flex flex-col justify-between relative">
-            <div>
-              <div className="h-8 flex items-start pr-9">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-tight block">
-                  Active EMIs
-                </span>
-              </div>
-              <span className="text-xl font-extrabold text-foreground mt-1.5 block">
+        <Card className="h-full bg-gradient-to-tr from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <CardContent className="p-4 sm:p-5 flex items-center justify-between h-full">
+            <div className="space-y-1">
+              <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground tracking-wider uppercase block">
+                Active EMIs
+              </span>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 {formatCurrency(emisSummary.totalLiability)}
+              </h2>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">
+                Active: {emisSummary.activeCount} ({emis.length} total)
               </span>
             </div>
-            <div className="text-[9px] text-muted-foreground/80 mt-1 block min-h-[14px]">
-              Active: {emisSummary.activeCount} ({emis.length} total)
-            </div>
-            <div className="absolute top-4 right-4 h-8 w-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
-              <CreditCard className="h-4 w-4" />
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner shrink-0">
+              <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </CardContent>
         </Card>
@@ -564,23 +554,21 @@ export const DepositsLoans: React.FC = () => {
           const net = loansTakenSummary.outstanding - loansProvidedSummary.outstanding;
           const isDebt = net > 0;
           return (
-            <Card className={`h-full flex flex-col bg-gradient-to-tr border/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 relative overflow-hidden ${isDebt ? 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20' : 'from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20'}`}>
-              <CardContent className="p-4 flex-1 flex flex-col justify-between relative">
-                <div>
-                  <div className="h-8 flex items-start pr-9">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-tight block">
-                      {t('depositsLoans.netBalance')}
-                    </span>
-                  </div>
-                  <span className="text-xl font-extrabold text-foreground mt-1.5 block">
+            <Card className={`h-full bg-gradient-to-tr hover:scale-[1.01] hover:shadow-md transition-all duration-300 ${isDebt ? 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20' : 'from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/20'}`}>
+              <CardContent className="p-4 sm:p-5 flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground tracking-wider uppercase block">
+                    {t('depositsLoans.netBalance')}
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     {formatCurrency(Math.abs(net))}
+                  </h2>
+                  <span className={`text-[10px] font-bold mt-1 block uppercase tracking-wider ${isDebt ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                    {isDebt ? 'Net Owed to Others' : 'Net Owed to You'}
                   </span>
                 </div>
-                <div className={`text-[9px] font-bold mt-1 block uppercase tracking-wider min-h-[14px] ${isDebt ? 'text-amber-600 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
-                  {isDebt ? 'Net Owed to Others' : 'Net Owed to You'}
-                </div>
-                <div className={`absolute top-4 right-4 h-8 w-8 rounded-xl flex items-center justify-center shadow-inner ${isDebt ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'}`}>
-                  <TrendingUp className="h-4 w-4" />
+                <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0 ${isDebt ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'}`}>
+                  <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
               </CardContent>
             </Card>

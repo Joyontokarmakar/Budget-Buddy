@@ -450,6 +450,14 @@ export const Analytics: React.FC = () => {
     }
   });
 
+  employmentIncomes.forEach(ei => {
+    const d = new Date(ei.date);
+    const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
+    if (monthlySpendingMap[label]) {
+      monthlySpendingMap[label].income += ei.amount;
+    }
+  });
+
   const monthlyComparisonData = Object.values(monthlySpendingMap).map(m => ({
     month: m.month,
     expenses: parseFloat(m.expenses.toFixed(2)),
@@ -988,18 +996,19 @@ export const Analytics: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card 
               onClick={() => setSelectedDetailCard('spending')}
-              className="bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
+              className="h-full bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
             >
-              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
-                <div>
-                  <div className="min-h-[32px] flex items-start pr-14">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.totalSpendingAllTime')}</p>
-                  </div>
-                  <p className="text-3xl font-extrabold tracking-tight text-rose-500 mt-2 block">
+              <CardContent className="p-6 flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                    {t('analytics.totalSpendingAllTime')}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     €{totalSpendingAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                  </h2>
+                  <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Total recorded expenses</span>
                 </div>
-                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner shrink-0">
+                <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingDown className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1007,18 +1016,19 @@ export const Analytics: React.FC = () => {
 
             <Card 
               onClick={() => setSelectedDetailCard('income')}
-              className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
+              className="h-full bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
             >
-              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
-                <div>
-                  <div className="min-h-[32px] flex items-start pr-14">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.totalIncomeAllTime')}</p>
-                  </div>
-                  <p className="text-3xl font-extrabold tracking-tight text-emerald-500 mt-2 block">
+              <CardContent className="p-6 flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                    {t('analytics.totalIncomeAllTime')}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     €{totalWalletAddAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                  </h2>
+                  <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Total wallet additions</span>
                 </div>
-                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner shrink-0">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingUp className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1026,20 +1036,19 @@ export const Analytics: React.FC = () => {
 
             <Card 
               onClick={() => setSelectedDetailCard('employment')}
-              className="bg-gradient-to-tr from-teal-500/10 via-teal-500/5 to-transparent border-teal-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col"
+              className="h-full bg-gradient-to-tr from-teal-500/10 via-teal-500/5 to-transparent border-teal-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer"
             >
-              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
-                <div>
-                  <div className="min-h-[32px] flex items-start pr-14">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">
-                      {i18n.language === 'de' ? 'Arbeits-Einnahmen (Allzeit)' : 'Employment Income (All Time)'}
-                    </p>
-                  </div>
-                  <p className="text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400 mt-2 block">
+              <CardContent className="p-6 flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                    {i18n.language === 'de' ? 'Arbeits-Einnahmen (Allzeit)' : 'Employment Income (All Time)'}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     €{totalEmploymentIncomeAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                  </h2>
+                  <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Job & research assistant salary</span>
                 </div>
-                <div className="absolute top-6 right-6 h-12 w-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-inner shrink-0">
+                <div className="h-12 w-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shadow-inner shrink-0">
                   <TrendingUp className="h-6 w-6" />
                 </div>
               </CardContent>
@@ -1048,23 +1057,24 @@ export const Analytics: React.FC = () => {
             <Card 
               onClick={() => setSelectedDetailCard('savings')}
               className={cn(
-                "hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden h-full flex flex-col",
+                "h-full hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer",
                 netSavingsAllTime >= 0
                   ? "bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20"
                   : "bg-gradient-to-tr from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20"
               )}
             >
-              <CardContent className="p-6 flex-1 flex flex-col justify-between relative">
-                <div>
-                  <div className="min-h-[32px] flex items-start pr-14">
-                    <p className="text-xs font-semibold text-muted-foreground tracking-wider uppercase leading-tight">{t('analytics.netSavingsAllTime')}</p>
-                  </div>
-                  <p className={cn("text-3xl font-extrabold tracking-tight mt-2 block", netSavingsAllTime >= 0 ? "text-primary" : "text-amber-500")}>
+              <CardContent className="p-6 flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                    {t('analytics.netSavingsAllTime')}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                     €{netSavingsAllTime.toLocaleString(i18n.language || 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+                  </h2>
+                  <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Savings Rate: {savingsRateAll.toFixed(1)}%</span>
                 </div>
                 <div className={cn(
-                  "absolute top-6 right-6 h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0",
+                  "h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0",
                   netSavingsAllTime >= 0 ? "bg-primary/10 text-primary" : "bg-amber-500/10 text-amber-500"
                 )}>
                   <Coins className="h-6 w-6" />
@@ -1113,7 +1123,7 @@ export const Analytics: React.FC = () => {
                     No categorized expenses logged for the selected period.
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
                         data={categoryData}
@@ -1158,7 +1168,7 @@ export const Analytics: React.FC = () => {
                 <CardDescription>Monthly inflows vs outflows</CardDescription>
               </CardHeader>
               <CardContent className="h-[340px] pt-2 relative w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="month" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
@@ -1312,7 +1322,7 @@ export const Analytics: React.FC = () => {
                     : 'No spending records available for the selected parameters.'}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart
                     data={barChartData}
                     margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
@@ -1434,7 +1444,7 @@ export const Analytics: React.FC = () => {
 
                 <CardContent className="h-[320px] pt-2 relative w-full min-w-0">
                   {timelineChartType === 'comparison' ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={280}>
                       <AreaChart data={monthlyComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
@@ -1465,7 +1475,7 @@ export const Analytics: React.FC = () => {
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={280}>
                       <LineChart 
                         data={(trendView === 'weekly' ? weeklyTrendData : dailyTrendData) as any[]} 
                         margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -2251,7 +2261,7 @@ export const Analytics: React.FC = () => {
             <p className="text-xs text-muted-foreground py-4 text-center font-medium">No purchase data available to draw chart.</p>
           ) : (
             <div className="w-full h-[260px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                   <XAxis dataKey="label" stroke={textColor} style={{ fontSize: '10px', fontWeight: 'semibold' }} />
