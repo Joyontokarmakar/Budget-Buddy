@@ -10,7 +10,7 @@ import { getCategoryColor } from '../../utils/color';
 import { getSafeItems } from '../../utils/items';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Table, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react';
+import { Table, Calculator, Info, Download, FileText, Store, ShoppingBag, Coins, ArrowDownLeft, ArrowUpRight, Receipt, Wallet } from 'lucide-react';
 
 export const Reports: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -24,6 +24,9 @@ export const Reports: React.FC = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Month-specific budget state (read-only on report page)
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(profile?.monthly_budget || 700.00);
 
   const selectedDate = useMemo(() => {
     const [year, month] = selectedMonth.split('-');
@@ -52,22 +55,24 @@ export const Reports: React.FC = () => {
     if (!profile) return;
     try {
       setLoading(true);
-      const [expData, catData, depData, loanData] = await Promise.all([
+      const [expData, catData, depData, loanData, budgetAmt] = await Promise.all([
         db.getExpenses(profile.id),
         db.getCategories(profile.id),
         db.getDeposits(profile.id),
         db.getLoans(profile.id),
+        db.getMonthlyBudget(profile.id, selectedMonth, profile.monthly_budget),
       ]);
       setExpenses(expData);
       setCategories(catData);
       setDeposits(depData);
       setLoans(loanData);
+      setMonthlyBudget(budgetAmt);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, selectedMonth]);
 
   useEffect(() => {
     loadData();
@@ -376,7 +381,6 @@ export const Reports: React.FC = () => {
     return shoppingSubTotal + totalCommonBill;
   }, [shoppingSubTotal, totalCommonBill]);
 
-  const monthlyBudget = profile?.monthly_budget || 0;
   const remainingBudgetRest = monthlyBudget - totalExpenses;
 
   // Store Analytics for selected month (excluding common bills)
@@ -1139,6 +1143,72 @@ export const Reports: React.FC = () => {
       </div>
 
 
+
+      {/* TOP KPI CARDS FOR SELECTED MONTH */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 no-print">
+        {/* Budget Limit Card */}
+        <Card className="shadow-sm border-border/80 bg-card/65 backdrop-blur-md relative overflow-hidden">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                Monthly Budget ({formatMonthKey(selectedMonth)})
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-xl font-extrabold font-mono text-foreground">
+                  €{monthlyBudget.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <Wallet className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Expenses Card */}
+        <Card className="shadow-sm border-border/80 bg-card/65 backdrop-blur-md relative overflow-hidden">
+          <CardContent className="p-4 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                Total Expenses
+              </span>
+              <span className="text-[10px] font-bold text-muted-foreground font-mono">
+                {monthlyBudget > 0 ? `${((totalExpenses / monthlyBudget) * 100).toFixed(0)}% used` : ''}
+              </span>
+            </div>
+            <div className="text-xl font-extrabold font-mono text-rose-600 dark:text-rose-400">
+              €{totalExpenses.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300",
+                  remainingBudgetRest >= 0 ? "bg-emerald-500" : "bg-rose-500"
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, (totalExpenses / (monthlyBudget || 1)) * 100))}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Remaining Rest Card */}
+        <Card className="shadow-sm border-border/80 bg-card/65 backdrop-blur-md relative overflow-hidden">
+          <CardContent className="p-4 space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+              Remaining Rest
+            </span>
+            <div className={cn(
+              "text-xl font-extrabold font-mono",
+              remainingBudgetRest >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+            )}>
+              €{remainingBudgetRest.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium truncate">
+              {remainingBudgetRest >= 0 ? 'Within monthly budget limit' : 'Exceeded monthly budget limit'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* BOTTOM SECTION: Detailed sheet and stacked summaries */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -426,10 +426,10 @@ export const Analytics: React.FC = () => {
     monthsCount = Math.max(1, diffMonths);
   }
 
-  // Init months chronologically
+  // Init months chronologically (setting day to 1 avoids 28/29/30/31 month rollover bugs)
+  const currentDateAnchor = new Date();
   for (let i = monthsCount - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
+    const d = new Date(currentDateAnchor.getFullYear(), currentDateAnchor.getMonth() - i, 1);
     const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
     monthlySpendingMap[label] = { month: label, expenses: 0, income: 0 };
   }

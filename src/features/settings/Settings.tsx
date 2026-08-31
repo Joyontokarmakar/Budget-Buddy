@@ -236,6 +236,11 @@ export const Settings: React.FC = () => {
     const { error } = await updateProfile({ 
       monthly_budget: parsedBudget
     });
+    if (profile) {
+      const now = new Date();
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.setMonthlyBudget(profile.id, currentMonthKey, parsedBudget);
+    }
     setBudgetLoading(false);
     if (!error) {
       setBudgetSuccess(true);
@@ -311,6 +316,9 @@ export const Settings: React.FC = () => {
       
       const recalculated = activeBillsSum + baseGroceries + baseOther;
       setBudget(recalculated.toFixed(2));
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.setMonthlyBudget(profile.id, currentMonthKey, recalculated);
+      await updateProfile({ monthly_budget: recalculated });
       
       setBudgetSuccess(true);
       setTimeout(() => setBudgetSuccess(false), 3000);

@@ -2494,6 +2494,77 @@ Output your response as a raw JSON object matching the requested schema.`;
     if (error) throw error;
     notifyDataChange();
   },
+
+  // MONTHLY BUDGETS
+  getMonthlyBudgets: async (userId: string): Promise<Record<string, number>> => {
+    try {
+      const key = `bb-monthly-budgets-${userId}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      console.error('Failed to get monthly budgets from storage:', e);
+    }
+    return {};
+  },
+
+  getMonthlyBudget: async (userId: string, monthKey: string, fallbackDefault?: number): Promise<number> => {
+    const allBudgets = await db.getMonthlyBudgets(userId);
+    if (allBudgets[monthKey] !== undefined && typeof allBudgets[monthKey] === 'number') {
+      return allBudgets[monthKey];
+    }
+    if (fallbackDefault !== undefined) {
+      return fallbackDefault;
+    }
+    try {
+      const mockProfile = localStorage.getItem('bb-mock-profile');
+      if (mockProfile) {
+        const parsed = JSON.parse(mockProfile);
+        if (parsed.monthly_budget !== undefined) {
+          return Number(parsed.monthly_budget) || 700.00;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return 700.00;
+  },
+
+  setMonthlyBudget: async (userId: string, monthKey: string, amount: number): Promise<void> => {
+    const allBudgets = await db.getMonthlyBudgets(userId);
+    allBudgets[monthKey] = amount;
+    try {
+      localStorage.setItem(`bb-monthly-budgets-${userId}`, JSON.stringify(allBudgets));
+    } catch (e) {
+      console.error('Failed to persist monthly budget:', e);
+    }
+
+    // If monthKey matches current calendar month, sync with profile monthly_budget
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (monthKey === currentMonthKey) {
+      try {
+        if (!isSupabaseConfigured) {
+          const mockProfile = localStorage.getItem('bb-mock-profile');
+          if (mockProfile) {
+            const parsed = JSON.parse(mockProfile);
+            parsed.monthly_budget = amount;
+            localStorage.setItem('bb-mock-profile', JSON.stringify(parsed));
+          }
+        } else {
+          await supabase
+            .from('profiles')
+            .update({ monthly_budget: amount })
+            .eq('id', userId);
+        }
+      } catch (e) {
+        console.error('Failed to update profile budget:', e);
+      }
+    }
+
+    notifyDataChange();
+  },
 };
 
 

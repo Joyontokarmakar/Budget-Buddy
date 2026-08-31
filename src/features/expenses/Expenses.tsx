@@ -1861,8 +1861,8 @@ export const Expenses: React.FC = () => {
                         setAdvAccountId(paymentAccountId || fallbackAccId);
                       }
                       
-                      const nextM = new Date();
-                      nextM.setMonth(nextM.getMonth() + 1);
+                      const now = new Date();
+                      const nextM = new Date(now.getFullYear(), now.getMonth() + 1, 1);
                       setAdvMonth(`${nextM.getFullYear()}-${String(nextM.getMonth() + 1).padStart(2, '0')}`);
                       
                       setAdvDate(new Date().toISOString().split('T')[0]);
