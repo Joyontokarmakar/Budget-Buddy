@@ -821,7 +821,7 @@ export const Accounts: React.FC = () => {
                         value={empDestinationAccount}
                         onChange={(e) => setEmpDestinationAccount(e.target.value)}
                         options={[
-                          { value: 'not-prefer-to-say', label: t('income.notPreferToSay') || 'Not prefer to say' },
+                          { value: 'not-prefer-to-say', label: t('income.notPreferToSay') || 'I prefer not to say' },
                           ...accounts.map(acc => ({
                             value: acc.id,
                             label: `${acc.name} (€${acc.balance.toFixed(2)})`,
@@ -870,7 +870,7 @@ export const Accounts: React.FC = () => {
                           <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-2">
                             <span>{new Date(inc.date).toLocaleDateString('de-DE')}</span>
                             <span>•</span>
-                            <span>To: {inc.destination_account_id ? (inc.account?.name || 'Unknown Account') : (t('income.notPreferToSay') || 'Not prefer to say')}</span>
+                            <span>To: {inc.destination_account_id ? (inc.account?.name || 'Unknown Account') : (t('income.notPreferToSay') || 'I prefer not to say')}</span>
                           </p>
                           {inc.notes && <p className="text-[11px] text-muted-foreground/80 mt-0.5">{inc.notes}</p>}
                         </div>

@@ -66,7 +66,7 @@
     "date": "Date",
     "orgName": "Organization Name (e.g., Apple GmbH)",
     "destination": "Destination Account",
-    "notPreferToSay": "Not prefer to say",
+    "notPreferToSay": "I prefer not to say",
     "notes": "Notes (Optional)",
     "save": "Log Income"
   },
@@ -243,7 +243,7 @@
     "loanProvided": "Loan Provided (Lent)",
     "person": "Person (From/To Whom)",
     "associatedAccount": "Associated Account",
-    "notPreferToSay": "Not Prefer to say",
+    "notPreferToSay": "I prefer not to say",
     "reason": "Reason / Why (Optional)",
     "dueDate": "Due Date (Optional)",
     "saveLoan": "Log Loan",

@@ -632,7 +632,7 @@ export const Dashboard: React.FC = () => {
       title: i.organization_name,
       amount: i.amount,
       date: i.date,
-      accountName: i.account?.name || 'Account',
+      accountName: i.destination_account_id ? (i.account?.name || 'Account') : (t('income.notPreferToSay') || 'I prefer not to say'),
     })),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
