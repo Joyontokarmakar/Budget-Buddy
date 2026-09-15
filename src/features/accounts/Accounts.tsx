@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails, ExpenseWithDetails, DepositWithDetails, LoanWithDetails } from '../../types';
 import { Button, Input, Textarea, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
-import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil, ArrowDownLeft, Calendar, Coins, PlusCircle, AlertCircle, Trash2, ChevronDown, FileText } from 'lucide-react';
+import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil, ArrowDownLeft, Calendar, Coins, PlusCircle, AlertCircle, Trash2, ChevronDown, FileText, Copy } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 export const Accounts: React.FC = () => {
@@ -50,6 +50,7 @@ export const Accounts: React.FC = () => {
 
   // Expand / Collapse details for history items
   const [expandedNoteIds, setExpandedNoteIds] = useState<Set<string>>(new Set());
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
 
   // Edit Employment Income Dialog & Form State
   const [isEditEmpOpen, setIsEditEmpOpen] = useState(false);
@@ -442,6 +443,12 @@ export const Accounts: React.FC = () => {
     });
   };
 
+  const handleCopyNote = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedNoteId(id);
+    setTimeout(() => setCopiedNoteId(null), 2000);
+  };
+
   const handleOpenEditEmpDialog = (income: EmploymentIncomeWithDetails) => {
     setSelectedEmpIncome(income);
     setEditEmpAmount(income.amount.toString());
@@ -787,7 +794,7 @@ export const Accounts: React.FC = () => {
                                           return (item as any).time ? `${formattedDate}, ${(item as any).time}` : formattedDate;
                                         }
                                         return new Date(item.date).toLocaleDateString(i18n.language || 'de-DE');
-                                      })()} {item.notes ? `• ${item.notes}` : ''}
+                                      })()} {item.notes ? `• ${item.notes.includes('\n') ? item.notes.split('\n')[0] + '...' : item.notes}` : ''}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
@@ -904,10 +911,12 @@ export const Accounts: React.FC = () => {
 
                       <Textarea
                         label={t('income.notes') || 'Notes / Details (Optional)'}
-                        placeholder="e.g., July Paycheck, 120h at €15/h, bonus included..."
+                        placeholder={"e.g.,\nActual Salary: 1344.16\n(+) Sunday Shift: 234.00\n==========================\nTotal: 1578.16"}
                         value={empNotes}
                         onChange={(e) => setEmpNotes(e.target.value)}
-                        rows={3}
+                        rows={5}
+                        className="font-mono text-xs leading-relaxed"
+                        style={{ whiteSpace: 'pre-wrap' }}
                       />
 
                       <Button type="submit" className="w-full mt-2" loading={empSaving}>
@@ -975,18 +984,38 @@ export const Accounts: React.FC = () => {
                       {/* Collapsible Details / Notes Section */}
                       {inc.notes && (
                         <div className="mt-3 pt-2.5 border-t border-border/40">
-                          <button
-                            type="button"
-                            onClick={() => toggleNoteExpansion(inc.id)}
-                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer border-none bg-transparent p-0"
-                          >
-                            <FileText className="h-3.5 w-3.5 text-primary" />
-                            <span>{expandedNoteIds.has(inc.id) ? (t('income.hideDetails') || 'Hide details') : (t('income.viewDetails') || 'View details')}</span>
-                            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expandedNoteIds.has(inc.id) && "rotate-180")} />
-                          </button>
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => toggleNoteExpansion(inc.id)}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer border-none bg-transparent p-0"
+                            >
+                              <FileText className="h-3.5 w-3.5 text-primary" />
+                              <span>{expandedNoteIds.has(inc.id) ? (t('income.hideDetails') || 'Hide details') : (t('income.viewDetails') || 'View details')}</span>
+                              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expandedNoteIds.has(inc.id) && "rotate-180")} />
+                            </button>
+
+                            {expandedNoteIds.has(inc.id) && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyNote(inc.id, inc.notes!)}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-primary transition-colors cursor-pointer border-none bg-transparent p-1 rounded hover:bg-primary/10"
+                                title="Copy details"
+                              >
+                                <Copy className="h-3 w-3" />
+                                <span>{copiedNoteId === inc.id ? 'Copied!' : 'Copy'}</span>
+                              </button>
+                            )}
+                          </div>
+
                           {expandedNoteIds.has(inc.id) && (
-                            <div className="mt-2 p-3 rounded-xl bg-secondary/50 dark:bg-muted/30 border border-border/50 text-xs text-foreground/90 font-medium whitespace-pre-wrap leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
-                              {inc.notes}
+                            <div className="mt-2.5 rounded-xl bg-slate-900/[0.04] dark:bg-black/40 border border-border/60 p-3.5 overflow-x-auto shadow-inner">
+                              <pre
+                                style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                                className="font-mono text-xs text-foreground/95 leading-relaxed tracking-tight select-text m-0 p-0 font-normal whitespace-pre-wrap"
+                              >
+                                {inc.notes}
+                              </pre>
                             </div>
                           )}
                         </div>
@@ -1382,10 +1411,12 @@ export const Accounts: React.FC = () => {
 
           <Textarea
             label={t('income.notes') || 'Notes / Details (Optional)'}
-            placeholder="e.g., July Paycheck, 120h at €15/h, bonus included..."
+            placeholder={"e.g.,\nActual Salary: 1344.16\n(+) Sunday Shift: 234.00\n==========================\nTotal: 1578.16"}
             value={editEmpNotes}
             onChange={(e) => setEditEmpNotes(e.target.value)}
-            rows={3}
+            rows={6}
+            className="font-mono text-xs leading-relaxed"
+            style={{ whiteSpace: 'pre-wrap' }}
           />
 
           <div className="flex gap-3 justify-end pt-2">

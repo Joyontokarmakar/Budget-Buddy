@@ -218,3 +218,16 @@ body {
   margin-right: 0 !important;
   white-space: nowrap !important;
 }
+
+/* Preserve multiline formatting and pre-wrap text */
+@utility whitespace-pre-wrap {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
