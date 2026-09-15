@@ -4,8 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { db } from '../../services/db';
 import type { Account, AccountType, IncomeType, IncomeWithDetails, EmploymentIncomeWithDetails, ExpenseWithDetails, DepositWithDetails, LoanWithDetails } from '../../types';
-import { Button, Input, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
-import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil, ArrowDownLeft, Calendar, Coins, PlusCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { Button, Input, Textarea, Select, Card, CardHeader, CardTitle, CardDescription, CardContent, Dialog, Spinner } from '../../components/ui';
+import { Wallet, Landmark, PiggyBank, Plus, TrendingUp, Pencil, ArrowDownLeft, Calendar, Coins, PlusCircle, AlertCircle, Trash2, ChevronDown, FileText } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 export const Accounts: React.FC = () => {
@@ -47,6 +47,20 @@ export const Accounts: React.FC = () => {
   const [empSaving, setEmpSaving] = useState(false);
   const [empError, setEmpError] = useState<string | null>(null);
   const [empSuccessMsg, setEmpSuccessMsg] = useState<string | null>(null);
+
+  // Expand / Collapse details for history items
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<string>>(new Set());
+
+  // Edit Employment Income Dialog & Form State
+  const [isEditEmpOpen, setIsEditEmpOpen] = useState(false);
+  const [selectedEmpIncome, setSelectedEmpIncome] = useState<EmploymentIncomeWithDetails | null>(null);
+  const [editEmpAmount, setEditEmpAmount] = useState('');
+  const [editEmpDate, setEditEmpDate] = useState('');
+  const [editEmpOrgName, setEditEmpOrgName] = useState('');
+  const [editEmpDestinationAccount, setEditEmpDestinationAccount] = useState('');
+  const [editEmpNotes, setEditEmpNotes] = useState('');
+  const [editEmpSaving, setEditEmpSaving] = useState(false);
+  const [editEmpError, setEditEmpError] = useState<string | null>(null);
 
   // Edit Account Dialog & Form State
   const [isEditAccountOpen, setIsEditAccountOpen] = useState(false);
@@ -413,6 +427,65 @@ export const Accounts: React.FC = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleNoteExpansion = (id: string) => {
+    setExpandedNoteIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleOpenEditEmpDialog = (income: EmploymentIncomeWithDetails) => {
+    setSelectedEmpIncome(income);
+    setEditEmpAmount(income.amount.toString());
+    setEditEmpDate(income.date);
+    setEditEmpOrgName(income.organization_name);
+    setEditEmpDestinationAccount(income.destination_account_id || 'not-prefer-to-say');
+    setEditEmpNotes(income.notes || '');
+    setEditEmpError(null);
+    setIsEditEmpOpen(true);
+  };
+
+  const handleUpdateEmploymentIncome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !selectedEmpIncome) return;
+    setEditEmpError(null);
+
+    if (!editEmpAmount.trim() || !editEmpDate || !editEmpOrgName.trim()) {
+      setEditEmpError('Please fill in all required fields');
+      return;
+    }
+
+    const numAmount = parseFloat(editEmpAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setEditEmpError('Amount must be greater than €0.00');
+      return;
+    }
+
+    try {
+      setEditEmpSaving(true);
+      await db.updateEmploymentIncome(profile.id, selectedEmpIncome.id, {
+        amount: numAmount,
+        date: editEmpDate,
+        organization_name: editEmpOrgName.trim(),
+        destination_account_id: editEmpDestinationAccount === 'not-prefer-to-say' ? null : editEmpDestinationAccount,
+        notes: editEmpNotes.trim() || null,
+      });
+
+      setIsEditEmpOpen(false);
+      setSelectedEmpIncome(null);
+      await fetchAccounts();
+    } catch (err: any) {
+      setEditEmpError(err.message || 'Error updating employment income');
+    } finally {
+      setEditEmpSaving(false);
     }
   };
 
@@ -829,11 +902,12 @@ export const Accounts: React.FC = () => {
                         ]}
                       />
 
-                      <Input
-                        label={t('income.notes') || 'Notes (Optional)'}
-                        placeholder="e.g., July Paycheck"
+                      <Textarea
+                        label={t('income.notes') || 'Notes / Details (Optional)'}
+                        placeholder="e.g., July Paycheck, 120h at €15/h, bonus included..."
                         value={empNotes}
                         onChange={(e) => setEmpNotes(e.target.value)}
+                        rows={3}
                       />
 
                       <Button type="submit" className="w-full mt-2" loading={empSaving}>
@@ -858,36 +932,65 @@ export const Accounts: React.FC = () => {
               ) : (
                 employmentIncomes.map((inc) => (
                   <Card key={inc.id} className="hover:border-primary/20 transition-all duration-200">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                          <ArrowDownLeft className="h-5 w-5" />
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <ArrowDownLeft className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-bold text-foreground truncate">
+                              {inc.organization_name}
+                            </h4>
+                            <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-2">
+                              <span>{new Date(inc.date).toLocaleDateString('de-DE')}</span>
+                              <span>•</span>
+                              <span>To: {inc.destination_account_id ? (inc.account?.name || 'Unknown Account') : (t('income.notPreferToSay') || 'I prefer not to say')}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-foreground">
-                            {inc.organization_name}
-                          </h4>
-                          <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-2">
-                            <span>{new Date(inc.date).toLocaleDateString('de-DE')}</span>
-                            <span>•</span>
-                            <span>To: {inc.destination_account_id ? (inc.account?.name || 'Unknown Account') : (t('income.notPreferToSay') || 'I prefer not to say')}</span>
-                          </p>
-                          {inc.notes && <p className="text-[11px] text-muted-foreground/80 mt-0.5">{inc.notes}</p>}
+                        <div className="text-right flex items-center gap-2 shrink-0 ml-3">
+                          <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                            +€{inc.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditEmpDialog(inc)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 active:scale-95 transition-all cursor-pointer border-none bg-transparent"
+                            title="Edit salary / income record"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEmploymentIncome(inc.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer border-none bg-transparent"
+                            title="Delete record"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="text-right flex items-center gap-3">
-                        <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                          +€{inc.amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEmploymentIncome(inc.id)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer border-none bg-transparent"
-                          title="Delete record"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+
+                      {/* Collapsible Details / Notes Section */}
+                      {inc.notes && (
+                        <div className="mt-3 pt-2.5 border-t border-border/40">
+                          <button
+                            type="button"
+                            onClick={() => toggleNoteExpansion(inc.id)}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer border-none bg-transparent p-0"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-primary" />
+                            <span>{expandedNoteIds.has(inc.id) ? (t('income.hideDetails') || 'Hide details') : (t('income.viewDetails') || 'View details')}</span>
+                            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expandedNoteIds.has(inc.id) && "rotate-180")} />
+                          </button>
+                          {expandedNoteIds.has(inc.id) && (
+                            <div className="mt-2 p-3 rounded-xl bg-secondary/50 dark:bg-muted/30 border border-border/50 text-xs text-foreground/90 font-medium whitespace-pre-wrap leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                              {inc.notes}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))
@@ -1213,6 +1316,91 @@ export const Accounts: React.FC = () => {
               {t('common.cancel')}
             </Button>
             <Button type="submit" loading={editSaving}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Edit Employment Income Dialog */}
+      <Dialog
+        isOpen={isEditEmpOpen}
+        onClose={() => {
+          setIsEditEmpOpen(false);
+          setSelectedEmpIncome(null);
+        }}
+        title={t('income.editTitle') || 'Edit Employment Income'}
+        description={t('income.editDesc') || 'Update salary amount, date, organization, account, or details'}
+      >
+        <form onSubmit={handleUpdateEmploymentIncome} className="space-y-4">
+          {editEmpError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl text-xs font-semibold">
+              {editEmpError}
+            </div>
+          )}
+
+          <Input
+            type="number"
+            step="0.01"
+            label={t('income.amount') || 'Amount (€)'}
+            placeholder="0.00"
+            value={editEmpAmount}
+            onChange={(e) => setEditEmpAmount(e.target.value)}
+            icon={<Coins className="h-4 w-4 text-muted-foreground" />}
+            required
+          />
+
+          <Input
+            type="date"
+            label={t('income.date') || 'Date'}
+            value={editEmpDate}
+            onChange={(e) => setEditEmpDate(e.target.value)}
+            icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
+            required
+          />
+
+          <Input
+            label={t('income.orgName') || 'Organization Name'}
+            placeholder="e.g., Apple GmbH"
+            value={editEmpOrgName}
+            onChange={(e) => setEditEmpOrgName(e.target.value)}
+            required
+          />
+
+          <Select
+            label={t('income.destination') || 'Destination Account'}
+            value={editEmpDestinationAccount}
+            onChange={(e) => setEditEmpDestinationAccount(e.target.value)}
+            options={[
+              { value: 'not-prefer-to-say', label: t('income.notPreferToSay') || 'I prefer not to say' },
+              ...accounts.map(acc => ({
+                value: acc.id,
+                label: `${acc.name} (€${acc.balance.toFixed(2)})`,
+              }))
+            ]}
+          />
+
+          <Textarea
+            label={t('income.notes') || 'Notes / Details (Optional)'}
+            placeholder="e.g., July Paycheck, 120h at €15/h, bonus included..."
+            value={editEmpNotes}
+            onChange={(e) => setEditEmpNotes(e.target.value)}
+            rows={3}
+          />
+
+          <div className="flex gap-3 justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsEditEmpOpen(false);
+                setSelectedEmpIncome(null);
+              }}
+              disabled={editEmpSaving}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" loading={editEmpSaving}>
               Save
             </Button>
           </div>

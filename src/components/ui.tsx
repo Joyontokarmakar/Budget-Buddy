@@ -112,6 +112,36 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = 'Input';
 
 // =========================================================================
+// TEXTAREA COMPONENT
+// =========================================================================
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+}
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, label, error, rows = 3, ...props }, ref) => {
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && <label className="text-xs font-semibold text-muted-foreground ml-1">{label}</label>}
+        <textarea
+          ref={ref}
+          rows={rows}
+          className={cn(
+            'flex w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm transition-all duration-200 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[80px]',
+            error ? 'border-destructive focus:ring-destructive/20 focus:border-destructive' : '',
+            className
+          )}
+          {...props}
+        />
+        {error && <span className="text-[11px] font-medium text-destructive ml-1">{error}</span>}
+      </div>
+    );
+  }
+);
+Textarea.displayName = 'Textarea';
+
+// =========================================================================
 // SELECT COMPONENT
 // =========================================================================
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {

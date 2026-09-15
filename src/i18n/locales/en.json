@@ -67,8 +67,12 @@
     "orgName": "Organization Name (e.g., Apple GmbH)",
     "destination": "Destination Account",
     "notPreferToSay": "I prefer not to say",
-    "notes": "Notes (Optional)",
-    "save": "Log Income"
+    "notes": "Notes / Details (Optional)",
+    "save": "Log Income",
+    "editTitle": "Edit Employment Income",
+    "editDesc": "Update salary amount, date, organization, account, or details",
+    "viewDetails": "View details",
+    "hideDetails": "Hide details"
   },
   "walletAdd": {
     "title": "Add to Wallet",

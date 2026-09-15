@@ -67,8 +67,12 @@
     "orgName": "Unternehmen / Organisation (z. B. Apple GmbH)",
     "destination": "Zielkonto",
     "notPreferToSay": "Lieber nicht sagen",
-    "notes": "Notizen (Optional)",
-    "save": "Einnahme buchen"
+    "notes": "Notizen / Details (Optional)",
+    "save": "Einnahme buchen",
+    "editTitle": "Erwerbseinkommen bearbeiten",
+    "editDesc": "Gehaltsbetrag, Datum, Arbeitgeber, Zielkonto oder Details bearbeiten",
+    "viewDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden"
   },
   "walletAdd": {
     "title": "Guthaben aufladen",
