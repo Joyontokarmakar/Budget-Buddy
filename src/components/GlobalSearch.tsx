@@ -20,9 +20,9 @@ import {
   FileText, 
   LayoutDashboard, 
   ArrowRight,
-  Terminal,
   Coins,
-  PlusCircle
+  PlusCircle,
+  Info
 } from 'lucide-react';
 import { Badge } from './ui';
 
@@ -179,7 +179,7 @@ export const GlobalSearch: React.FC = () => {
       { to: '/reports', label: t('nav.reports'), icon: <FileText className="h-4.5 w-4.5 text-indigo-500" /> },
       { to: '/assets', label: t('nav.assets'), icon: <Gem className="h-4.5 w-4.5 text-amber-500" /> },
       { to: '/settings', label: t('nav.settings'), icon: <Settings className="h-4.5 w-4.5 text-slate-500" /> },
-      { to: '/developer', label: t('nav.developer'), icon: <Terminal className="h-4.5 w-4.5 text-teal-500" /> },
+      { to: '/about', label: t('nav.about') || 'About Budget Buddy', icon: <Info className="h-4.5 w-4.5 text-primary" /> },
     ];
 
     const matchedPages = pageItems.filter(item => 

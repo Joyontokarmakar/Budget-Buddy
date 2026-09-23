@@ -278,9 +278,35 @@ export const Navigation: React.FC = () => {
         </div>
 
         {/* Mobile Drawer Footer Credit */}
-        <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center">
-          <div>Budget buddy Student v1.0.0</div>
-          <div>© {new Date().getFullYear()} <NavLink to="/developer" onClick={() => setIsMoreOpen(false)} className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
+        <div className="mt-6 pt-4 border-t border-border/50 text-xs text-muted-foreground/70 font-medium text-center space-y-1.5">
+          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+            <span>Budget Buddy Student v1.0.0</span>
+            <span>•</span>
+            <NavLink to="/about" onClick={() => setIsMoreOpen(false)} className="hover:text-primary transition-colors underline font-semibold">
+              {t('nav.about') || 'About'}
+            </NavLink>
+          </div>
+          <div className="text-[11px] text-muted-foreground/60">
+            Built by <span className="font-semibold text-foreground">Joyonto Karmakar</span>
+            {' • '}
+            <a
+              href="https://github.com/Joyontokarmakar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline"
+            >
+              GitHub
+            </a>
+            {' • '}
+            <a
+              href="https://joyontokarmakar.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline"
+            >
+              Portfolio
+            </a>
+          </div>
         </div>
       </div>
 
@@ -345,9 +371,35 @@ export const Navigation: React.FC = () => {
 
 
         {/* Footer Credit */}
-        <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground/60 font-medium text-center space-y-1">
-          <div>Budget buddy Student v1.0.0</div>
-          <div>© {new Date().getFullYear()} <NavLink to="/developer" className="font-semibold text-foreground hover:text-primary transition-colors underline">Joyonto Karmakar</NavLink>.</div>
+        <div className="pt-4 border-t border-border/50 text-xs text-muted-foreground/70 font-medium text-center space-y-1.5">
+          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+            <span>Budget Buddy Student v1.0.0</span>
+            <span>•</span>
+            <NavLink to="/about" className="hover:text-primary transition-colors underline font-semibold">
+              {t('nav.about') || 'About'}
+            </NavLink>
+          </div>
+          <div className="text-[11px] text-muted-foreground/60">
+            Built by <span className="font-semibold text-foreground">Joyonto Karmakar</span>
+            {' • '}
+            <a
+              href="https://github.com/Joyontokarmakar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline"
+            >
+              GitHub
+            </a>
+            {' • '}
+            <a
+              href="https://joyontokarmakar.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors underline"
+            >
+              Portfolio
+            </a>
+          </div>
         </div>
       </aside>
     </>

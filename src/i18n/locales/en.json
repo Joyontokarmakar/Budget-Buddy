@@ -10,7 +10,8 @@
     "reports": "Reports",
     "assets": "Permanent Assets",
     "depositsLoans": "Deposits & Loans",
-    "developer": "Developer Info"
+    "developer": "Developer Info",
+    "about": "About Budget Buddy"
   },
   "auth": {
     "signIn": "Sign In",

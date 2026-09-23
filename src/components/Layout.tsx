@@ -91,7 +91,7 @@ export const Layout: React.FC = () => {
     if (path.startsWith('/reports')) return t('nav.reports');
     if (path.startsWith('/assets')) return t('nav.assets');
     if (path.startsWith('/settings')) return t('nav.settings');
-    if (path.startsWith('/developer')) return t('nav.developer') || 'Developer Info';
+    if (path.startsWith('/about') || path.startsWith('/developer')) return t('nav.about') || 'About Budget Buddy';
     return 'Budget Buddy';
   };
 

@@ -10,7 +10,8 @@
     "reports": "Berichte",
     "assets": "Anlagevermögen",
     "depositsLoans": "Einlagen & Kredite",
-    "developer": "Entwicklerinfo"
+    "developer": "Entwicklerinfo",
+    "about": "Über Budget Buddy"
   },
   "auth": {
     "signIn": "Anmelden",

@@ -16,7 +16,7 @@ import { Reports } from './features/reports/Reports';
 import { Assets } from './features/assets/Assets';
 import { Settings } from './features/settings/Settings';
 import { GeminiGuide } from './features/settings/GeminiGuide';
-import { Developer } from './features/developer/Developer';
+import { About } from './features/about/About';
 import { DepositsLoans } from './features/deposits-loans/DepositsLoans';
 
 const queryClient = new QueryClient({
@@ -92,8 +92,8 @@ function SEOTracker() {
       pageTitle = 'Gemini API Key Setup Guide | Budget buddy Student';
     } else if (path.startsWith('/settings')) {
       pageTitle = 'Student Budget Limit & Profile Settings | Budget buddy Student';
-    } else if (path.startsWith('/developer')) {
-      pageTitle = 'Developer Console & Mock DB Console | Budget buddy Student';
+    } else if (path.startsWith('/about') || path.startsWith('/developer')) {
+      pageTitle = 'About Budget Buddy & Privacy Policy | Budget buddy Student';
     } else if (path.startsWith('/login')) {
       pageTitle = 'Sign In | Budget buddy Student - Free Student Budget Calculator';
     } else if (path.startsWith('/register')) {
@@ -152,7 +152,8 @@ function App() {
               <Route path="assets" element={<Assets />} />
               <Route path="settings" element={<Settings />} />
               <Route path="settings/gemini-guide" element={<GeminiGuide />} />
-              <Route path="developer" element={<Developer />} />
+              <Route path="about" element={<About />} />
+              <Route path="developer" element={<Navigate to="/about" replace />} />
             </Route>
 
             {/* Fallback Catch-all Redirect */}
