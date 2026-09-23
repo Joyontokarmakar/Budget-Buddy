@@ -396,7 +396,14 @@ export const Analytics: React.FC = () => {
   });
 
   // 3. Monthly Spending Comparison (Dynamic Timeframe)
-  const monthlySpendingMap: { [key: string]: { month: string; expenses: number; income: number } } = {};
+  const monthlySpendingMap: {
+    [key: string]: {
+      month: string;
+      expenses: number;
+      walletAdd: number;
+      employmentIncome: number;
+    };
+  } = {};
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
   // Calculate months to show based on selected timeframe
@@ -421,6 +428,14 @@ export const Analytics: React.FC = () => {
         }
       }
     });
+    employmentIncomes.forEach(ei => {
+      if (ei.date) {
+        const d = new Date(ei.date);
+        if (!isNaN(d.getTime()) && d.getTime() < earliest.getTime()) {
+          earliest = d;
+        }
+      }
+    });
     const now = new Date();
     const diffMonths = (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1;
     monthsCount = Math.max(1, diffMonths);
@@ -431,7 +446,7 @@ export const Analytics: React.FC = () => {
   for (let i = monthsCount - 1; i >= 0; i--) {
     const d = new Date(currentDateAnchor.getFullYear(), currentDateAnchor.getMonth() - i, 1);
     const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
-    monthlySpendingMap[label] = { month: label, expenses: 0, income: 0 };
+    monthlySpendingMap[label] = { month: label, expenses: 0, walletAdd: 0, employmentIncome: 0 };
   }
 
   expenses.forEach(e => {
@@ -446,7 +461,7 @@ export const Analytics: React.FC = () => {
     const d = new Date(i.date);
     const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
     if (monthlySpendingMap[label]) {
-      monthlySpendingMap[label].income += i.amount;
+      monthlySpendingMap[label].walletAdd += i.amount;
     }
   });
 
@@ -454,14 +469,16 @@ export const Analytics: React.FC = () => {
     const d = new Date(ei.date);
     const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
     if (monthlySpendingMap[label]) {
-      monthlySpendingMap[label].income += ei.amount;
+      monthlySpendingMap[label].employmentIncome += ei.amount;
     }
   });
 
   const monthlyComparisonData = Object.values(monthlySpendingMap).map(m => ({
     month: m.month,
     expenses: parseFloat(m.expenses.toFixed(2)),
-    income: parseFloat(m.income.toFixed(2)),
+    walletAdd: parseFloat(m.walletAdd.toFixed(2)),
+    employmentIncome: parseFloat(m.employmentIncome.toFixed(2)),
+    income: parseFloat((m.walletAdd + m.employmentIncome).toFixed(2)),
   }));
   // 4. Store Analytics: Top 3 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
@@ -927,17 +944,7 @@ export const Analytics: React.FC = () => {
       }
     });
 
-    employmentIncomes.forEach(inc => {
-      if (!inc.date) return;
-      const d = new Date(inc.date);
-      if (d.getFullYear() < currentCalYear || (d.getFullYear() === currentCalYear && d.getMonth() < currentCalMonth)) {
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!monthsData[monthKey]) {
-          monthsData[monthKey] = { monthKey, income: 0, expenses: 0 };
-        }
-        monthsData[monthKey].income += inc.amount;
-      }
-    });
+    // Savings breakdown specifically tracks wallet inflows vs outflows
 
     expenses.forEach(exp => {
       if (!exp.date) return;
@@ -1165,7 +1172,11 @@ export const Analytics: React.FC = () => {
                   <Coins className="h-4.5 w-4.5 text-emerald-500" />
                   {t('analytics.cashFlow')}
                 </CardTitle>
-                <CardDescription>Monthly inflows vs outflows</CardDescription>
+                <CardDescription>
+                  {i18n.language === 'de' 
+                    ? 'Monatliche Wallet-Aufladungen, Arbeits-Einnahmen & Ausgaben' 
+                    : 'Monthly wallet additions, employment earnings, and expenses'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-[340px] pt-2 relative w-full min-w-0">
                 <ResponsiveContainer width="100%" height={300}>
@@ -1183,7 +1194,8 @@ export const Analytics: React.FC = () => {
                       formatter={(value) => [`€${Number(value).toFixed(2)}`]}
                     />
                     <Legend iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold' }} />
-                    <Bar dataKey="income" name={t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="walletAdd" name={t('analytics.walletAdd') || t('analytics.income')} fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="employmentIncome" name={t('analytics.employmentIncome') || 'Employment Income'} fill="#0d9488" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name={t('analytics.expenses')} fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -2660,11 +2672,14 @@ export const Analytics: React.FC = () => {
                         {employmentIncomes.map((inc) => {
                           const dateObj = inc.date ? new Date(inc.date) : null;
                           const dateStr = dateObj ? dateObj.toLocaleDateString(i18n.language || 'en-US', { day: '2-digit', month: '2-digit' }) : 'N/A';
+                          const destinationLabel = inc.destination_account_id
+                            ? (inc.account?.name || 'Unknown Account')
+                            : (t('income.notPreferToSay') || 'I prefer not to say');
                           return (
                             <tr key={inc.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
                               <td className="py-2.5 px-3 font-mono text-muted-foreground">{dateStr}</td>
                               <td className="py-2.5 px-3 font-bold text-foreground">{inc.organization_name}</td>
-                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[100px]" title={inc.account?.name || 'Default'}>{inc.account?.name || 'Default'}</td>
+                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[120px]" title={destinationLabel}>{destinationLabel}</td>
                               <td className="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">€{inc.amount.toFixed(2)}</td>
                             </tr>
                           );
