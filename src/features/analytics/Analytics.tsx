@@ -69,6 +69,7 @@ export const Analytics: React.FC = () => {
   } | null>(null);
   const [modalMonthFilter, setModalMonthFilter] = useState<string>('all');
   const [hoveredCategoryName, setHoveredCategoryName] = useState<string | null>(null);
+  const [categorySearchQuery, setCategorySearchQuery] = useState<string>('');
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -227,6 +228,10 @@ export const Analytics: React.FC = () => {
     }));
 
   const totalCategoryFilteredSpent = categoryData.reduce((sum, item) => sum + item.value, 0);
+
+  const filteredCategoryData = categorySearchQuery.trim()
+    ? categoryData.filter(c => c.name.toLowerCase().includes(categorySearchQuery.toLowerCase().trim()))
+    : categoryData;
 
   const handleOpenCategoryBreakdown = (item: {
     name: string;
@@ -1245,25 +1250,25 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="min-h-[350px] p-5 pt-1 relative w-full min-w-0 flex flex-col justify-between">
+              <CardContent className="h-[340px] p-4 pt-0 relative w-full min-w-0 flex flex-col">
                 {categoryData.length === 0 ? (
-                  <div className="text-center text-xs text-muted-foreground font-semibold py-16">
+                  <div className="text-center text-xs text-muted-foreground font-semibold py-16 m-auto">
                     {i18n.language === 'de'
                       ? 'Keine kategorisierten Ausgaben für den ausgewählten Zeitraum erfasst.'
                       : 'No categorized expenses logged for the selected period.'}
                   </div>
                 ) : (
-                  <div className="flex flex-col h-full justify-between gap-2">
+                  <div className="flex flex-col h-full">
                     {/* Donut Chart Area */}
-                    <div className="h-[185px] w-full relative">
+                    <div className="h-[145px] w-full relative shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={categoryData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={isMobile ? 38 : 46}
-                            outerRadius={isMobile ? 64 : 76}
+                            innerRadius={isMobile ? 32 : 38}
+                            outerRadius={isMobile ? 54 : 62}
                             paddingAngle={3}
                             dataKey="value"
                             nameKey="name"
@@ -1304,61 +1309,88 @@ export const Analytics: React.FC = () => {
                       </ResponsiveContainer>
                       {/* Center donut label */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                        <span className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider leading-none mb-0.5">
                           {i18n.language === 'de' ? 'Gesamt' : 'Total'}
                         </span>
-                        <span className="text-xs sm:text-sm font-black font-mono text-foreground">
+                        <span className="text-xs font-black font-mono text-foreground leading-tight">
                           €{totalCategoryFilteredSpent.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
                         </span>
                       </div>
                     </div>
 
-                    {/* Interactive Category Chips below chart */}
-                    <div className="pt-2 border-t border-border/40">
-                      <div className="flex items-center justify-between mb-1.5 px-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    {/* Compact Interactive Category List directly below chart */}
+                    <div className="pt-2 mt-0.5 border-t border-border/40 flex flex-col flex-1 min-h-0">
+                      <div className="flex items-center justify-between mb-1 px-0.5 shrink-0">
+                        <span className="text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                           <Layers className="h-3 w-3 text-primary" />
-                          {i18n.language === 'de' ? 'Kategorien (Klicken für Details)' : 'Categories (Click for breakdown)'}
+                          {i18n.language === 'de' ? 'Kategorien' : 'Categories'}
                         </span>
-                        <span className="text-[9px] text-muted-foreground font-semibold flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          {categoryData.length} {categoryData.length === 1 ? 'category' : 'categories'}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 max-h-[110px] overflow-y-auto pr-1">
-                        {categoryData.map((item, idx) => {
-                          const isHovered = hoveredCategoryName === item.name;
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => handleOpenCategoryBreakdown(item)}
-                              onMouseEnter={() => setHoveredCategoryName(item.name)}
-                              onMouseLeave={() => setHoveredCategoryName(null)}
-                              className={cn(
-                                "group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-semibold border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs",
-                                isHovered 
-                                  ? "bg-primary/15 border-primary/50 text-foreground scale-[1.03] ring-1 ring-primary/40"
-                                  : "bg-muted/40 hover:bg-muted/70 border-border/50 text-foreground"
-                              )}
-                              title={i18n.language === 'de' 
-                                ? `${item.name}: Details für alle Monate & Konten anzeigen` 
-                                : `${item.name}: Click to see all months & accounts breakdown`}
-                            >
-                              <span
-                                className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
-                                style={{ backgroundColor: item.color }}
+                        
+                        <div className="flex items-center gap-1.5">
+                          {categoryData.length > 6 && (
+                            <div className="relative">
+                              <Search className="h-2.5 w-2.5 absolute left-1.5 top-1.5 text-muted-foreground/60 pointer-events-none" />
+                              <input
+                                type="text"
+                                value={categorySearchQuery}
+                                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                placeholder={i18n.language === 'de' ? 'Filter...' : 'Filter...'}
+                                className="h-5 pl-5 pr-1.5 text-[9px] rounded-md bg-muted/40 border border-border/40 focus:outline-none focus:ring-1 focus:ring-primary w-20 text-foreground font-medium placeholder:text-muted-foreground/50 transition-all"
                               />
-                              <span className="truncate max-w-[95px] sm:max-w-[125px] font-medium">
-                                {item.name}
-                              </span>
-                              <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover:text-foreground">
-                                €{item.value.toFixed(2)}
-                              </span>
-                              <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 -ml-1 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
-                            </button>
-                          );
-                        })}
+                            </div>
+                          )}
+                          <span className="text-[9px] text-muted-foreground font-semibold flex items-center gap-1 shrink-0">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {filteredCategoryData.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Structured 2-column compact list filling remaining height */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2.5 gap-y-0.5 overflow-y-auto pr-0.5 flex-1 content-start auto-rows-max items-start [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/60 hover:[&::-webkit-scrollbar-thumb]:bg-border">
+                        {filteredCategoryData.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground py-4 text-center col-span-2 font-medium">
+                            {i18n.language === 'de' ? 'Keine passende Kategorie' : 'No matching categories'}
+                          </p>
+                        ) : (
+                          filteredCategoryData.map((item, idx) => {
+                            const isHovered = hoveredCategoryName === item.name;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => handleOpenCategoryBreakdown(item)}
+                                onMouseEnter={() => setHoveredCategoryName(item.name)}
+                                onMouseLeave={() => setHoveredCategoryName(null)}
+                                className={cn(
+                                  "group w-full h-6 flex items-center justify-between px-1.5 rounded-md text-[10px] transition-all duration-150 cursor-pointer text-left border border-transparent shrink-0",
+                                  isHovered 
+                                    ? "bg-primary/15 text-primary font-bold shadow-2xs border-primary/30" 
+                                    : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                                )}
+                                title={i18n.language === 'de' 
+                                  ? `${item.name}: Details für alle Monate & Konten anzeigen` 
+                                  : `${item.name}: Click to see all months & accounts breakdown`}
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full shrink-0 transition-transform group-hover:scale-125"
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <span className="truncate font-medium text-foreground text-[10px]">
+                                    {item.name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-0.5 shrink-0 font-mono text-[9.5px] font-bold">
+                                  <span className={isHovered ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}>
+                                    €{item.value.toFixed(2)}
+                                  </span>
+                                  <ArrowUpRight className="h-2 w-2 text-muted-foreground/40 opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   </div>
