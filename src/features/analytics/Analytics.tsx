@@ -7,6 +7,7 @@ import { db } from '../../services/db';
 import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails, Category } from '../../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { getSafeItems } from '../../utils/items';
+import { parseExpenseDate } from '../../utils/date';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
 import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X, TrendingDown, TrendingUp, Receipt, Wallet, CreditCard, ArrowUpRight, Layers } from 'lucide-react';
 export const Analytics: React.FC = () => {
@@ -161,8 +162,14 @@ export const Analytics: React.FC = () => {
   const currentYearVal = new Date().getFullYear();
   const years = Array.from(new Set([
     currentYearVal,
-    ...expenses.map(e => e.date ? new Date(e.date).getFullYear() : currentYearVal),
-    ...incomes.map(i => i.date ? new Date(i.date).getFullYear() : currentYearVal)
+    ...expenses.map(e => {
+      const p = parseExpenseDate(e.date);
+      return p.year > 0 ? p.year : currentYearVal;
+    }),
+    ...incomes.map(i => {
+      const p = parseExpenseDate(i.date);
+      return p.year > 0 ? p.year : currentYearVal;
+    })
   ])).sort((a, b) => b - a);
 
   const months = [
@@ -183,9 +190,9 @@ export const Analytics: React.FC = () => {
 
   const categoryFilteredExpenses = expenses.filter(e => {
     if (!e.date) return false;
-    const d = new Date(e.date);
-    const yMatches = d.getFullYear() === categoryYear;
-    const mMatches = categoryMonth === 'all' || d.getMonth() === parseInt(categoryMonth, 10);
+    const { year, month } = parseExpenseDate(e.date);
+    const yMatches = year === categoryYear;
+    const mMatches = categoryMonth === 'all' || month === parseInt(categoryMonth, 10);
     return yMatches && mMatches;
   });
 
@@ -254,8 +261,8 @@ export const Analytics: React.FC = () => {
   const categoryAllYearExpenses = selectedCategoryBreakdown
     ? expenses.filter(e => {
         if (!e.date) return false;
-        const d = new Date(e.date);
-        if (d.getFullYear() !== categoryYear) return false;
+        const { year } = parseExpenseDate(e.date);
+        if (year !== categoryYear) return false;
         if (selectedCategoryBreakdown.categoryId && e.category_id) {
           if (e.category_id === selectedCategoryBreakdown.categoryId) return true;
         }
@@ -280,7 +287,7 @@ export const Analytics: React.FC = () => {
     { index: 10, short: 'Nov', en: 'November', de: 'November' },
     { index: 11, short: 'Dec', en: 'December', de: 'Dezember' },
   ].map(m => {
-    const mExpenses = categoryAllYearExpenses.filter(e => new Date(e.date).getMonth() === m.index);
+    const mExpenses = categoryAllYearExpenses.filter(e => parseExpenseDate(e.date).month === m.index);
     const amount = mExpenses.reduce((sum, e) => sum + e.amount, 0);
     const label = i18n.language === 'de' && m.short === 'Mar' ? 'Mär' : (i18n.language === 'de' && m.short === 'May' ? 'Mai' : (i18n.language === 'de' && m.short === 'Oct' ? 'Okt' : (i18n.language === 'de' && m.short === 'Dec' ? 'Dez' : m.short)));
     const fullName = i18n.language === 'de' ? m.de : m.en;
@@ -300,7 +307,7 @@ export const Analytics: React.FC = () => {
   // Expenses for the active modal filter (either 'all' or a specific month 0..11)
   const activeModalExpenses = modalMonthFilter === 'all'
     ? categoryAllYearExpenses
-    : categoryAllYearExpenses.filter(e => new Date(e.date).getMonth() === parseInt(modalMonthFilter, 10));
+    : categoryAllYearExpenses.filter(e => parseExpenseDate(e.date).month === parseInt(modalMonthFilter, 10));
 
   const activeModalSpent = activeModalExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -333,16 +340,16 @@ export const Analytics: React.FC = () => {
     if (categoryViewType === 'all') {
       const barFilteredExpenses = expenses.filter(e => {
         if (!e.date) return false;
-        const d = new Date(e.date);
+        const { year, month } = parseExpenseDate(e.date);
         if (barTimeframe === 'all') {
           return true;
         }
         if (barTimeframe === 'year') {
-          return d.getFullYear() === barYear;
+          return year === barYear;
         }
         // month timeframe
-        const yMatches = d.getFullYear() === barYear;
-        const mMatches = barMonth === 'all' ? true : d.getMonth() === parseInt(barMonth, 10);
+        const yMatches = year === barYear;
+        const mMatches = barMonth === 'all' ? true : month === parseInt(barMonth, 10);
         return yMatches && mMatches;
       });
 
@@ -386,9 +393,8 @@ export const Analytics: React.FC = () => {
         ];
 
         singleCategoryExpenses.forEach(e => {
-          const d = new Date(e.date);
-          if (d.getFullYear() === barYear && d.getMonth() === parseInt(barMonth, 10)) {
-            const day = d.getDate();
+          const { year, month, day } = parseExpenseDate(e.date);
+          if (year === barYear && month === parseInt(barMonth, 10)) {
             if (day <= 7) weeksData[0].amount += e.amount;
             else if (day <= 14) weeksData[1].amount += e.amount;
             else if (day <= 21) weeksData[2].amount += e.amount;
@@ -420,11 +426,10 @@ export const Analytics: React.FC = () => {
         }));
 
         singleCategoryExpenses.forEach(e => {
-          const d = new Date(e.date);
-          if (d.getFullYear() === barYear) {
-            const m = d.getMonth();
-            if (m >= 0 && m < 12) {
-              monthsData[m].amount += e.amount;
+          const { year, month } = parseExpenseDate(e.date);
+          if (year === barYear) {
+            if (month >= 0 && month < 12) {
+              monthsData[month].amount += e.amount;
             }
           }
         });
@@ -437,8 +442,8 @@ export const Analytics: React.FC = () => {
           .sort((a, b) => parseInt(a.name) - parseInt(b.name));
 
         singleCategoryExpenses.forEach(e => {
-          const d = new Date(e.date);
-          const yStr = d.getFullYear().toString();
+          const { year } = parseExpenseDate(e.date);
+          const yStr = year.toString();
           const target = yearsData.find(item => item.name === yStr);
           if (target) {
             target.amount += e.amount;
@@ -1230,7 +1235,13 @@ export const Analytics: React.FC = () => {
                   <div className="flex items-center gap-1.5 self-start sm:self-auto">
                     <select
                       value={categoryMonth}
-                      onChange={(e) => setCategoryMonth(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCategoryMonth(val);
+                        if (val !== 'all') {
+                          setBarMonth(val);
+                        }
+                      }}
                       className="bg-card border border-border/80 text-foreground text-[10px] sm:text-xs font-semibold rounded-xl px-2.5 py-1 focus:ring-1 focus:ring-primary focus:border-primary shrink-0 focus:outline-none cursor-pointer"
                     >
                       {months.map(m => (
@@ -1248,14 +1259,34 @@ export const Analytics: React.FC = () => {
                     </select>
                   </div>
                 </div>
-                <CardDescription>Categorized spending allocation</CardDescription>
+                <CardDescription className="text-xs">
+                  {categoryMonth === 'all'
+                    ? (i18n.language === 'de' ? `Kategorisierte Ausgaben für alle Monate (${categoryYear})` : `Categorized spending allocation across all months (${categoryYear})`)
+                    : (i18n.language === 'de' ? `Kategorisierte Ausgaben für ${months.find(m => m.value === categoryMonth)?.label} ${categoryYear}` : `Categorized spending allocation for ${months.find(m => m.value === categoryMonth)?.label} ${categoryYear}`)}
+                </CardDescription>
               </CardHeader>
               <CardContent className="h-[340px] p-4 pt-0 relative w-full min-w-0 flex flex-col">
                 {categoryData.length === 0 ? (
-                  <div className="text-center text-xs text-muted-foreground font-semibold py-16 m-auto">
-                    {i18n.language === 'de'
-                      ? 'Keine kategorisierten Ausgaben für den ausgewählten Zeitraum erfasst.'
-                      : 'No categorized expenses logged for the selected period.'}
+                  <div className="text-center text-xs text-muted-foreground font-semibold py-12 m-auto flex flex-col items-center gap-2">
+                    <PieIcon className="h-8 w-8 text-muted-foreground/30 stroke-[1.5]" />
+                    <span>
+                      {categoryMonth === 'all'
+                        ? (i18n.language === 'de'
+                            ? `Keine kategorisierten Ausgaben für ${categoryYear} erfasst.`
+                            : `No categorized expenses logged for ${categoryYear}.`)
+                        : (i18n.language === 'de'
+                            ? `Keine Ausgaben für ${months.find(m => m.value === categoryMonth)?.label} ${categoryYear} erfasst.`
+                            : `No categorized expenses logged for ${months.find(m => m.value === categoryMonth)?.label} ${categoryYear}.`)}
+                    </span>
+                    {categoryMonth !== 'all' && (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryMonth('all')}
+                        className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                      >
+                        {i18n.language === 'de' ? `Alle Monate von ${categoryYear} anzeigen` : `Show all months of ${categoryYear}`}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col h-full">
@@ -1310,21 +1341,35 @@ export const Analytics: React.FC = () => {
                       {/* Center donut label */}
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                         <span className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider leading-none mb-0.5">
-                          {i18n.language === 'de' ? 'Gesamt' : 'Total'}
+                          {categoryMonth === 'all' 
+                            ? (i18n.language === 'de' ? 'Gesamt' : 'Total') 
+                            : (months.find(m => m.value === categoryMonth)?.label?.toUpperCase() || (i18n.language === 'de' ? 'Monat' : 'Month'))}
                         </span>
                         <span className="text-xs font-black font-mono text-foreground leading-tight">
                           €{totalCategoryFilteredSpent.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
                         </span>
+                        {categoryMonth !== 'all' && (
+                          <span className="text-[7.5px] text-primary font-bold leading-none mt-0.5">
+                            {categoryYear}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Compact Interactive Category List directly below chart */}
                     <div className="pt-2 mt-0.5 border-t border-border/40 flex flex-col flex-1 min-h-0">
                       <div className="flex items-center justify-between mb-1 px-0.5 shrink-0">
-                        <span className="text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3 w-3 text-primary" />
-                          {i18n.language === 'de' ? 'Kategorien' : 'Categories'}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1 shrink-0">
+                            <Layers className="h-3 w-3 text-primary" />
+                            {i18n.language === 'de' ? 'Kategorien' : 'Categories'}
+                          </span>
+                          {categoryMonth !== 'all' && (
+                            <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20 shrink-0">
+                              {months.find(m => m.value === categoryMonth)?.label}
+                            </span>
+                          )}
+                        </div>
                         
                         <div className="flex items-center gap-1.5">
                           {categoryData.length > 6 && (
@@ -3056,13 +3101,15 @@ export const Analytics: React.FC = () => {
                         color: selectedCategoryBreakdown.color,
                       }}
                     >
-                      {categoryYear}
+                      {modalMonthFilter === 'all' 
+                        ? categoryYear 
+                        : `${activeModalMonthName} ${categoryYear}`}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {categoryMonth === 'all'
+                    {modalMonthFilter === 'all'
                       ? (i18n.language === 'de' ? 'Übersicht aller 12 Monate & verwendete Zahlungskonten' : 'All 12 months overview & payment accounts')
-                      : (i18n.language === 'de' ? `Im Dropdown gewählt: ${months.find(m => m.value === categoryMonth)?.label || ''}` : `Selected in dropdown: ${months.find(m => m.value === categoryMonth)?.label || ''}`)}
+                      : (i18n.language === 'de' ? `Gefiltert nach: ${activeModalMonthName} ${categoryYear}` : `Filtered by: ${activeModalMonthName} ${categoryYear}`)}
                   </p>
                 </div>
               </div>
@@ -3100,39 +3147,45 @@ export const Analytics: React.FC = () => {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Total in Year */}
-              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  {i18n.language === 'de' ? `Gesamt (${categoryYear})` : `Total (${categoryYear})`}
-                </p>
-                <p className="text-base sm:text-lg font-black font-mono text-foreground">
-                  €{totalCategoryYearSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {categoryAllYearExpenses.length} {i18n.language === 'de' ? 'Transaktionen im Jahr' : 'tx in full year'}
-                </p>
-              </div>
-
-              {/* Selected Filter Amount */}
+              {/* Stat 1: Selected Month Total or Full Year Total */}
               <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   {modalMonthFilter === 'all'
-                    ? (i18n.language === 'de' ? 'Monatsdurchschnitt' : 'Monthly Avg')
-                    : activeModalMonthName}
+                    ? (i18n.language === 'de' ? `Gesamt (${categoryYear})` : `Total (${categoryYear})`)
+                    : `${activeModalMonthName} (${categoryYear})`}
                 </p>
-                <p className="text-base sm:text-lg font-black font-mono text-rose-500">
+                <p className={cn("text-base sm:text-lg font-black font-mono", modalMonthFilter === 'all' ? "text-foreground" : "text-rose-500")}>
                   €{modalMonthFilter === 'all'
-                    ? (totalCategoryYearSpent / 12).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    ? totalCategoryYearSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : activeModalSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   {modalMonthFilter === 'all'
-                    ? (i18n.language === 'de' ? 'Über alle 12 Monate' : 'Across 12 months')
-                    : `${activeModalExpenses.length} ${i18n.language === 'de' ? 'Transaktionen' : 'transactions'}`}
+                    ? `${categoryAllYearExpenses.length} ${i18n.language === 'de' ? 'Transaktionen im Jahr' : 'tx in full year'}`
+                    : `${activeModalExpenses.length} ${i18n.language === 'de' ? 'Transaktionen im Monat' : 'transactions in month'}`}
                 </p>
               </div>
 
-              {/* Peak Month */}
+              {/* Stat 2: Full Year Total (when month selected) or Monthly Avg (when all months) */}
+              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {modalMonthFilter === 'all'
+                    ? (i18n.language === 'de' ? 'Monatsdurchschnitt' : 'Monthly Avg')
+                    : (i18n.language === 'de' ? `Gesamt (${categoryYear})` : `Full Year (${categoryYear})`)}
+                </p>
+                <p className={cn("text-base sm:text-lg font-black font-mono", modalMonthFilter === 'all' ? "text-rose-500" : "text-foreground")}>
+                  €{modalMonthFilter === 'all'
+                    ? (totalCategoryYearSpent / 12).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : totalCategoryYearSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {modalMonthFilter === 'all'
+                    ? (i18n.language === 'de' ? 'Über alle 12 Monate' : 'Across 12 months')
+                    : `${categoryAllYearExpenses.length} ${i18n.language === 'de' ? 'Transaktionen im Jahr' : 'tx in full year'}`}
+                </p>
+              </div>
+
+              {/* Stat 3: Peak Month */}
               <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   {i18n.language === 'de' ? 'Spitzenmonat' : 'Peak Month'}
@@ -3145,10 +3198,12 @@ export const Analytics: React.FC = () => {
                 </p>
               </div>
 
-              {/* Top Payment Account */}
+              {/* Stat 4: Top Payment Account */}
               <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  {i18n.language === 'de' ? 'Hauptkonto' : 'Primary Account'}
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+                  {modalMonthFilter === 'all'
+                    ? (i18n.language === 'de' ? 'Hauptkonto (Jahr)' : 'Primary Account (Year)')
+                    : (i18n.language === 'de' ? `Hauptkonto (${activeModalMonthName})` : `Primary Account (${activeModalMonthName})`)}
                 </p>
                 <p className="text-sm sm:text-base font-bold text-foreground truncate" title={categoryAccountBreakdown[0]?.name || 'N/A'}>
                   {categoryAccountBreakdown[0]?.name || 'N/A'}
@@ -3165,9 +3220,13 @@ export const Analytics: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                     <BarChart2 className="h-3.5 w-3.5 text-primary" />
-                    {i18n.language === 'de' 
-                      ? `Ausgaben für ${selectedCategoryBreakdown.name} in allen Monaten (${categoryYear})` 
-                      : `Expenses for ${selectedCategoryBreakdown.name} across all months (${categoryYear})`}
+                    {modalMonthFilter === 'all'
+                      ? (i18n.language === 'de' 
+                          ? `Ausgaben für ${selectedCategoryBreakdown.name} in allen Monaten (${categoryYear})` 
+                          : `Expenses for ${selectedCategoryBreakdown.name} across all months (${categoryYear})`)
+                      : (i18n.language === 'de' 
+                          ? `Ausgaben für ${selectedCategoryBreakdown.name} im ${activeModalMonthName} ${categoryYear} & 12-Monats-Trend` 
+                          : `Expenses for ${selectedCategoryBreakdown.name} in ${activeModalMonthName} ${categoryYear} & 12-Month Trend`)}
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
                     {i18n.language === 'de' 
