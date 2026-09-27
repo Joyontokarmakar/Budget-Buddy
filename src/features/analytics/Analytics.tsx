@@ -163,11 +163,11 @@ export const Analytics: React.FC = () => {
   const years = Array.from(new Set([
     currentYearVal,
     ...expenses.map(e => {
-      const p = parseExpenseDate(e.date);
+      const p = parseExpenseDate(e.date, e.notes);
       return p.year > 0 ? p.year : currentYearVal;
     }),
     ...incomes.map(i => {
-      const p = parseExpenseDate(i.date);
+      const p = parseExpenseDate(i.date, (i as any).notes);
       return p.year > 0 ? p.year : currentYearVal;
     })
   ])).sort((a, b) => b - a);
@@ -190,7 +190,7 @@ export const Analytics: React.FC = () => {
 
   const categoryFilteredExpenses = expenses.filter(e => {
     if (!e.date) return false;
-    const { year, month } = parseExpenseDate(e.date);
+    const { year, month } = parseExpenseDate(e.date, e.notes);
     const yMatches = year === categoryYear;
     const mMatches = categoryMonth === 'all' || month === parseInt(categoryMonth, 10);
     return yMatches && mMatches;
@@ -208,8 +208,9 @@ export const Analytics: React.FC = () => {
   } = {};
 
   categoryFilteredExpenses.forEach(e => {
-    const catName = e.category?.name || 'Other';
-    const catColor = e.category?.color || '#6b7280';
+    const cat = categories.find(c => c.id === e.category_id) || e.category;
+    const catName = cat?.name || e.category?.name || 'Other';
+    const catColor = cat?.color || e.category?.color || '#6b7280';
     const transName = t(`categories.${catName}`, catName);
     const catId = e.category_id || e.category?.id || null;
     
@@ -261,12 +262,13 @@ export const Analytics: React.FC = () => {
   const categoryAllYearExpenses = selectedCategoryBreakdown
     ? expenses.filter(e => {
         if (!e.date) return false;
-        const { year } = parseExpenseDate(e.date);
+        const { year } = parseExpenseDate(e.date, e.notes);
         if (year !== categoryYear) return false;
         if (selectedCategoryBreakdown.categoryId && e.category_id) {
           if (e.category_id === selectedCategoryBreakdown.categoryId) return true;
         }
-        const catName = e.category?.name || 'Other';
+        const cat = categories.find(c => c.id === e.category_id) || e.category;
+        const catName = cat?.name || e.category?.name || 'Other';
         return catName.toLowerCase() === selectedCategoryBreakdown.rawName.toLowerCase();
       })
     : [];
@@ -287,7 +289,7 @@ export const Analytics: React.FC = () => {
     { index: 10, short: 'Nov', en: 'November', de: 'November' },
     { index: 11, short: 'Dec', en: 'December', de: 'Dezember' },
   ].map(m => {
-    const mExpenses = categoryAllYearExpenses.filter(e => parseExpenseDate(e.date).month === m.index);
+    const mExpenses = categoryAllYearExpenses.filter(e => parseExpenseDate(e.date, e.notes).month === m.index);
     const amount = mExpenses.reduce((sum, e) => sum + e.amount, 0);
     const label = i18n.language === 'de' && m.short === 'Mar' ? 'Mär' : (i18n.language === 'de' && m.short === 'May' ? 'Mai' : (i18n.language === 'de' && m.short === 'Oct' ? 'Okt' : (i18n.language === 'de' && m.short === 'Dec' ? 'Dez' : m.short)));
     const fullName = i18n.language === 'de' ? m.de : m.en;
@@ -307,7 +309,7 @@ export const Analytics: React.FC = () => {
   // Expenses for the active modal filter (either 'all' or a specific month 0..11)
   const activeModalExpenses = modalMonthFilter === 'all'
     ? categoryAllYearExpenses
-    : categoryAllYearExpenses.filter(e => parseExpenseDate(e.date).month === parseInt(modalMonthFilter, 10));
+    : categoryAllYearExpenses.filter(e => parseExpenseDate(e.date, e.notes).month === parseInt(modalMonthFilter, 10));
 
   const activeModalSpent = activeModalExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -340,7 +342,7 @@ export const Analytics: React.FC = () => {
     if (categoryViewType === 'all') {
       const barFilteredExpenses = expenses.filter(e => {
         if (!e.date) return false;
-        const { year, month } = parseExpenseDate(e.date);
+        const { year, month } = parseExpenseDate(e.date, e.notes);
         if (barTimeframe === 'all') {
           return true;
         }
@@ -393,7 +395,7 @@ export const Analytics: React.FC = () => {
         ];
 
         singleCategoryExpenses.forEach(e => {
-          const { year, month, day } = parseExpenseDate(e.date);
+          const { year, month, day } = parseExpenseDate(e.date, e.notes);
           if (year === barYear && month === parseInt(barMonth, 10)) {
             if (day <= 7) weeksData[0].amount += e.amount;
             else if (day <= 14) weeksData[1].amount += e.amount;
@@ -426,7 +428,7 @@ export const Analytics: React.FC = () => {
         }));
 
         singleCategoryExpenses.forEach(e => {
-          const { year, month } = parseExpenseDate(e.date);
+          const { year, month } = parseExpenseDate(e.date, e.notes);
           if (year === barYear) {
             if (month >= 0 && month < 12) {
               monthsData[month].amount += e.amount;
@@ -442,7 +444,7 @@ export const Analytics: React.FC = () => {
           .sort((a, b) => parseInt(a.name) - parseInt(b.name));
 
         singleCategoryExpenses.forEach(e => {
-          const { year } = parseExpenseDate(e.date);
+          const { year } = parseExpenseDate(e.date, e.notes);
           const yStr = year.toString();
           const target = yearsData.find(item => item.name === yStr);
           if (target) {
@@ -1295,6 +1297,7 @@ export const Analytics: React.FC = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
+                            key={`pie-${categoryMonth}-${categoryYear}`}
                             data={categoryData}
                             cx="50%"
                             cy="50%"
@@ -1325,16 +1328,49 @@ export const Analytics: React.FC = () => {
                             })}
                           </Pie>
                           <Tooltip
-                            contentStyle={{
-                              backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                              borderColor: isDark ? '#334155' : '#e2e8f0',
-                              borderRadius: '12px',
+                            content={({ active, payload }) => {
+                              if (!active || !payload || !payload.length) return null;
+                              const item = payload[0].payload;
+                              if (!item) return null;
+                              const catVal = Number(item.value || 0);
+                              const percent = totalCategoryFilteredSpent > 0 
+                                ? ((catVal / totalCategoryFilteredSpent) * 100).toFixed(1) 
+                                : '0.0';
+                              return (
+                                <div className="bg-popover/95 backdrop-blur-md border border-border px-3 py-2.5 rounded-xl shadow-xl text-xs z-50 pointer-events-none min-w-[170px] animate-in fade-in-50 zoom-in-95 duration-100">
+                                  <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-border/50">
+                                    <span 
+                                      className="h-2.5 w-2.5 rounded-full shrink-0 shadow-xs" 
+                                      style={{ backgroundColor: item.color }} 
+                                    />
+                                    <span className="font-bold text-foreground text-xs truncate max-w-[150px]">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-3 text-muted-foreground font-mono">
+                                      <span className="text-[11px]">{i18n.language === 'de' ? 'Ausgaben:' : 'Spent:'}</span>
+                                      <span className="font-extrabold text-foreground text-xs">
+                                        €{catVal.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3 text-muted-foreground font-mono">
+                                      <span className="text-[11px]">{i18n.language === 'de' ? 'Anteil:' : 'Share:'}</span>
+                                      <span className="font-bold text-primary text-xs">{percent}%</span>
+                                    </div>
+                                    {item.count > 0 && (
+                                      <div className="flex items-center justify-between gap-3 text-muted-foreground text-[10px]">
+                                        <span>{i18n.language === 'de' ? 'Buchungen:' : 'Transactions:'}</span>
+                                        <span className="font-medium text-foreground">{item.count}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 pt-1.5 border-t border-border/40 text-[9.5px] text-muted-foreground/80 italic text-center">
+                                    {i18n.language === 'de' ? 'Klicken für Details' : 'Click for breakdown'}
+                                  </div>
+                                </div>
+                              );
                             }}
-                            itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                            formatter={(value) => [
-                              `€${Number(value).toFixed(2)}`,
-                              i18n.language === 'de' ? 'Ausgaben (Klicken für Details)' : 'Spent (Click for breakdown)',
-                            ]}
                           />
                         </PieChart>
                       </ResponsiveContainer>
