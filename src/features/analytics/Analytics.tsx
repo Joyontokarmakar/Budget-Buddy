@@ -8,7 +8,7 @@ import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { getSafeItems } from '../../utils/items';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
-import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X, TrendingDown, TrendingUp, Receipt } from 'lucide-react';
+import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X, TrendingDown, TrendingUp, Receipt, Wallet, CreditCard, ArrowUpRight, Layers } from 'lucide-react';
 export const Analytics: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuthStore();
@@ -58,6 +58,17 @@ export const Analytics: React.FC = () => {
 
   // Top card details modal state
   const [selectedDetailCard, setSelectedDetailCard] = useState<'spending' | 'income' | 'employment' | 'savings' | null>(null);
+
+  // Interactive Pie Chart Category Breakdown Modal
+  const [selectedCategoryBreakdown, setSelectedCategoryBreakdown] = useState<{
+    name: string;
+    rawName: string;
+    categoryId?: string | null;
+    color: string;
+    value?: number;
+  } | null>(null);
+  const [modalMonthFilter, setModalMonthFilter] = useState<string>('all');
+  const [hoveredCategoryName, setHoveredCategoryName] = useState<string | null>(null);
 
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -177,19 +188,34 @@ export const Analytics: React.FC = () => {
     return yMatches && mMatches;
   });
 
-  const categoryDataMap: { [key: string]: { name: string; value: number; color: string } } = {};
+  const categoryDataMap: { 
+    [key: string]: { 
+      name: string; 
+      rawName: string; 
+      categoryId?: string | null; 
+      value: number; 
+      color: string; 
+      count: number; 
+    } 
+  } = {};
+
   categoryFilteredExpenses.forEach(e => {
     const catName = e.category?.name || 'Other';
     const catColor = e.category?.color || '#6b7280';
     const transName = t(`categories.${catName}`, catName);
+    const catId = e.category_id || e.category?.id || null;
     
     if (categoryDataMap[catName]) {
       categoryDataMap[catName].value += e.amount;
+      categoryDataMap[catName].count += 1;
     } else {
       categoryDataMap[catName] = {
         name: transName,
+        rawName: catName,
+        categoryId: catId,
         value: e.amount,
         color: catColor,
+        count: 1,
       };
     }
   });
@@ -199,6 +225,101 @@ export const Analytics: React.FC = () => {
       ...item,
       color: UNIQUE_COLORS[idx % UNIQUE_COLORS.length]
     }));
+
+  const totalCategoryFilteredSpent = categoryData.reduce((sum, item) => sum + item.value, 0);
+
+  const handleOpenCategoryBreakdown = (item: {
+    name: string;
+    rawName?: string;
+    categoryId?: string | null;
+    color: string;
+    value?: number;
+  }) => {
+    setSelectedCategoryBreakdown({
+      name: item.name,
+      rawName: item.rawName || item.name,
+      categoryId: item.categoryId || null,
+      color: item.color,
+      value: item.value,
+    });
+    setModalMonthFilter(categoryMonth);
+  };
+
+  // Category Breakdown Calculations for Modal
+  const categoryAllYearExpenses = selectedCategoryBreakdown
+    ? expenses.filter(e => {
+        if (!e.date) return false;
+        const d = new Date(e.date);
+        if (d.getFullYear() !== categoryYear) return false;
+        if (selectedCategoryBreakdown.categoryId && e.category_id) {
+          if (e.category_id === selectedCategoryBreakdown.categoryId) return true;
+        }
+        const catName = e.category?.name || 'Other';
+        return catName.toLowerCase() === selectedCategoryBreakdown.rawName.toLowerCase();
+      })
+    : [];
+
+  const totalCategoryYearSpent = categoryAllYearExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const monthlyCategoryBreakdown = [
+    { index: 0, short: 'Jan', en: 'January', de: 'Januar' },
+    { index: 1, short: 'Feb', en: 'February', de: 'Februar' },
+    { index: 2, short: 'Mar', en: 'March', de: 'März' },
+    { index: 3, short: 'Apr', en: 'April', de: 'April' },
+    { index: 4, short: 'May', en: 'May', de: 'Mai' },
+    { index: 5, short: 'Jun', en: 'June', de: 'Juni' },
+    { index: 6, short: 'Jul', en: 'July', de: 'Juli' },
+    { index: 7, short: 'Aug', en: 'August', de: 'August' },
+    { index: 8, short: 'Sep', en: 'September', de: 'September' },
+    { index: 9, short: 'Oct', en: 'October', de: 'Oktober' },
+    { index: 10, short: 'Nov', en: 'November', de: 'November' },
+    { index: 11, short: 'Dec', en: 'December', de: 'Dezember' },
+  ].map(m => {
+    const mExpenses = categoryAllYearExpenses.filter(e => new Date(e.date).getMonth() === m.index);
+    const amount = mExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const label = i18n.language === 'de' && m.short === 'Mar' ? 'Mär' : (i18n.language === 'de' && m.short === 'May' ? 'Mai' : (i18n.language === 'de' && m.short === 'Oct' ? 'Okt' : (i18n.language === 'de' && m.short === 'Dec' ? 'Dez' : m.short)));
+    const fullName = i18n.language === 'de' ? m.de : m.en;
+    return {
+      index: m.index,
+      label,
+      fullName,
+      amount: parseFloat(amount.toFixed(2)),
+      count: mExpenses.length,
+      expenses: mExpenses,
+    };
+  });
+
+  const peakCategoryMonth = [...monthlyCategoryBreakdown].sort((a, b) => b.amount - a.amount)[0];
+  const maxMonthAmount = peakCategoryMonth && peakCategoryMonth.amount > 0 ? peakCategoryMonth.amount : 1;
+
+  // Expenses for the active modal filter (either 'all' or a specific month 0..11)
+  const activeModalExpenses = modalMonthFilter === 'all'
+    ? categoryAllYearExpenses
+    : categoryAllYearExpenses.filter(e => new Date(e.date).getMonth() === parseInt(modalMonthFilter, 10));
+
+  const activeModalSpent = activeModalExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Accounts used for this category in the active filter
+  const accountBreakdownMap: { [key: string]: { name: string; amount: number; count: number } } = {};
+  activeModalExpenses.forEach(e => {
+    const accName = e.account?.name || (e.payment_account_id ? 'Account' : (i18n.language === 'de' ? 'Standard-Konto' : 'Default Account'));
+    if (!accountBreakdownMap[accName]) {
+      accountBreakdownMap[accName] = { name: accName, amount: 0, count: 0 };
+    }
+    accountBreakdownMap[accName].amount += e.amount;
+    accountBreakdownMap[accName].count += 1;
+  });
+
+  const categoryAccountBreakdown = Object.values(accountBreakdownMap)
+    .sort((a, b) => b.amount - a.amount)
+    .map(acc => ({
+      ...acc,
+      percentage: activeModalSpent > 0 ? (acc.amount / activeModalSpent) * 100 : 0
+    }));
+
+  const activeModalMonthName = modalMonthFilter === 'all'
+    ? (i18n.language === 'de' ? 'Alle Monate' : 'All Months')
+    : (monthlyCategoryBreakdown.find(m => m.index === parseInt(modalMonthFilter, 10))?.fullName || (i18n.language === 'de' ? 'Monat' : 'Month'));
 
   const selectedCategoryObj = categories.find(c => c.id === selectedCategoryId);
   const selectedCategoryColor = selectedCategoryObj?.color || '#3b82f6';
@@ -1124,43 +1245,123 @@ export const Analytics: React.FC = () => {
                 </div>
                 <CardDescription>Categorized spending allocation</CardDescription>
               </CardHeader>
-              <CardContent className="h-[340px] pt-2 relative w-full min-w-0">
+              <CardContent className="min-h-[350px] p-5 pt-1 relative w-full min-w-0 flex flex-col justify-between">
                 {categoryData.length === 0 ? (
-                  <div className="text-center text-xs text-muted-foreground font-semibold py-12">
-                    No categorized expenses logged for the selected period.
+                  <div className="text-center text-xs text-muted-foreground font-semibold py-16">
+                    {i18n.language === 'de'
+                      ? 'Keine kategorisierten Ausgaben für den ausgewählten Zeitraum erfasst.'
+                      : 'No categorized expenses logged for the selected period.'}
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy={isMobile ? "40%" : "45%"}
-                        outerRadius={isMobile ? 65 : 75}
-                        dataKey="value"
-                        nameKey="name"
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                          borderColor: isDark ? '#334155' : '#e2e8f0',
-                          borderRadius: '12px',
-                        }}
-                        itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
-                        formatter={(value) => [`€${Number(value).toFixed(2)}`]}
-                      />
-                      <Legend 
-                        iconSize={8} 
-                        iconType="circle" 
-                        wrapperStyle={{ fontSize: '10px', fontWeight: 'semibold', paddingTop: isMobile ? '12px' : '4px' }} 
-                        formatter={(value, entry: any) => `${value}: €${Number(entry.payload?.value || 0).toFixed(2)}`}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="flex flex-col h-full justify-between gap-2">
+                    {/* Donut Chart Area */}
+                    <div className="h-[185px] w-full relative">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={isMobile ? 38 : 46}
+                            outerRadius={isMobile ? 64 : 76}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                            cursor="pointer"
+                            onClick={(entry: any) => {
+                              if (entry) {
+                                handleOpenCategoryBreakdown(entry);
+                              }
+                            }}
+                          >
+                            {categoryData.map((entry, index) => {
+                              const isHovered = hoveredCategoryName === entry.name;
+                              return (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={entry.color}
+                                  opacity={hoveredCategoryName ? (isHovered ? 1 : 0.35) : 1}
+                                  stroke={isHovered ? '#ffffff' : 'transparent'}
+                                  strokeWidth={isHovered ? 2 : 0}
+                                  className="transition-all duration-200 cursor-pointer"
+                                />
+                              );
+                            })}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                              borderColor: isDark ? '#334155' : '#e2e8f0',
+                              borderRadius: '12px',
+                            }}
+                            itemStyle={{ color: isDark ? '#ffffff' : '#0f172a', fontWeight: 'bold' }}
+                            formatter={(value) => [
+                              `€${Number(value).toFixed(2)}`,
+                              i18n.language === 'de' ? 'Ausgaben (Klicken für Details)' : 'Spent (Click for breakdown)',
+                            ]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Center donut label */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                          {i18n.language === 'de' ? 'Gesamt' : 'Total'}
+                        </span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-foreground">
+                          €{totalCategoryFilteredSpent.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Interactive Category Chips below chart */}
+                    <div className="pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between mb-1.5 px-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Layers className="h-3 w-3 text-primary" />
+                          {i18n.language === 'de' ? 'Kategorien (Klicken für Details)' : 'Categories (Click for breakdown)'}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground font-semibold flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          {categoryData.length} {categoryData.length === 1 ? 'category' : 'categories'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-[110px] overflow-y-auto pr-1">
+                        {categoryData.map((item, idx) => {
+                          const isHovered = hoveredCategoryName === item.name;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => handleOpenCategoryBreakdown(item)}
+                              onMouseEnter={() => setHoveredCategoryName(item.name)}
+                              onMouseLeave={() => setHoveredCategoryName(null)}
+                              className={cn(
+                                "group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-semibold border transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs",
+                                isHovered 
+                                  ? "bg-primary/15 border-primary/50 text-foreground scale-[1.03] ring-1 ring-primary/40"
+                                  : "bg-muted/40 hover:bg-muted/70 border-border/50 text-foreground"
+                              )}
+                              title={i18n.language === 'de' 
+                                ? `${item.name}: Details für alle Monate & Konten anzeigen` 
+                                : `${item.name}: Click to see all months & accounts breakdown`}
+                            >
+                              <span
+                                className="h-2 w-2 rounded-full shrink-0 transition-transform group-hover:scale-125"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span className="truncate max-w-[95px] sm:max-w-[125px] font-medium">
+                                {item.name}
+                              </span>
+                              <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover:text-foreground">
+                                €{item.value.toFixed(2)}
+                              </span>
+                              <ArrowUpRight className="h-3 w-3 text-muted-foreground/60 opacity-0 -ml-1 group-hover:opacity-100 group-hover:text-primary transition-all shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -2775,6 +2976,431 @@ export const Analytics: React.FC = () => {
             Close
           </Button>
         </div>
+      </Dialog>
+
+      {/* INTERACTIVE CATEGORY BREAKDOWN MODAL (All Months & Payment Accounts) */}
+      <Dialog
+        isOpen={selectedCategoryBreakdown !== null}
+        onClose={() => setSelectedCategoryBreakdown(null)}
+        title=""
+        className="sm:max-w-3xl"
+        footer={
+          <div className="w-full flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">
+              {i18n.language === 'de'
+                ? `Analyse für das Jahr ${categoryYear}`
+                : `Annual expense breakdown for ${categoryYear}`}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSelectedCategoryBreakdown(null)}>
+              {i18n.language === 'de' ? 'Schließen' : 'Close'}
+            </Button>
+          </div>
+        }
+      >
+        {selectedCategoryBreakdown && (
+          <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-1">
+            {/* Modal Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs"
+                  style={{
+                    backgroundColor: `${selectedCategoryBreakdown.color}20`,
+                    color: selectedCategoryBreakdown.color,
+                  }}
+                >
+                  <PieIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-foreground">
+                      {selectedCategoryBreakdown.name}
+                    </h3>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                      style={{
+                        backgroundColor: `${selectedCategoryBreakdown.color}15`,
+                        borderColor: `${selectedCategoryBreakdown.color}40`,
+                        color: selectedCategoryBreakdown.color,
+                      }}
+                    >
+                      {categoryYear}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {categoryMonth === 'all'
+                      ? (i18n.language === 'de' ? 'Übersicht aller 12 Monate & verwendete Zahlungskonten' : 'All 12 months overview & payment accounts')
+                      : (i18n.language === 'de' ? `Im Dropdown gewählt: ${months.find(m => m.value === categoryMonth)?.label || ''}` : `Selected in dropdown: ${months.find(m => m.value === categoryMonth)?.label || ''}`)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Timeframe selector pill */}
+              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/50 text-xs shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setModalMonthFilter('all')}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer",
+                    modalMonthFilter === 'all'
+                      ? "bg-background text-foreground shadow-xs border border-border/20"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {i18n.language === 'de' ? 'Alle Monate' : 'All Months'}
+                </button>
+                {categoryMonth !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalMonthFilter(categoryMonth)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer",
+                      modalMonthFilter === categoryMonth
+                        ? "bg-background text-foreground shadow-xs border border-border/20"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {months.find(m => m.value === categoryMonth)?.label}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Total in Year */}
+              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {i18n.language === 'de' ? `Gesamt (${categoryYear})` : `Total (${categoryYear})`}
+                </p>
+                <p className="text-base sm:text-lg font-black font-mono text-foreground">
+                  €{totalCategoryYearSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {categoryAllYearExpenses.length} {i18n.language === 'de' ? 'Transaktionen im Jahr' : 'tx in full year'}
+                </p>
+              </div>
+
+              {/* Selected Filter Amount */}
+              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {modalMonthFilter === 'all'
+                    ? (i18n.language === 'de' ? 'Monatsdurchschnitt' : 'Monthly Avg')
+                    : activeModalMonthName}
+                </p>
+                <p className="text-base sm:text-lg font-black font-mono text-rose-500">
+                  €{modalMonthFilter === 'all'
+                    ? (totalCategoryYearSpent / 12).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : activeModalSpent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {modalMonthFilter === 'all'
+                    ? (i18n.language === 'de' ? 'Über alle 12 Monate' : 'Across 12 months')
+                    : `${activeModalExpenses.length} ${i18n.language === 'de' ? 'Transaktionen' : 'transactions'}`}
+                </p>
+              </div>
+
+              {/* Peak Month */}
+              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {i18n.language === 'de' ? 'Spitzenmonat' : 'Peak Month'}
+                </p>
+                <p className="text-sm sm:text-base font-bold text-foreground truncate">
+                  {peakCategoryMonth && peakCategoryMonth.amount > 0 ? peakCategoryMonth.fullName : 'None'}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {peakCategoryMonth && peakCategoryMonth.amount > 0 ? `€${peakCategoryMonth.amount.toFixed(2)}` : '€0.00'}
+                </p>
+              </div>
+
+              {/* Top Payment Account */}
+              <div className="p-3.5 rounded-xl bg-card border border-border/70 shadow-2xs space-y-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {i18n.language === 'de' ? 'Hauptkonto' : 'Primary Account'}
+                </p>
+                <p className="text-sm sm:text-base font-bold text-foreground truncate" title={categoryAccountBreakdown[0]?.name || 'N/A'}>
+                  {categoryAccountBreakdown[0]?.name || 'N/A'}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {categoryAccountBreakdown[0] ? `€${categoryAccountBreakdown[0].amount.toFixed(2)} (${categoryAccountBreakdown[0].percentage.toFixed(0)}%)` : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {/* MONTH-BY-MONTH BREAKDOWN (All Months of categoryYear) */}
+            <div className="space-y-3 p-4 rounded-2xl bg-muted/20 border border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <BarChart2 className="h-3.5 w-3.5 text-primary" />
+                    {i18n.language === 'de' 
+                      ? `Ausgaben für ${selectedCategoryBreakdown.name} in allen Monaten (${categoryYear})` 
+                      : `Expenses for ${selectedCategoryBreakdown.name} across all months (${categoryYear})`}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground">
+                    {i18n.language === 'de' 
+                      ? 'Klicken Sie auf einen Monat oder Balken, um die Konten und Buchungen dieses Monats anzuzeigen.' 
+                      : 'Click any month card or bar to inspect that month\'s accounts and transactions.'}
+                  </p>
+                </div>
+                {modalMonthFilter !== 'all' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalMonthFilter('all')}
+                    className="text-[10px] h-7 self-start sm:self-auto cursor-pointer"
+                  >
+                    {i18n.language === 'de' ? 'Alle Monate anzeigen' : 'Show All Months'}
+                  </Button>
+                )}
+              </div>
+
+              {/* Mini Monthly Bar Chart */}
+              <div className="w-full h-[170px] pt-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyCategoryBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <XAxis 
+                      dataKey="label" 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'bold' }} 
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke={textColor} 
+                      style={{ fontSize: '10px', fontWeight: 'semibold' }} 
+                      tickFormatter={(val) => `€${val}`}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderColor: isDark ? '#334155' : '#e2e8f0',
+                        borderRadius: '12px',
+                      }}
+                      itemStyle={{ fontWeight: 'bold' }}
+                      formatter={(value) => [`€${Number(value).toFixed(2)}`, selectedCategoryBreakdown.name]}
+                      labelFormatter={(label) => {
+                        const m = monthlyCategoryBreakdown.find(item => item.label === label);
+                        return m ? `${m.fullName} ${categoryYear}` : `${label} ${categoryYear}`;
+                      }}
+                    />
+                    <Bar 
+                      dataKey="amount" 
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(entry: any) => {
+                        if (entry && typeof entry.index === 'number') {
+                          setModalMonthFilter(entry.index.toString());
+                        }
+                      }}
+                    >
+                      {monthlyCategoryBreakdown.map((entry, index) => {
+                        const isFiltered = modalMonthFilter === entry.index.toString();
+                        return (
+                          <Cell 
+                            key={`bar-cell-${index}`} 
+                            fill={isFiltered ? '#f43f5e' : selectedCategoryBreakdown.color}
+                            opacity={modalMonthFilter === 'all' || isFiltered ? 1 : 0.4}
+                          />
+                        );
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* 12-Month Cards Grid */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1">
+                {monthlyCategoryBreakdown.map((m) => {
+                  const isCurrentFilter = modalMonthFilter === m.index.toString();
+                  const isDropdownMonth = categoryMonth === m.index.toString();
+                  return (
+                    <button
+                      key={m.index}
+                      type="button"
+                      onClick={() => setModalMonthFilter(isCurrentFilter ? 'all' : m.index.toString())}
+                      className={cn(
+                        "flex flex-col p-2 rounded-xl border text-left transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs",
+                        isCurrentFilter
+                          ? "bg-rose-500/10 border-rose-500 ring-1 ring-rose-500/60 shadow-xs"
+                          : m.amount > 0
+                            ? "bg-card hover:bg-muted/60 border-border/70 hover:border-primary/40"
+                            : "bg-muted/15 border-border/30 opacity-60 hover:opacity-100 hover:border-border/60"
+                      )}
+                      title={i18n.language === 'de' ? `${m.fullName}: Klicken zum Filtern` : `${m.fullName}: Click to filter`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          "text-[11px] font-bold",
+                          isCurrentFilter ? "text-rose-500" : "text-foreground"
+                        )}>
+                          {m.label}
+                        </span>
+                        {isDropdownMonth && (
+                          <span 
+                            className="h-1.5 w-1.5 rounded-full bg-primary" 
+                            title={i18n.language === 'de' ? 'Im Dropdown oben ausgewählt' : 'Selected in top dropdown'} 
+                          />
+                        )}
+                      </div>
+                      <span className={cn(
+                        "text-xs font-black mt-1 font-mono",
+                        m.amount > 0 ? (isCurrentFilter ? "text-rose-500" : "text-foreground") : "text-muted-foreground/60"
+                      )}>
+                        €{m.amount.toFixed(2)}
+                      </span>
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground mt-0.5">
+                        <span>{m.count} tx</span>
+                        <span className="font-semibold">
+                          {totalCategoryYearSpent > 0 ? `${((m.amount / totalCategoryYearSpent) * 100).toFixed(0)}%` : '0%'}
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div className="h-1 w-full bg-muted/60 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${(m.amount / maxMonthAmount) * 100}%`,
+                            backgroundColor: isCurrentFilter ? '#f43f5e' : selectedCategoryBreakdown.color,
+                          }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* EXPENSES BY PAYMENT ACCOUNT ("Paid From Accounts") */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                  <Wallet className="h-3.5 w-3.5 text-primary" />
+                  {i18n.language === 'de' ? 'Ausgaben nach Zahlungskonto' : 'Expenses by Payment Account'}
+                  <span className="text-[10px] text-muted-foreground font-normal normal-case">
+                    ({activeModalMonthName}, {categoryYear})
+                  </span>
+                </h4>
+                <span className="text-xs font-bold font-mono text-foreground">
+                  {i18n.language === 'de' ? 'Summe: ' : 'Total: '}
+                  <span className="text-primary">€{activeModalSpent.toFixed(2)}</span>
+                </span>
+              </div>
+
+              {categoryAccountBreakdown.length === 0 ? (
+                <div className="p-4 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground font-medium">
+                  {i18n.language === 'de'
+                    ? 'Keine Ausgaben über Konten für diesen Zeitraum erfasst.'
+                    : 'No account expenses recorded for this timeframe.'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {categoryAccountBreakdown.map((acc, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-card border border-border/70 hover:border-primary/40 transition-all space-y-2 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            <CreditCard className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-foreground leading-tight truncate max-w-[140px] sm:max-w-[170px]">
+                              {acc.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {acc.count} {acc.count === 1 ? (i18n.language === 'de' ? 'Buchung' : 'transaction') : (i18n.language === 'de' ? 'Buchungen' : 'transactions')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-bold font-mono text-foreground block">
+                            €{acc.amount.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] font-semibold text-muted-foreground">
+                            {acc.percentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary/70 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${acc.percentage}%`,
+                            backgroundColor: selectedCategoryBreakdown.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* DETAILED TRANSACTION HISTORY */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                  <Receipt className="h-3.5 w-3.5 text-primary" />
+                  {i18n.language === 'de' ? 'Transaktionshistorie' : 'Transaction History'}
+                  <span className="text-[10px] text-muted-foreground font-normal normal-case">
+                    ({activeModalExpenses.length})
+                  </span>
+                </h4>
+              </div>
+
+              <div className="max-h-[220px] overflow-y-auto border border-border/50 rounded-xl bg-card">
+                {activeModalExpenses.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6 font-medium">
+                    {i18n.language === 'de' ? 'Keine Transaktionen in diesem Zeitraum gefunden.' : 'No transactions found for this period.'}
+                  </p>
+                ) : (
+                  <table className="w-full text-xs text-left border-collapse font-sans">
+                    <thead>
+                      <tr className="border-b border-border/60 bg-muted/40 text-muted-foreground font-semibold sticky top-0 backdrop-blur-xs">
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Store / Notes</th>
+                        <th className="py-2.5 px-3">Account</th>
+                        <th className="py-2.5 px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeModalExpenses
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((exp) => {
+                          const dateObj = exp.date ? new Date(exp.date) : null;
+                          const dateStr = dateObj ? dateObj.toLocaleDateString(i18n.language || 'en-US', { day: '2-digit', month: 'short' }) : 'N/A';
+                          const displayName = exp.store?.name || exp.notes || selectedCategoryBreakdown.name;
+                          const accountName = exp.account?.name || 'Default Account';
+                          return (
+                            <tr key={exp.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-3 font-mono text-muted-foreground shrink-0">{dateStr}</td>
+                              <td className="py-2.5 px-3 font-medium">
+                                <p className="font-bold truncate max-w-[160px] text-foreground">{displayName}</p>
+                                {exp.notes && exp.store?.name && (
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[160px]">{exp.notes}</p>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[110px]" title={accountName}>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted border border-border/50">
+                                  {accountName}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-500">
+                                €{exp.amount.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
   );

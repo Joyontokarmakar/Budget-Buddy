@@ -275,9 +275,10 @@ export interface DialogProps {
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  className?: string;
 }
 
-export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, description, children, footer }) => {
+export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, description, children, footer, className }) => {
   if (!isOpen) return null;
 
   return (
@@ -286,7 +287,7 @@ export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, descript
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative w-full sm:max-w-lg bg-card text-card-foreground rounded-t-[24px] sm:rounded-2xl border border-border/80 shadow-2xl p-6 z-10 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 safe-pb max-h-[90vh] overflow-y-auto">
+      <div className={cn("relative w-full sm:max-w-lg bg-card text-card-foreground rounded-t-[24px] sm:rounded-2xl border border-border/80 shadow-2xl p-6 z-10 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 safe-pb max-h-[90vh] overflow-y-auto", className)}>
         {/* Drag handle for mobile */}
         <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mb-4 sm:hidden" onClick={onClose} />
 
