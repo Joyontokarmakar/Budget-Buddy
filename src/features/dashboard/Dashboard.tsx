@@ -11,7 +11,8 @@ import { getSafeItems } from '../../utils/items';
 import { getEmiMonthsRange } from '../../utils/emi';
 import { cn } from '../../utils/cn';
 import { isCategoryBill, isCategoryActive } from '../../utils/category';
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, Percent } from 'lucide-react';
+import { parseExpenseDate } from '../../utils/date';
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Flame, Coins, BrainCircuit, Sparkles, Store, ShoppingBag, AlertCircle, ChevronDown, Calendar, Search, X, Check, CreditCard, Receipt, Percent, Landmark, PiggyBank, History } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -44,6 +45,12 @@ export const Dashboard: React.FC = () => {
     month?: string; // used for product month filtering
     scope?: 'thisMonth' | 'allTime'; // used for store scope filtering
   } | null>(null);
+
+  // Interactive KPI Cards Detail Modal State
+  const [activeDetailCard, setActiveDetailCard] = useState<
+    'currentMoney' | 'monthlySpending' | 'monthlyIncome' | 'monthlySavings' | 'monthlyDiscounts' | 'groceriesTrajectory' | null
+  >(null);
+  const [modalTimeframe, setModalTimeframe] = useState<6 | 12>(6);
 
   // Onboarding Wizard State
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -724,6 +731,116 @@ export const Dashboard: React.FC = () => {
     groceriesDiffPercent = ((groceriesThisMonthSum - groceriesLastMonthSum) / groceriesLastMonthSum) * 100;
   }
 
+  // Account detail icon helper
+  const getAccountDetailIcon = (accType: string) => {
+    switch (accType) {
+      case 'bank':
+        return <Landmark className="h-5 w-5 text-blue-500" />;
+      case 'savings':
+        return <PiggyBank className="h-5 w-5 text-violet-500" />;
+      case 'cash':
+      default:
+        return <Wallet className="h-5 w-5 text-emerald-500" />;
+    }
+  };
+
+  const getAccountTypeLabel = (accType: string) => {
+    if (accType === 'bank') return t('accounts.bank', 'Bank Account');
+    if (accType === 'savings') return t('accounts.savings', 'Savings Account');
+    return t('accounts.cash', 'Cash Wallet');
+  };
+
+  // Monthly History calculations for interactive detail modals
+  const getMonthlyHistory = (monthsCount: number = 6) => {
+    const list = [];
+    const nowAnchor = new Date();
+    const curY = nowAnchor.getFullYear();
+    const curM = nowAnchor.getMonth();
+
+    for (let i = 0; i < monthsCount; i++) {
+      const d = new Date(curY, curM - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+
+      const monthLabel = d.toLocaleDateString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+        month: 'short',
+        year: 'numeric'
+      });
+      const fullMonthLabel = d.toLocaleDateString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
+        month: 'long',
+        year: 'numeric'
+      });
+
+      // Filter expenses for this calendar month
+      const mExpenses = expenses.filter(e => {
+        if (!e.date) return false;
+        const parsed = parseExpenseDate(e.date, e.notes);
+        if (parsed.year > 0) {
+          return parsed.year === y && parsed.month === m;
+        }
+        const expDate = new Date(e.date);
+        return expDate.getFullYear() === y && expDate.getMonth() === m;
+      });
+
+      const spending = mExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const discounts = mExpenses.reduce((sum, e) => sum + (e.discount || 0), 0);
+      const discountCount = mExpenses.filter(e => (e.discount || 0) > 0).length;
+
+      // Grocery expenses for this month
+      const groceries = mExpenses.reduce((sum, curr) => {
+        const isMainGroceries = curr.category_id && groceriesCatIds.includes(curr.category_id);
+        const safeItems = getSafeItems(curr.items);
+        if (safeItems.length > 0) {
+          return sum + safeItems.reduce((iSum, item) => {
+            const isItemGroceries = item.category_id && groceriesCatIds.includes(item.category_id);
+            return isItemGroceries ? iSum + Number(item.amount) : iSum;
+          }, 0);
+        }
+        return isMainGroceries ? sum + Number(curr.amount) : sum;
+      }, 0);
+
+      // Incomes (Wallet Adds)
+      const mIncomes = incomes.filter(inc => {
+        if (!inc.date) return false;
+        const incDate = new Date(inc.date);
+        return incDate.getFullYear() === y && incDate.getMonth() === m;
+      });
+      const walletAdd = mIncomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
+
+      // Employment Incomes
+      const mEmpIncomes = employmentIncomes.filter(ei => {
+        if (!ei.date) return false;
+        const eiDate = new Date(ei.date);
+        return eiDate.getFullYear() === y && eiDate.getMonth() === m;
+      });
+      const employmentIncome = mEmpIncomes.reduce((sum, ei) => sum + (ei.amount || 0), 0);
+
+      // Savings: Consistent with Dashboard line 579 (walletAdd - spending)
+      const savings = walletAdd - spending;
+      const totalIncome = employmentIncome + walletAdd;
+
+      list.push({
+        index: i,
+        year: y,
+        month: m,
+        monthLabel,
+        fullMonthLabel,
+        isCurrent: i === 0,
+        spending,
+        discounts,
+        discountCount,
+        groceries,
+        walletAdd,
+        employmentIncome,
+        totalIncome,
+        savings,
+        expenseCount: mExpenses.length,
+      });
+    }
+
+    return list;
+  };
+
   // Store Analytics: Top 5 stores this month with amount (excluding common bills)
   const storeSpendingMap: { [key: string]: number } = {};
   const storeDailySpendingMap: { [key: string]: { [date: string]: number } } = {};
@@ -994,36 +1111,56 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Assets (Span 2) */}
-        <Card className="col-span-2 h-full bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+        <Card 
+          onClick={() => setActiveDetailCard('currentMoney')}
+          className="col-span-2 h-full bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border-primary/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.99] group select-none"
+        >
           <CardContent className="p-5 sm:p-6 flex items-center justify-between h-full">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                {t('dashboard.currentMoney')}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                  {t('dashboard.currentMoney')}
+                </span>
+                <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                  <ArrowUpRight className="h-3 w-3" />
+                </span>
+              </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{totalAssets.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
-              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">Across all synced assets</span>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block group-hover:text-primary transition-colors">
+                Across all synced assets · {t('dashboard.detailModals.tapForDetails', 'Click for details')}
+              </span>
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner shrink-0">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
               <Wallet className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
         {/* Monthly Spending */}
-        <Card className="h-full bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+        <Card 
+          onClick={() => setActiveDetailCard('monthlySpending')}
+          className="h-full bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.99] group select-none"
+        >
           <CardContent className="p-5 sm:p-6 flex items-center justify-between h-full">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                {t('dashboard.monthlySpending')}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                  {t('dashboard.monthlySpending')}
+                </span>
+                <span className="text-[10px] font-bold text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                  <ArrowUpRight className="h-3 w-3" />
+                </span>
+              </div>
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground whitespace-nowrap">
                 €{monthlySpending.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h2>
-              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block">This Month</span>
+              <span className="text-[10px] text-muted-foreground font-semibold mt-1 block group-hover:text-rose-500 transition-colors">
+                This Month · {t('dashboard.detailModals.tapForDetails', 'Click for details')}
+              </span>
             </div>
-            <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner shrink-0">
+            <div className="h-12 w-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
               <TrendingDown className="h-6 w-6" />
             </div>
           </CardContent>
@@ -1053,13 +1190,17 @@ export const Dashboard: React.FC = () => {
         
         {/* Income, Savings & Discounts */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:col-span-2">
-          <Card className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <Card 
+            onClick={() => setActiveDetailCard('monthlyIncome')}
+            className="bg-gradient-to-tr from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.99] group select-none"
+          >
             <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                   {t('dashboard.thisMonthIncome')}
+                  <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 text-emerald-500 transition-opacity" />
                 </span>
-                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
                   <ArrowUpRight className="h-4 w-4" />
                 </div>
               </div>
@@ -1067,23 +1208,31 @@ export const Dashboard: React.FC = () => {
                 <h3 className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                   +€{thisMonthIncome.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
-                <span className="text-[9px] text-muted-foreground mt-0.5 block">Werkstudent + Support</span>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  Werkstudent + Support · History ↗
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={thisMonthSavings >= 0 
-            ? "bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300"
-            : "bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300"
-          }>
+          <Card 
+            onClick={() => setActiveDetailCard('monthlySavings')}
+            className={cn(
+              "hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.99] group select-none",
+              thisMonthSavings >= 0 
+                ? "bg-gradient-to-tr from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20" 
+                : "bg-gradient-to-tr from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20"
+            )}
+          >
             <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                   {t('dashboard.thisMonthSavings')}
+                  <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity" />
                 </span>
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-inner shrink-0 ${
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform ${
                   thisMonthSavings >= 0 
-                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' 
                     : 'bg-rose-500/10 text-rose-500'
                 }`}>
                   {thisMonthSavings >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
@@ -1093,18 +1242,24 @@ export const Dashboard: React.FC = () => {
                 <h3 className={`text-base sm:text-lg font-extrabold whitespace-nowrap ${thisMonthSavings >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-500'}`}>
                   {thisMonthSavings >= 0 ? '+' : ''}€{thisMonthSavings.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
-                <span className="text-[9px] text-muted-foreground mt-0.5 block">Net Cash Flow</span>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  Net Cash Flow · History ↗
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300">
+          <Card 
+            onClick={() => setActiveDetailCard('monthlyDiscounts')}
+            className="bg-gradient-to-tr from-violet-500/10 via-violet-500/5 to-transparent border-violet-500/20 hover:scale-[1.01] hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.99] group select-none"
+          >
             <CardContent className="p-5 flex flex-col justify-between min-h-[108px]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                   Monthly Discounts
+                  <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 text-violet-500 transition-opacity" />
                 </span>
-                <div className="h-8 w-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-inner shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
                   <Percent className="h-4 w-4" />
                 </div>
               </div>
@@ -1112,7 +1267,9 @@ export const Dashboard: React.FC = () => {
                 <h3 className="text-base sm:text-lg font-extrabold text-violet-600 dark:text-violet-400 whitespace-nowrap">
                   +€{thisMonthDiscounts.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h3>
-                <span className="text-[9px] text-muted-foreground mt-0.5 block">Total Saved</span>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                  Total Saved · History ↗
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -1547,11 +1704,19 @@ export const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           {/* Grocery comparison insight */}
-          <div className="flex flex-col bg-card/40 hover:bg-card/60 transition-colors p-4 rounded-2xl border border-border/50 relative overflow-hidden">
+          <div 
+            onClick={() => setActiveDetailCard('groceriesTrajectory')}
+            className="flex flex-col bg-card/40 hover:bg-card/70 transition-all p-4 rounded-2xl border border-border/50 hover:border-primary/40 relative overflow-hidden cursor-pointer active:scale-[0.99] group select-none shadow-xs"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Groceries Trajectory</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Groceries Trajectory</span>
+                <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                  <ArrowUpRight className="h-3 w-3" />
+                </span>
+              </div>
               <div className={cn(
-                "h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white",
+                "h-7 w-7 rounded-lg shrink-0 flex items-center justify-center text-white group-hover:scale-105 transition-transform",
                 groceriesDiffPercent > 0 ? "bg-rose-500" : groceriesLastMonthSum > 0 && groceriesDiffPercent < 0 ? "bg-emerald-500" : "bg-slate-500"
               )}>
                 {groceriesDiffPercent > 0 ? (
@@ -1598,6 +1763,9 @@ export const Dashboard: React.FC = () => {
                 ? `You spent €${groceriesThisMonthSum.toFixed(2)} this month, compared to €${groceriesLastMonthSum.toFixed(2)} last month (${Math.abs(groceriesDiffPercent).toFixed(0)}% ${groceriesDiffPercent > 0 ? 'more' : 'less'}).`
                 : 'No previous month grocery records available for trend analysis.'
               }
+              <span className="block text-primary/80 group-hover:text-primary mt-1 font-semibold transition-colors">
+                {t('dashboard.detailModals.tapForDetails', 'Click for monthly trajectory history')} ↗
+              </span>
             </p>
           </div>
 
@@ -2317,6 +2485,417 @@ export const Dashboard: React.FC = () => {
           <Button variant="outline" size="sm" onClick={() => setSelectedReceipt(null)}>
             Close
           </Button>
+        </div>
+      </Dialog>
+
+      {/* Interactive Detail Modal for Dashboard KPI Cards */}
+      <Dialog
+        isOpen={activeDetailCard !== null}
+        onClose={() => setActiveDetailCard(null)}
+        title={(() => {
+          if (activeDetailCard === 'currentMoney') return t('dashboard.detailModals.currentMoneyTitle', 'Wallets & Accounts Breakdown');
+          if (activeDetailCard === 'monthlySpending') return t('dashboard.detailModals.monthlySpendingTitle', 'Monthly Spending History');
+          if (activeDetailCard === 'monthlyIncome') return t('dashboard.detailModals.monthlyIncomeTitle', 'Monthly Income History');
+          if (activeDetailCard === 'monthlySavings') return t('dashboard.detailModals.monthlySavingsTitle', 'Monthly Net Savings');
+          if (activeDetailCard === 'monthlyDiscounts') return t('dashboard.detailModals.monthlyDiscountsTitle', 'Monthly Discounts Saved');
+          if (activeDetailCard === 'groceriesTrajectory') return t('dashboard.detailModals.groceriesTrajectoryTitle', 'Grocery Spending Trajectory');
+          return '';
+        })()}
+        description={(() => {
+          if (activeDetailCard === 'currentMoney') return t('dashboard.detailModals.currentMoneyDesc', 'Distribution of your balance across all synced assets.');
+          if (activeDetailCard === 'monthlySpending') return t('dashboard.detailModals.monthlySpendingDesc', 'Compare your total monthly expenditures over time.');
+          if (activeDetailCard === 'monthlyIncome') return t('dashboard.detailModals.monthlyIncomeDesc', 'Track your total employment earnings and deposits.');
+          if (activeDetailCard === 'monthlySavings') return t('dashboard.detailModals.monthlySavingsDesc', 'Monthly cash flow and net savings (inflow vs spending).');
+          if (activeDetailCard === 'monthlyDiscounts') return t('dashboard.detailModals.monthlyDiscountsDesc', 'Total money saved through discounts, vouchers and student deals.');
+          if (activeDetailCard === 'groceriesTrajectory') return t('dashboard.detailModals.groceriesTrajectoryDesc', 'Track your food and supermarket spending month by month.');
+          return '';
+        })()}
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Button variant="outline" size="sm" onClick={() => setActiveDetailCard(null)}>
+              {t('common.close', 'Close')}
+            </Button>
+            {activeDetailCard === 'currentMoney' && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setActiveDetailCard(null);
+                  navigate('/accounts');
+                }}
+              >
+                <span>{t('dashboard.detailModals.viewAccounts', 'Manage Wallets & Accounts')}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {(activeDetailCard === 'monthlySpending' || activeDetailCard === 'monthlySavings' || activeDetailCard === 'groceriesTrajectory') && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setActiveDetailCard(null);
+                  navigate('/analytics');
+                }}
+              >
+                <span>{t('dashboard.detailModals.viewAnalytics', 'View in Analytics')}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {activeDetailCard === 'monthlyIncome' && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setActiveDetailCard(null);
+                  navigate('/accounts?tab=income');
+                }}
+              >
+                <span>{t('dashboard.detailModals.viewAnalytics', 'Manage Income')}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {activeDetailCard === 'monthlyDiscounts' && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setActiveDetailCard(null);
+                  navigate('/expenses');
+                }}
+              >
+                <span>{t('dashboard.detailModals.viewExpenses', 'View Expenses')}</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          {/* CURRENT MONEY / WALLETS BREAKDOWN */}
+          {activeDetailCard === 'currentMoney' && (
+            <div className="space-y-4">
+              {/* Summary card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    {t('dashboard.currentMoney')}
+                  </span>
+                  <p className="text-2xl font-black text-foreground mt-0.5">
+                    €{totalAssets.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                    {accounts.length} {accounts.length === 1 ? 'account' : 'accounts & wallets'} synced
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-inner">
+                  <Wallet className="h-6 w-6" />
+                </div>
+              </div>
+
+              {/* Wallets List */}
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                {accounts.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed rounded-2xl text-muted-foreground text-xs font-medium">
+                    {t('accounts.noAccounts', 'No accounts found.')}
+                  </div>
+                ) : (
+                  accounts
+                    .slice()
+                    .sort((a, b) => b.balance - a.balance)
+                    .map(acc => {
+                      const share = totalAssets > 0 ? Math.max(0, (acc.balance / totalAssets) * 100) : 0;
+                      return (
+                        <div
+                          key={acc.id}
+                          className="p-3.5 rounded-2xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-card border border-border/40 flex items-center justify-center shrink-0 shadow-xs">
+                                {getAccountDetailIcon(acc.type)}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-sm text-foreground">{acc.name}</span>
+                                  {acc.is_default && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                                      Default
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-medium">
+                                  {getAccountTypeLabel(acc.type)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-mono font-black text-sm text-foreground block">
+                                €{acc.balance.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <span className="text-[10px] font-semibold text-muted-foreground">
+                                {share.toFixed(1)}% of total
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Share Progress Bar */}
+                          <div className="h-1.5 w-full bg-secondary/60 rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                acc.type === 'bank' ? 'bg-blue-500' : acc.type === 'savings' ? 'bg-violet-500' : 'bg-emerald-500'
+                              )}
+                              style={{ width: `${Math.min(100, Math.max(2, share))}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MONTHLY HISTORY DRILL-DOWNS (SPENDING, INCOME, SAVINGS, DISCOUNTS, GROCERIES) */}
+          {activeDetailCard && activeDetailCard !== 'currentMoney' && (() => {
+            const history = getMonthlyHistory(modalTimeframe);
+
+            // Compute summary metrics
+            let totalPeriod = 0;
+            let highestVal = 0;
+            let highestMonthLabel = '';
+            let positiveCount = 0;
+
+            history.forEach(item => {
+              let val = 0;
+              if (activeDetailCard === 'monthlySpending') val = item.spending;
+              if (activeDetailCard === 'monthlyIncome') val = item.employmentIncome;
+              if (activeDetailCard === 'monthlySavings') val = item.savings;
+              if (activeDetailCard === 'monthlyDiscounts') val = item.discounts;
+              if (activeDetailCard === 'groceriesTrajectory') val = item.groceries;
+
+              totalPeriod += val;
+              if (val > highestVal) {
+                highestVal = val;
+                highestMonthLabel = item.monthLabel;
+              }
+              if (val > 0) positiveCount++;
+            });
+
+            const avgPerMonth = totalPeriod / Math.max(modalTimeframe, 1);
+            const maxValForBars = Math.max(...history.map(item => {
+              if (activeDetailCard === 'monthlySpending') return item.spending;
+              if (activeDetailCard === 'monthlyIncome') return item.employmentIncome;
+              if (activeDetailCard === 'monthlySavings') return Math.abs(item.savings);
+              if (activeDetailCard === 'monthlyDiscounts') return item.discounts;
+              if (activeDetailCard === 'groceriesTrajectory') return item.groceries;
+              return 1;
+            }), 1);
+
+            return (
+              <div className="space-y-4">
+                {/* Timeframe Switcher Pill */}
+                <div className="flex items-center justify-between">
+                  <div className="flex p-1 bg-muted/80 dark:bg-zinc-900/60 rounded-xl border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => setModalTimeframe(6)}
+                      className={cn(
+                        "py-1 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
+                        modalTimeframe === 6
+                          ? "bg-card text-foreground shadow-xs dark:bg-zinc-800 dark:text-zinc-100"
+                          : "text-muted-foreground hover:text-foreground bg-transparent"
+                      )}
+                    >
+                      {t('dashboard.detailModals.timeframe6M', '6 Months')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalTimeframe(12)}
+                      className={cn(
+                        "py-1 px-3 text-xs font-bold rounded-lg transition-all cursor-pointer border-none",
+                        modalTimeframe === 12
+                          ? "bg-card text-foreground shadow-xs dark:bg-zinc-800 dark:text-zinc-100"
+                          : "text-muted-foreground hover:text-foreground bg-transparent"
+                      )}
+                    >
+                      {t('dashboard.detailModals.timeframe12M', '12 Months')}
+                    </button>
+                  </div>
+
+                  <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+                    <History className="h-3 w-3" />
+                    {modalTimeframe} {t('analytics.months', 'months')}
+                  </span>
+                </div>
+
+                {/* 3-Column Summary Stats Box */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="p-3 rounded-xl bg-card border border-border/60 shadow-2xs">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      {t('dashboard.detailModals.averagePerMonth', 'Average / Mo')}
+                    </span>
+                    <p className="text-sm sm:text-base font-extrabold text-foreground mt-1 font-mono">
+                      €{avgPerMonth.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-card border border-border/60 shadow-2xs">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      {t('dashboard.detailModals.highestMonth', 'Highest Mo')}
+                    </span>
+                    <p className="text-sm sm:text-base font-extrabold text-foreground mt-1 font-mono truncate" title={highestMonthLabel || 'N/A'}>
+                      €{highestVal.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
+                    </p>
+                    {highestMonthLabel && (
+                      <span className="text-[9px] text-muted-foreground truncate block font-medium">
+                        {highestMonthLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3 rounded-xl bg-card border border-border/60 shadow-2xs">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
+                      {activeDetailCard === 'monthlySavings'
+                        ? t('dashboard.detailModals.positiveMonths', 'Positive Mos')
+                        : t('dashboard.detailModals.totalPeriod', 'Total Period')}
+                    </span>
+                    <p className="text-sm sm:text-base font-extrabold text-foreground mt-1 font-mono">
+                      {activeDetailCard === 'monthlySavings'
+                        ? `${positiveCount} / ${modalTimeframe}`
+                        : `€${totalPeriod.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                {/* Month by Month History List */}
+                <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
+                  {history.map((item, idx) => {
+                    let amount = 0;
+                    let displayColor = 'text-foreground';
+                    let barColor = 'bg-primary';
+                    let subtext = '';
+
+                    if (activeDetailCard === 'monthlySpending') {
+                      amount = item.spending;
+                      displayColor = 'text-rose-500';
+                      barColor = 'bg-rose-500';
+                      subtext = `${item.expenseCount} ${item.expenseCount === 1 ? 'transaction' : 'transactions'}`;
+                    } else if (activeDetailCard === 'monthlyIncome') {
+                      amount = item.employmentIncome;
+                      displayColor = 'text-emerald-500';
+                      barColor = 'bg-emerald-500';
+                      subtext = item.walletAdd > 0
+                        ? `Job: €${item.employmentIncome.toFixed(0)} · Deposits: €${item.walletAdd.toFixed(0)}`
+                        : `Employment earnings`;
+                    } else if (activeDetailCard === 'monthlySavings') {
+                      amount = item.savings;
+                      displayColor = item.savings >= 0 ? 'text-blue-500 dark:text-blue-400' : 'text-rose-500';
+                      barColor = item.savings >= 0 ? 'bg-blue-500' : 'bg-rose-500';
+                      subtext = `In: €${item.walletAdd.toFixed(0)} · Out: €${item.spending.toFixed(0)}`;
+                    } else if (activeDetailCard === 'monthlyDiscounts') {
+                      amount = item.discounts;
+                      displayColor = 'text-violet-500';
+                      barColor = 'bg-violet-500';
+                      subtext = item.discountCount > 0
+                        ? `${item.discountCount} ${item.discountCount === 1 ? 'discounted purchase' : 'discounted purchases'}`
+                        : `No discounts claimed`;
+                    } else if (activeDetailCard === 'groceriesTrajectory') {
+                      amount = item.groceries;
+                      displayColor = 'text-amber-600 dark:text-amber-400';
+                      barColor = 'bg-amber-500';
+                      subtext = item.isCurrent
+                        ? `Current month pace`
+                        : `Total food & supermarket`;
+                    }
+
+                    // Month over Month difference vs prior month (which is at idx + 1)
+                    const prevItem = history[idx + 1];
+                    let prevAmount = 0;
+                    if (prevItem) {
+                      if (activeDetailCard === 'monthlySpending') prevAmount = prevItem.spending;
+                      if (activeDetailCard === 'monthlyIncome') prevAmount = prevItem.employmentIncome;
+                      if (activeDetailCard === 'monthlySavings') prevAmount = prevItem.savings;
+                      if (activeDetailCard === 'monthlyDiscounts') prevAmount = prevItem.discounts;
+                      if (activeDetailCard === 'groceriesTrajectory') prevAmount = prevItem.groceries;
+                    }
+
+                    let diffPercent: number | null = null;
+                    if (prevItem && prevAmount > 0) {
+                      diffPercent = ((amount - prevAmount) / prevAmount) * 100;
+                    }
+
+                    const barWidth = Math.min(100, Math.max(3, (Math.abs(amount) / maxValForBars) * 100));
+
+                    return (
+                      <div
+                        key={item.monthLabel}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all space-y-1.5",
+                          item.isCurrent
+                            ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20"
+                            : "bg-muted/15 border-border/50 hover:bg-muted/30"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-foreground">
+                              {item.fullMonthLabel}
+                            </span>
+                            {item.isCurrent && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-primary/10 text-primary border border-primary/20">
+                                {t('dashboard.detailModals.currentMonth', 'Current')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("font-mono font-black text-sm", displayColor)}>
+                              {(activeDetailCard === 'monthlyIncome' || activeDetailCard === 'monthlyDiscounts' || (activeDetailCard === 'monthlySavings' && amount > 0)) ? '+' : ''}
+                              €{amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bar */}
+                        <div className="h-1.5 w-full bg-secondary/50 rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", barColor)}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+
+                        {/* Bottom line: subtext & MoM change */}
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                          <span className="truncate max-w-[200px] font-medium">
+                            {subtext}
+                          </span>
+                          {diffPercent !== null ? (
+                            <span
+                              className={cn(
+                                "font-bold font-mono px-1 py-0.2 rounded text-[9.5px]",
+                                (activeDetailCard === 'monthlySpending' || activeDetailCard === 'groceriesTrajectory')
+                                  ? (diffPercent > 0 ? 'text-rose-500 bg-rose-500/10' : 'text-emerald-500 bg-emerald-500/10')
+                                  : (diffPercent >= 0 ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10')
+                              )}
+                            >
+                              {diffPercent > 0 ? '+' : ''}{diffPercent.toFixed(0)}% vs prev
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-muted-foreground/60 italic">
+                              {idx === history.length - 1 ? 'Start of period' : '—'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </Dialog>
     </div>
