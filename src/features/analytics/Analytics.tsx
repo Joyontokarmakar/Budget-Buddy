@@ -8,6 +8,7 @@ import type { ExpenseWithDetails, IncomeWithDetails, EmploymentIncomeWithDetails
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Spinner, Button, Dialog } from '../../components/ui';
 import { getSafeItems } from '../../utils/items';
 import { parseExpenseDate } from '../../utils/date';
+import { DigitalReceipt } from '../../components/DigitalReceipt';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
 import { PieChart as PieIcon, LineChart as LineIcon, BarChart2, Coins, Store, ShoppingBag, Calendar, Search, X, TrendingDown, TrendingUp, Receipt, Wallet, CreditCard, ArrowUpRight, Layers } from 'lucide-react';
 export const Analytics: React.FC = () => {
@@ -2621,85 +2622,14 @@ export const Analytics: React.FC = () => {
           {matchingReceipts.length === 0 ? (
             <p className="text-xs text-muted-foreground py-4 text-center">No receipt details found.</p>
           ) : (
-            <div className="space-y-4">
-              {matchingReceipts.map((exp, expIdx) => {
-                const safeItems = getSafeItems(exp.items);
-                const storeName = exp.store?.rendering_name || exp.store?.name || 'Other/Unknown';
-                const categoryName = exp.category?.name || 'General';
-                const dateFormatted = exp.date ? new Date(exp.date).toLocaleDateString(i18n.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown Date';
-                const accountName = exp.account?.name || 'Default Account';
-                
-                return (
-                  <div key={expIdx} className="bg-amber-50/30 dark:bg-slate-950/40 border border-amber-200/50 dark:border-slate-800 p-5 rounded-2xl shadow-inner font-mono text-xs text-slate-800 dark:text-slate-300 space-y-3 relative">
-                    {/* Decorative serrated edge top */}
-                    <div className="text-[7px] text-muted-foreground/35 select-none text-center tracking-[0.2em] -mt-2 mb-1">
-                      ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-                    </div>
-                    {/* Receipt header */}
-                    <div className="text-center space-y-1">
-                      <h4 className="font-extrabold text-sm uppercase tracking-widest text-amber-900 dark:text-amber-400">{storeName}</h4>
-                      <p className="text-[10px] text-muted-foreground">{dateFormatted}</p>
-                      <p className="text-[9px] text-muted-foreground uppercase">Method: {accountName}</p>
-                    </div>
-
-                    <div className="border-t border-dashed border-border/70 my-2" />
-
-                    {/* Items list */}
-                    <div className="space-y-1.5">
-                      {safeItems.length > 0 ? (
-                        safeItems.map((item, itemIdx) => {
-                          const isTargetProduct = selectedReceipt?.type === 'product' && 
-                            item.name.toLowerCase().trim() === selectedReceipt?.name.toLowerCase().trim();
-                          return (
-                            <div key={itemIdx} className={cn("flex justify-between items-center gap-4", isTargetProduct ? "bg-amber-100/60 dark:bg-slate-800/80 px-1.5 py-0.5 rounded font-extrabold text-primary" : "")}>
-                              <span className="truncate">{item.name}</span>
-                              <span className="shrink-0 font-bold">€{item.amount.toFixed(2)}</span>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="flex justify-between items-center gap-4">
-                          <span className="truncate">{exp.notes || categoryName}</span>
-                          <span className="shrink-0 font-bold">€{exp.amount.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="border-t border-dashed border-border/70 my-2" />
-
-                    {/* Financial details */}
-                    <div className="space-y-1 text-right">
-                      {exp.discount ? (
-                        <>
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                            <span>Subtotal:</span>
-                            <span>€{(exp.amount + exp.discount).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-[10px] text-teal-600 dark:text-teal-400">
-                            <span>Discount:</span>
-                            <span>-€{exp.discount.toFixed(2)}</span>
-                          </div>
-                        </>
-                      ) : null}
-                      <div className="flex justify-between font-extrabold text-sm text-slate-900 dark:text-white mt-1 pt-1 border-t border-dashed border-border/40">
-                        <span>TOTAL:</span>
-                        <span>€{exp.amount.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    {exp.notes && (
-                      <div className="mt-2 pt-2 border-t border-dotted border-border/30 text-[10px] text-muted-foreground italic break-words text-left">
-                        Note: {exp.notes}
-                      </div>
-                    )}
-
-                    {/* Decorative serrated edge at bottom */}
-                    <div className="text-center text-[10px] text-muted-foreground/80 tracking-widest mt-4">
-                      *** THANK YOU ***
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-6">
+              {matchingReceipts.map((exp, expIdx) => (
+                <DigitalReceipt
+                  key={exp.id || expIdx}
+                  expense={exp}
+                  selectedProductName={selectedReceipt?.type === 'product' ? selectedReceipt.name : undefined}
+                />
+              ))}
             </div>
           )}
         </div>
